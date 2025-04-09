@@ -12,19 +12,7 @@ const tabs = [
     activeIcon: 'el-icon-home-filled',
     path: '/' 
   },
-  { 
-    name: '榜单名单', 
-    icon: 'el-icon-menu', 
-    activeIcon: 'el-icon-menu',
-    path: '/category' 
-  },
-  { 
-    name: '订阅', 
-    icon: 'el-icon-star', 
-    activeIcon: 'el-icon-star-filled',
-    path: '/subscription' 
-  },
-  { 
+  {
     name: '我的', 
     icon: 'el-icon-user', 
     activeIcon: 'el-icon-user-filled',

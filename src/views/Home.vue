@@ -6,7 +6,9 @@ const router = useRouter()
 const activeTab = ref('推荐')
 
 const tabs = ['推荐', '番剧', '剧场版', '4K', '待添加']
-
+const userInfo = {
+  avatar: 'https://avatars.githubusercontent.com/u/156616301?v=4'
+}
 // 模拟追番日历数据
 const calendarAnimes = [
   {
@@ -71,8 +73,13 @@ const newAnimes = [
 const swiperImages = [
   {
     id: 100,
-    url: 'https://placeholder.pics/svg/360x200/FF9CAA/FFFFFF/动漫封面',
+    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg',
     title: '快藏起来！玛琪娜同学！'
+  },
+  {
+    id: 101,
+    url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg',
+    title: '庙屋少女'
   }
 ]
 
@@ -86,7 +93,7 @@ const goToSearch = () => {
     <!-- 顶部搜索栏 -->
     <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center">
       <div class="w-8 h-8 mr-2">
-        <img src="https://placeholder.pics/svg/30x30/FFCAD4/555555/头像" class="w-full h-full rounded-full" alt="avatar" />
+        <img :src="userInfo.avatar" class="w-full h-full rounded-full" alt="avatar" />
       </div>
       
       <div class="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-1" @click="goToSearch">

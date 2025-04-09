@@ -8,18 +8,6 @@ const routes = [
     meta: { showTabBar: true }
   },
   {
-    path: '/category',
-    name: 'Category',
-    component: () => import('../views/Category.vue'),
-    meta: { showTabBar: true }
-  },
-  {
-    path: '/subscription',
-    name: 'Subscription',
-    component: () => import('../views/Subscription.vue'),
-    meta: { showTabBar: true }
-  },
-  {
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/Profile.vue'),
