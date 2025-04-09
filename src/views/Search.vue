@@ -73,27 +73,27 @@ const clearSearchKeyword = () => {
 <template>
   <div class="search-container">
     <!-- 搜索头部 -->
-    <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center border-b">
-      <el-icon class="mr-2 text-gray-600" @click="goBack"><el-icon-arrow-left /></el-icon>
+    <div class="search-header">
+      <el-icon class="back-icon" @click="goBack"><el-icon-arrow-left /></el-icon>
       
-      <div class="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-2 relative">
-        <img src="@/assets/icon/search.svg" class="w-4 h-4 mr-2" alt="search" />
+      <div class="search-input-container">
+        <img src="@/assets/icon/search.svg" class="search-icon" alt="search" />
         <input 
           v-model="searchKeyword"
-          class="bg-transparent flex-1 focus:outline-none text-sm"
+          class="search-input"
           placeholder="搜索" 
           @keydown.enter="handleSearch"
         />
-        <el-icon v-if="searchKeyword" class="text-gray-400 cursor-pointer" @click="clearSearchKeyword">
+        <el-icon v-if="searchKeyword" class="clear-icon" @click="clearSearchKeyword">
           <el-icon-close-bold />
         </el-icon>
       </div>
       
-      <el-button class="ml-2" type="danger" plain size="small" @click="handleSearch">搜索</el-button>
+      <el-button class="search-button" type="danger" plain size="small" @click="handleSearch">搜索</el-button>
     </div>
     
     <!-- 搜索内容区域 -->
-    <div class="p-4">
+    <div class="search-content">
       <!-- 搜索结果 -->
       <div v-if="searchResults.length > 0">
         <h3 class="text-lg font-medium mb-3">搜索结果</h3>
@@ -136,7 +136,7 @@ const clearSearchKeyword = () => {
             <div 
               v-for="(hot, index) in hotSearches" 
               :key="index"
-              class="flex items-center"
+              class="flex items-center cursor-pointer"
               @click="selectHotSearch(hot)"
             >
               <span class="w-5 h-5 flex items-center justify-center mr-2" :class="{'text-red-500': index < 3, 'text-gray-400': index >= 3}">{{ index + 1 }}</span>
@@ -153,5 +153,71 @@ const clearSearchKeyword = () => {
 .search-container {
   min-height: 100vh;
   background-color: white;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 固定头部样式 */
+.search-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: #fff;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* 硬件加速，减少抖动 */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.back-icon {
+  margin-right: 8px;
+  color: #606266;
+}
+
+.search-input-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background-color: #f3f4f6;
+  border-radius: 999px;
+  padding: 6px 16px;
+  position: relative;
+}
+
+.search-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+.search-input {
+  background-color: transparent;
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+.clear-icon {
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.search-button {
+  margin-left: 8px;
+}
+
+/* 内容区域样式 */
+.search-content {
+  padding-top: 60px; /* 搜索头部高度 + 额外空间 */
+  padding: 60px 16px 16px 16px;
 }
 </style> 

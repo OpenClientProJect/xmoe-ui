@@ -89,126 +89,132 @@ const goToSearch = () => {
 </script>
 
 <template>
-  <div class="home-container pb-16">
-    <!-- 顶部搜索栏 -->
-    <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center">
-      <div class="w-8 h-8 mr-2">
-        <img :src="userInfo.avatar" class="w-full h-full rounded-full" alt="avatar" />
-      </div>
-      
-      <div class="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-1.5" @click="goToSearch">
-        <img src="@/assets/icon/search.svg" class="w-4 h-4 mr-2" alt="search" />
-        <span class="text-gray-400">搜索</span>
-      </div>
-      
-      <el-icon class="ml-3 text-red-500"><el-icon-clock /></el-icon>
-      <el-icon class="ml-3 text-gray-500"><el-icon-more-filled /></el-icon>
-    </div>
-    
-    <!-- 分类导航栏 -->
-    <div class="flex text-sm overflow-x-auto py-3 border-b sticky top-14 bg-white z-10">
-      <div 
-        v-for="tab in tabs" 
-        :key="tab" 
-        class="px-4 whitespace-nowrap"
-        :class="{'text-red-500 font-bold': activeTab === tab, 'border-b-2 border-red-500': activeTab === tab}"
-        @click="activeTab = tab"
-      >
-        {{ tab }}
-      </div>
-    </div>
-    
-    <!-- 轮播图 -->
-    <div class="px-4 py-3">
-      <el-carousel height="180px" indicator-position="none" class="rounded-lg overflow-hidden">
-        <el-carousel-item v-for="item in swiperImages" :key="item.id">
-          <div class="relative h-full">
-            <img :src="item.url" class="w-full h-full object-cover" />
-            <div class="absolute bottom-0 left-0 p-4 text-white">
-              <p class="text-lg">{{ item.title }}</p>
-            </div>
-          </div>
-        </el-carousel-item>
-      </el-carousel>
-    </div>
-    
-    <!-- 软件使用指南 -->
-    <div class="mx-4 my-3 bg-gray-50 rounded-lg p-3 flex justify-between items-center">
-      <div class="flex items-center">
-        <div class="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center text-pink-500">
-          <el-icon><el-icon-question-filled /></el-icon>
-        </div>
-        <span class="ml-2">软件使用指南</span>
-      </div>
-      <el-icon><el-icon-arrow-right /></el-icon>
-    </div>
-    
-    <!-- 快捷分类 -->
-    <div class="grid grid-cols-4 gap-2 mx-4 my-4">
-      <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg p-3 text-white text-center">
-        <span>全部</span>
-      </div>
-      <div class="bg-gradient-to-r from-pink-500 to-red-400 rounded-lg p-3 text-white text-center">
-        <span>榜单</span>
-      </div>
-      <div class="bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg p-3 text-white text-center">
-        <span>海贼王</span>
-      </div>
-      <div class="bg-gradient-to-r from-blue-400 to-indigo-400 rounded-lg p-3 text-white text-center">
-        <span>追番</span>
-      </div>
-    </div>
-    
-    <!-- 追番日历 -->
-    <div class="px-4 mt-4">
-      <div class="flex justify-between items-center mb-2">
-        <div class="flex items-center">
-          <el-icon class="mr-1"><el-icon-calendar /></el-icon>
-          <span class="font-medium">追番日历</span>
-        </div>
-        <span class="text-gray-400 text-sm">更多</span>
-      </div>
-      
-      <div class="grid grid-cols-2 gap-3">
-        <!-- 左侧日历 -->
-        <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/333333/FFFFFF/背景');">
-          <div v-for="anime in calendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-            <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
-            <div class="ml-2 text-white">
-              <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
-              <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
-            </div>
-          </div>
+  <div class="home-container">
+    <!-- 顶部导航容器 - 使用fixed定位 -->
+    <div class="page-header">
+      <!-- 顶部搜索栏 -->
+      <div class="search-bar">
+        <div class="avatar-container">
+          <img :src="userInfo.avatar" class="avatar-img" alt="avatar" />
         </div>
         
-        <!-- 右侧日历 -->
-        <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/666666/FFFFFF/背景');">
-          <div v-for="anime in rightCalendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-            <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
-            <div class="ml-2 text-white">
-              <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
-              <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
+        <div class="search-input" @click="goToSearch">
+          <img src="@/assets/icon/search.svg" class="search-icon" alt="search" />
+          <span class="placeholder-text">搜索</span>
+        </div>
+        
+        <el-icon class="action-icon history-icon"><el-icon-clock /></el-icon>
+        <el-icon class="action-icon more-icon"><el-icon-more-filled /></el-icon>
+      </div>
+      
+      <!-- 分类导航栏 -->
+      <div class="tab-container">
+        <div 
+          v-for="tab in tabs" 
+          :key="tab" 
+          class="tab-item"
+          :class="{'active-tab': activeTab === tab}"
+          @click="activeTab = tab"
+        >
+          {{ tab }}
+        </div>
+      </div>
+    </div>
+
+    <!-- 内容区域 - 添加足够的上边距避免被顶部遮挡 -->
+    <div class="page-content">
+      <!-- 轮播图 -->
+      <div class="px-4 py-3">
+        <el-carousel height="180px" indicator-position="none" class="rounded-lg overflow-hidden">
+          <el-carousel-item v-for="item in swiperImages" :key="item.id">
+            <div class="relative h-full">
+              <img :src="item.url" class="w-full h-full object-cover" />
+              <div class="absolute bottom-0 left-0 p-4 text-white">
+                <p class="text-lg">{{ item.title }}</p>
+              </div>
+            </div>
+          </el-carousel-item>
+        </el-carousel>
+      </div>
+
+      <!-- 软件使用指南 -->
+      <div class="mx-4 my-3 bg-gray-50 rounded-lg p-3 flex justify-between items-center">
+        <div class="flex items-center">
+          <div class="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center text-pink-500">
+            <el-icon><el-icon-question-filled /></el-icon>
+          </div>
+          <span class="ml-2">软件使用指南</span>
+        </div>
+        <el-icon><el-icon-arrow-right /></el-icon>
+      </div>
+
+      <!-- 快捷分类 -->
+      <div class="grid grid-cols-4 gap-2 mx-4 my-4">
+        <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg p-3 text-white text-center">
+          <span>全部</span>
+        </div>
+        <div class="bg-gradient-to-r from-pink-500 to-red-400 rounded-lg p-3 text-white text-center">
+          <span>榜单</span>
+        </div>
+        <div class="bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg p-3 text-white text-center">
+          <span>海贼王</span>
+        </div>
+        <div class="bg-gradient-to-r from-blue-400 to-indigo-400 rounded-lg p-3 text-white text-center">
+          <span>追番</span>
+        </div>
+      </div>
+
+      <!-- 追番日历 -->
+      <div class="px-4 mt-4">
+        <div class="flex justify-between items-center mb-2">
+          <div class="flex items-center">
+            <el-icon class="mr-1"><el-icon-calendar /></el-icon>
+            <span class="font-medium">追番日历</span>
+          </div>
+          <span class="text-gray-400 text-sm">更多</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- 左侧日历 -->
+          <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/333333/FFFFFF/背景');">
+            <div v-for="anime in calendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
+              <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
+              <div class="ml-2 text-white">
+                <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
+                <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧日历 -->
+          <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/666666/FFFFFF/背景');">
+            <div v-for="anime in rightCalendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
+              <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
+              <div class="ml-2 text-white">
+                <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
+                <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    
-    <!-- 四月新番 -->
-    <div class="px-4 mt-5">
-      <div class="flex justify-between items-center mb-3">
-        <div class="flex items-center">
-          <span class="text-amber-400 mr-1">🔥</span>
-          <span class="font-medium">四月新番</span>
+
+      <!-- 四月新番 -->
+      <div class="px-4 mt-5 pb-16">
+        <div class="flex justify-between items-center mb-3">
+          <div class="flex items-center">
+            <span class="text-amber-400 mr-1">🔥</span>
+            <span class="font-medium">四月新番</span>
+          </div>
+          <span class="text-green-500 text-sm">颜北女角太多了！</span>
         </div>
-        <span class="text-green-500 text-sm">颜北女角太多了！</span>
-      </div>
-      
-      <div class="grid grid-cols-2 gap-3">
-        <div v-for="anime in newAnimes" :key="anime.id" class="rounded-lg overflow-hidden">
-          <div class="relative">
-            <img :src="anime.cover" class="w-full h-auto" />
-            <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">{{ anime.episode }}</span>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div v-for="anime in newAnimes" :key="anime.id" class="rounded-lg overflow-hidden">
+            <div class="relative">
+              <img :src="anime.cover" class="w-full h-auto" />
+              <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">{{ anime.episode }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -217,15 +223,116 @@ const goToSearch = () => {
 </template>
 
 <style scoped>
+/* 基础样式 */
 .home-container {
   min-height: 100vh;
+  background-color: #f5f5f5;
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* 隐藏滚动条但保留功能 */
-.overflow-x-auto {
-  scrollbar-width: none; /* Firefox */
+/* 顶部固定导航 */
+.page-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* 硬件加速，减少抖动 */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
 }
-.overflow-x-auto::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
+
+/* 搜索栏样式 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #fff;
+}
+
+.avatar-container {
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.search-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background-color: #f3f4f6;
+  border-radius: 999px;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+
+.search-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+.placeholder-text {
+  color: #9ca3af;
+}
+
+.action-icon {
+  margin-left: 12px;
+}
+
+.history-icon {
+  color: #dc2626;
+}
+
+.more-icon {
+  color: #6b7280;
+}
+
+/* 标签栏样式 */
+.tab-container {
+  display: flex;
+  overflow-x: auto;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.tab-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.tab-item {
+  padding: 12px 16px;
+  font-size: 14px;
+  white-space: nowrap;
+  position: relative;
+}
+
+.active-tab {
+  color: #dc2626;
+  font-weight: 600;
+  border-bottom: 2px solid #dc2626;
+}
+
+/* 内容区域样式 */
+.page-content {
+  padding-top: 106px; /* 顶部导航高度 + 额外空间 */
+  position: relative;
+  z-index: 1;
+  width: 100%;
 }
 </style> 
