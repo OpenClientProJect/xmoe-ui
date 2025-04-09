@@ -133,7 +133,8 @@ const goToSearch = () => {
           :autoplay="true"
           :interval="5000"
           :loop="true"
-          arrow="always"
+          arrow="never"
+          direction="horizontal"
         >
           <el-carousel-item 
             v-for="item in swiperImages" 
@@ -254,7 +255,7 @@ const goToSearch = () => {
   display: flex;
   align-items: center;
   padding: 8px 16px;
-  background-color: #fff;
+  background-image: linear-gradient(to right, #ff6b8b, #ff8e72);
 }
 
 .avatar-container {
@@ -274,7 +275,7 @@ const goToSearch = () => {
   flex: 1;
   display: flex;
   align-items: center;
-  background-color: #f3f4f6;
+  background-color: rgba(255, 255, 255, 0.9);
   border-radius: 999px;
   padding: 6px 16px;
   cursor: pointer;
@@ -292,14 +293,15 @@ const goToSearch = () => {
 
 .action-icon {
   margin-left: 12px;
+  color: white;
 }
 
 .history-icon {
-  color: #dc2626;
+  color: white;
 }
 
 .more-icon {
-  color: #6b7280;
+  color: white;
 }
 
 .recording-icon {
@@ -307,6 +309,7 @@ const goToSearch = () => {
   height: 24px;
   margin-left: 12px;
   cursor: pointer;
+  filter: brightness(0) invert(1); /* 将图标改为白色 */
 }
 
 /* 标签栏样式 */
@@ -329,6 +332,7 @@ const goToSearch = () => {
   font-size: 14px;
   white-space: nowrap;
   position: relative;
+  color: #333;
 }
 
 .active-tab {
@@ -345,7 +349,7 @@ const goToSearch = () => {
   width: 100%;
 }
 
-/* 新增轮播图样式 */
+/* 轮播图样式 */
 .carousel-container {
   border-radius: 8px;
   overflow: hidden;
@@ -373,6 +377,8 @@ const goToSearch = () => {
   bottom: 0;
   left: 0;
   padding: 16px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  width: 100%;
 }
 
 .carousel-title {
