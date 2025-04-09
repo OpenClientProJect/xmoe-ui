@@ -103,6 +103,7 @@ const goToSearch = () => {
           <span class="placeholder-text">搜索</span>
         </div>
         
+        <img src="@/assets/icon/Recording.svg" class="action-icon recording-icon" alt="recording" />
         <el-icon class="action-icon history-icon"><el-icon-clock /></el-icon>
         <el-icon class="action-icon more-icon"><el-icon-more-filled /></el-icon>
       </div>
@@ -125,41 +126,42 @@ const goToSearch = () => {
     <div class="page-content">
       <!-- 轮播图 -->
       <div class="px-4 py-3">
-        <el-carousel height="180px" indicator-position="none" class="rounded-lg overflow-hidden">
-          <el-carousel-item v-for="item in swiperImages" :key="item.id">
-            <div class="relative h-full">
-              <img :src="item.url" class="w-full h-full object-cover" />
-              <div class="absolute bottom-0 left-0 p-4 text-white">
-                <p class="text-lg">{{ item.title }}</p>
+        <el-carousel
+          height="180px"
+          indicator-position="none"
+          class="carousel-container"
+          :autoplay="true"
+          :interval="5000"
+          :loop="true"
+          arrow="always"
+        >
+          <el-carousel-item 
+            v-for="item in swiperImages" 
+            :key="item.id"
+            class="carousel-item"
+          >
+            <div class="carousel-content">
+              <img :src="item.url" class="carousel-image" />
+              <div class="carousel-caption">
+                <p class="carousel-title">{{ item.title }}</p>
               </div>
             </div>
           </el-carousel-item>
         </el-carousel>
       </div>
 
-      <!-- 软件使用指南 -->
-      <div class="mx-4 my-3 bg-gray-50 rounded-lg p-3 flex justify-between items-center">
-        <div class="flex items-center">
-          <div class="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center text-pink-500">
-            <el-icon><el-icon-question-filled /></el-icon>
-          </div>
-          <span class="ml-2">软件使用指南</span>
-        </div>
-        <el-icon><el-icon-arrow-right /></el-icon>
-      </div>
-
       <!-- 快捷分类 -->
-      <div class="grid grid-cols-4 gap-2 mx-4 my-4">
-        <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg p-3 text-white text-center">
+      <div class="category-buttons mx-4 my-4">
+        <div class="category-btn category-btn-blue">
           <span>全部</span>
         </div>
-        <div class="bg-gradient-to-r from-pink-500 to-red-400 rounded-lg p-3 text-white text-center">
+        <div class="category-btn category-btn-pink">
           <span>榜单</span>
         </div>
-        <div class="bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg p-3 text-white text-center">
+        <div class="category-btn category-btn-purple">
           <span>海贼王</span>
         </div>
-        <div class="bg-gradient-to-r from-blue-400 to-indigo-400 rounded-lg p-3 text-white text-center">
+        <div class="category-btn category-btn-indigo">
           <span>追番</span>
         </div>
       </div>
@@ -300,6 +302,13 @@ const goToSearch = () => {
   color: #6b7280;
 }
 
+.recording-icon {
+  width: 24px;
+  height: 24px;
+  margin-left: 12px;
+  cursor: pointer;
+}
+
 /* 标签栏样式 */
 .tab-container {
   display: flex;
@@ -334,5 +343,91 @@ const goToSearch = () => {
   position: relative;
   z-index: 1;
   width: 100%;
+}
+
+/* 新增轮播图样式 */
+.carousel-container {
+  border-radius: 8px;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.carousel-item {
+  height: 100%;
+}
+
+.carousel-content {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.carousel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.carousel-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: 16px;
+}
+
+.carousel-title {
+  color: white;
+  font-size: 18px;
+}
+
+/* 快捷分类按钮 */
+.category-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.category-btn {
+  padding: 12px 0;
+  border-radius: 30px; /* 更圆润的圆角 */
+  text-align: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.category-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+  z-index: 1;
+}
+
+.category-btn span {
+  position: relative;
+  z-index: 2;
+}
+
+.category-btn-blue {
+  background: linear-gradient(to right, #00c6fb, #005bea);
+}
+
+.category-btn-pink {
+  background: linear-gradient(to right, #ff758c, #ff7eb3);
+}
+
+.category-btn-purple {
+  background: linear-gradient(to right, #7928ca, #ff0080);
+}
+
+.category-btn-indigo {
+  background: linear-gradient(to right, #3a7bd5, #3a6073);
 }
 </style> 

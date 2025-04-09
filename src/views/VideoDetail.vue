@@ -94,98 +94,95 @@ onMounted(() => {
 <template>
   <div class="video-detail-container">
     <!-- 视频播放区域 -->
-    <div class="relative">
-      <div class="w-full aspect-video bg-black">
-        <img :src="videoInfo.cover" class="w-full h-full object-cover" alt="video cover" />
-        <div class="absolute inset-0 flex items-center justify-center">
-          <div class="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center">
+    <div class="video-player-section">
+      <div class="video-player">
+        <img :src="videoInfo.cover" class="video-cover" alt="video cover" />
+        <div class="play-button-overlay">
+          <div class="play-button">
             <el-icon :size="32" class="text-white"><el-icon-video-play /></el-icon>
           </div>
         </div>
       </div>
       
       <!-- 返回按钮 -->
-      <div class="absolute top-3 left-3">
-        <div 
-          class="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center"
-          @click="goBack"
-        >
+      <div class="back-button">
+        <div class="back-button-inner" @click="goBack">
           <el-icon class="text-white"><el-icon-arrow-left /></el-icon>
         </div>
       </div>
     </div>
     
     <!-- 视频信息 -->
-    <div class="bg-white p-4">
-      <h1 class="text-lg font-medium">{{ videoInfo.title }} {{ videoInfo.episode }}</h1>
+    <div class="video-info-section">
+      <h1 class="video-title">{{ videoInfo.title }} {{ videoInfo.episode }}</h1>
       
-      <div class="flex justify-between mt-2 text-sm text-gray-500">
+      <div class="video-stats">
         <div>{{ videoInfo.views }}播放 · {{ videoInfo.releaseDate }}</div>
         <div>{{ videoInfo.likes }}点赞</div>
       </div>
       
       <!-- 操作栏 -->
-      <div class="flex justify-between mt-4 border-t border-b py-3">
-        <div class="flex flex-col items-center" @click="toggleLike">
+      <div class="action-bar">
+        <div class="action-item" @click="toggleLike">
           <el-icon :size="24" :class="{'text-red-500': videoInfo.isLiked}">
             <el-icon-thumb v-if="!videoInfo.isLiked" />
             <el-icon-thumb v-else />
           </el-icon>
-          <span class="text-xs mt-1">点赞</span>
+          <span class="action-label">点赞</span>
         </div>
         
-        <div class="flex flex-col items-center" @click="toggleCollect">
+        <div class="action-item" @click="toggleCollect">
           <el-icon :size="24" :class="{'text-yellow-500': videoInfo.isCollected}">
             <el-icon-star v-if="!videoInfo.isCollected" />
             <el-icon-star-filled v-else />
           </el-icon>
-          <span class="text-xs mt-1">收藏</span>
+          <span class="action-label">收藏</span>
         </div>
         
-        <div class="flex flex-col items-center">
+        <div class="action-item">
           <el-icon :size="24"><el-icon-share /></el-icon>
-          <span class="text-xs mt-1">分享</span>
+          <span class="action-label">分享</span>
         </div>
         
-        <div class="flex flex-col items-center">
+        <div class="action-item">
           <el-icon :size="24"><el-icon-download /></el-icon>
-          <span class="text-xs mt-1">缓存</span>
+          <span class="action-label">缓存</span>
         </div>
       </div>
       
       <!-- 标签页 -->
-      <div class="flex border-b mt-2">
+      <div class="tabs">
         <div 
           v-for="tab in tabs" 
           :key="tab" 
-          class="mr-4 py-2 relative"
-          :class="{'text-red-500 font-medium': activeTab === tab}"
+          class="tab"
+          :class="{'active-tab': activeTab === tab}"
           @click="activeTab = tab"
         >
           {{ tab }}
-          <div v-if="activeTab === tab" class="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500"></div>
+          <div v-if="activeTab === tab" class="tab-indicator"></div>
         </div>
       </div>
       
       <!-- 简介内容 -->
-      <div v-if="activeTab === '简介'" class="py-3">
-        <div class="flex flex-wrap gap-2 mb-3">
+      <div v-if="activeTab === '简介'" class="tab-content">
+        <div class="tag-list">
           <span 
             v-for="tag in videoInfo.tags" 
             :key="tag"
-            class="px-2 py-1 bg-gray-100 rounded-full text-xs"
+            class="tag"
           >
             {{ tag }}
           </span>
         </div>
         
-        <p class="text-sm text-gray-600">{{ videoInfo.description }}</p>
+        <p class="description">{{ videoInfo.description }}</p>
         
         <!-- 订阅按钮 -->
-        <div class="mt-4 flex justify-between items-center">
-          <div class="flex items-center">
-            <div class="w-8 h-8 bg-gray-200 rounded-full mr-2"></div>
-            <span class="text-sm font-medium">XMoe动漫</span>
+        <div class="subscribe-section">
+          <div class="channel-info">
+            <div class="channel-avatar"></div>
+            <span class="channel-name">XMoe动漫</span>
           </div>
           <el-button 
             :type="videoInfo.isSubscribed ? 'default' : 'danger'" 
@@ -198,56 +195,56 @@ onMounted(() => {
       </div>
       
       <!-- 评论内容 -->
-      <div v-else class="py-3 flex flex-col items-center justify-center text-gray-500">
+      <div v-else class="comment-placeholder">
         <el-icon :size="32" class="mb-2"><el-icon-chat-dot-round /></el-icon>
         <p class="text-sm">评论功能开发中...</p>
       </div>
     </div>
     
     <!-- 剧集列表 -->
-    <div class="bg-white mt-2 p-4">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="font-medium">剧集</h3>
-        <div class="text-xs text-gray-500">
+    <div class="episodes-section">
+      <div class="episodes-header">
+        <h3 class="section-title">剧集</h3>
+        <div class="episode-count">
           共12集，更新至12集 <el-icon><el-icon-arrow-down /></el-icon>
         </div>
       </div>
       
-      <div class="grid grid-cols-4 gap-2">
+      <div class="episodes-grid">
         <div 
           v-for="episode in episodes" 
           :key="episode.id"
-          class="p-2 border rounded-md text-center relative"
-          :class="{'border-red-500 text-red-500': episode.id === 12, 'bg-gray-50': episode.watched}"
+          class="episode-item"
+          :class="{'current-episode': episode.id === 12, 'watched-episode': episode.watched}"
           @click="playVideo(episode.id)"
         >
-          <div class="text-xs">{{ episode.title }}</div>
+          <div class="episode-title">{{ episode.title }}</div>
           <div 
             v-if="episode.watched" 
-            class="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-300"
+            class="progress-bar"
           >
-            <div class="h-full bg-red-500 w-full"></div>
+            <div class="progress-fill"></div>
           </div>
         </div>
       </div>
     </div>
     
     <!-- 相关推荐 -->
-    <div class="bg-white mt-2 p-4">
-      <h3 class="font-medium mb-3">相关推荐</h3>
+    <div class="recommendations-section">
+      <h3 class="section-title">相关推荐</h3>
       
-      <div class="space-y-3">
+      <div class="recommendations-list">
         <div 
           v-for="video in relatedVideos" 
           :key="video.id"
-          class="flex"
+          class="recommendation-item"
         >
-          <div class="w-28 aspect-video rounded overflow-hidden">
-            <img :src="video.cover" class="w-full h-full object-cover" />
+          <div class="thumbnail-container">
+            <img :src="video.cover" class="thumbnail" />
           </div>
-          <div class="ml-3 flex-1">
-            <h4 class="text-sm font-medium line-clamp-2">{{ video.title }}</h4>
-            <div class="flex justify-between text-xs text-gray-500 mt-2">
+          <div class="recommendation-info">
+            <h4 class="recommendation-title">{{ video.title }}</h4>
+            <div class="recommendation-stats">
               <span>{{ video.views }}播放</span>
               <span>{{ video.episode }}</span>
             </div>
@@ -263,5 +260,305 @@ onMounted(() => {
   min-height: 100vh;
   background-color: #f5f5f5;
   padding-bottom: 1rem;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 视频播放区域 */
+.video-player-section {
+  position: relative;
+  width: 100%;
+}
+
+.video-player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: black;
+  position: relative;
+}
+
+.video-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.play-button-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-button {
+  width: 64px;
+  height: 64px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-button {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
+.back-button-inner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* 视频信息区域 */
+.video-info-section {
+  background-color: white;
+  padding: 16px;
+}
+
+.video-title {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.video-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* 操作栏 */
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.action-label {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* 标签页 */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  margin-top: 8px;
+}
+
+.tab {
+  margin-right: 16px;
+  padding: 8px 0;
+  position: relative;
+  cursor: pointer;
+}
+
+.active-tab {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #dc2626;
+}
+
+.tab-content {
+  padding: 12px 0;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tag {
+  padding: 4px 8px;
+  background-color: #f3f4f6;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.description {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.subscribe-section {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.channel-info {
+  display: flex;
+  align-items: center;
+}
+
+.channel-avatar {
+  width: 32px;
+  height: 32px;
+  background-color: #e5e7eb;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.channel-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.comment-placeholder {
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+/* 剧集列表 */
+.episodes-section {
+  background-color: white;
+  margin-top: 8px;
+  padding: 16px;
+}
+
+.episodes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-weight: 500;
+}
+
+.episode-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.episode-item {
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.current-episode {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.watched-episode {
+  background-color: #f9fafb;
+}
+
+.episode-title {
+  font-size: 12px;
+}
+
+.progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #d1d5db;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #dc2626;
+  width: 100%;
+}
+
+/* 推荐列表 */
+.recommendations-section {
+  background-color: white;
+  margin-top: 8px;
+  padding: 16px;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recommendation-item {
+  display: flex;
+}
+
+.thumbnail-container {
+  width: 112px;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recommendation-info {
+  margin-left: 12px;
+  flex: 1;
+}
+
+.recommendation-title {
+  font-size: 14px;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.recommendation-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
 }
 </style>
