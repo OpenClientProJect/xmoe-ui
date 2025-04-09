@@ -96,13 +96,13 @@ const goToSearch = () => {
         <img :src="userInfo.avatar" class="w-full h-full rounded-full" alt="avatar" />
       </div>
       
-      <div class="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-1" @click="goToSearch">
-        <el-icon class="text-gray-400 mr-2"><el-icon-search /></el-icon>
+      <div class="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-1.5" @click="goToSearch">
+        <img src="@/assets/icon/search.svg" class="w-4 h-4 mr-2" alt="search" />
         <span class="text-gray-400">搜索</span>
       </div>
       
       <el-icon class="ml-3 text-red-500"><el-icon-clock /></el-icon>
-      <el-icon class="ml-3"><el-icon-more /></el-icon>
+      <el-icon class="ml-3 text-gray-500"><el-icon-more-filled /></el-icon>
     </div>
     
     <!-- 分类导航栏 -->

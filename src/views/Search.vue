@@ -74,10 +74,10 @@ const clearSearchKeyword = () => {
   <div class="search-container">
     <!-- 搜索头部 -->
     <div class="sticky top-0 z-10 bg-white px-4 py-2 flex items-center border-b">
-      <el-icon class="mr-2" @click="goBack"><el-icon-arrow-left /></el-icon>
+      <el-icon class="mr-2 text-gray-600" @click="goBack"><el-icon-arrow-left /></el-icon>
       
       <div class="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-2 relative">
-        <el-icon class="text-gray-400 mr-2"><el-icon-search /></el-icon>
+        <img src="@/assets/icon/search.svg" class="w-4 h-4 mr-2" alt="search" />
         <input 
           v-model="searchKeyword"
           class="bg-transparent flex-1 focus:outline-none text-sm"
