@@ -112,11 +112,19 @@ const touchStart = (e) => {
   isDragging.value = true
   startX.value = getPositionX(e)
   carouselRef.value.style.transition = 'none'
+  // 阻止事件冒泡和默认行为，防止页面滚动
+  if (e.type.includes('touch')) {
+    e.preventDefault()
+  }
 }
 
 // 轮播图触摸移动
 const touchMove = (e) => {
   if (!isDragging.value || !carouselRef.value) return
+  // 阻止事件冒泡和默认行为，防止页面滚动
+  if (e.type.includes('touch')) {
+    e.preventDefault()
+  }
   const currentX = getPositionX(e)
   const diff = currentX - startX.value
   currentTranslate.value = prevTranslate.value + diff
@@ -281,8 +289,8 @@ const goToSearch = () => {
             @mousemove="touchMove"
             @mouseup="touchEnd"
             @mouseleave="touchEnd"
-            @touchstart="touchStart"
-            @touchmove="touchMove"
+            @touchstart.prevent="touchStart"
+            @touchmove.prevent="touchMove"
             @touchend="touchEnd"
             @touchcancel="touchEnd"
           >
