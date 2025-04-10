@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 // 导入样式
 import 'swiper/css'
 import 'swiper/css/pagination'
+// 导入番剧列表组件
+import AnimeList from '@/components/home/AnimeList.vue'
 
 const router = useRouter()
 const activeTab = ref('推荐')
@@ -15,6 +17,64 @@ const tabs = ['推荐', '番剧', '剧场版', '4K', '待添加']
 const userInfo = {
   avatar: 'https://avatars.githubusercontent.com/u/156616301?v=4'
 }
+
+// 添加番剧数据
+const animeList = [
+  {
+    id: 201,
+    title: '香格里拉边境',
+    episodes: '全25集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg'
+  },
+  {
+    id: 202,
+    title: '命运-奇异夜谈',
+    episodes: '全1集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg'
+  },
+  {
+    id: 203,
+    title: '光之美少女',
+    episodes: '全49集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg'
+  },
+  {
+    id: 204,
+    title: '最强王者，无所事事',
+    episodes: '更新至第02集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg'
+  },
+  {
+    id: 205,
+    title: '外星人沐沐',
+    episodes: '更新至第01集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg'
+  },
+  {
+    id: 206,
+    title: '圣女因太过诚实',
+    episodes: '更新至第02集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg'
+  },
+  {
+    id: 207,
+    title: '记忆缝线',
+    episodes: '更新至第02集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg'
+  },
+  {
+    id: 208,
+    title: '鹰峰同学请睁开衣领',
+    episodes: '更新至第02集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg'
+  },
+  {
+    id: 209, 
+    title: '直至魔女消逝',
+    episodes: '更新至第02集',
+    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg'
+  }
+]
 
 // 模拟追番日历数据
 const calendarAnimes = [
@@ -313,6 +373,11 @@ onUnmounted(() => {
 const goToSearch = () => {
   router.push('/search')
 }
+
+// 跳转到详情页
+const goToAnimeDetail = (id) => {
+  router.push(`/video-detail?id=${id}`)
+}
 </script>
 
 <template>
@@ -348,115 +413,129 @@ const goToSearch = () => {
 
     <!-- 内容区域 - 添加足够的上边距避免被顶部遮挡 -->
     <div class="page-content">
-      <!-- 自定义轮播图 -->
-      <div class="carousel-container px-4 py-3">
-        <div class="carousel-overflow">
-          <div 
-            ref="carouselRef"
-            class="carousel-track"
-            @mousedown="touchStart"
-            @mousemove="touchMove"
-            @mouseup="touchEnd"
-            @mouseleave="touchEnd"
-            @touchstart.prevent="touchStart"
-            @touchmove.prevent="touchMove"
-            @touchend="touchEnd"
-            @touchcancel="touchEnd"
-          >
+      <!-- 推荐标签页内容 -->
+      <div v-if="activeTab === '推荐'">
+        <!-- 自定义轮播图 -->
+        <div class="carousel-container px-4 py-3">
+          <div class="carousel-overflow">
             <div 
-              v-for="(item, index) in loopSwiperImages" 
-              :key="`${item.id}-${index}`"
-              class="carousel-slide"
+              ref="carouselRef"
+              class="carousel-track"
+              @mousedown="touchStart"
+              @mousemove="touchMove"
+              @mouseup="touchEnd"
+              @mouseleave="touchEnd"
+              @touchstart.prevent="touchStart"
+              @touchmove.prevent="touchMove"
+              @touchend="touchEnd"
+              @touchcancel="touchEnd"
             >
-              <img :src="item.url" class="carousel-image" alt="carousel" draggable="false" />
-              <div class="carousel-caption">
-                <p class="carousel-title">{{ item.title }}</p>
+              <div 
+                v-for="(item, index) in loopSwiperImages" 
+                :key="`${item.id}-${index}`"
+                class="carousel-slide"
+              >
+                <img :src="item.url" class="carousel-image" alt="carousel" draggable="false" />
+                <div class="carousel-caption">
+                  <p class="carousel-title">{{ item.title }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 指示器 -->
+          <div class="carousel-indicators">
+            <span 
+              v-for="(item, index) in swiperImages" 
+              :key="item.id"
+              class="indicator"
+              :class="{ 'active': index === currentRealIndex }"
+              @click="slideTo(index)"
+            ></span>
+          </div>
+        </div>
+
+        <!-- 快捷分类 -->
+        <div class="category-buttons mx-4 my-4">
+          <div class="category-btn category-btn-blue">
+            <span>全部</span>
+          </div>
+          <div class="category-btn category-btn-pink">
+            <span>榜单</span>
+          </div>
+          <div class="category-btn category-btn-purple">
+            <span>海贼王</span>
+          </div>
+          <div class="category-btn category-btn-indigo">
+            <span>追番</span>
+          </div>
+        </div>
+
+        <!-- 追番日历 -->
+        <div class="px-4 mt-4">
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center">
+              <el-icon class="mr-1"><el-icon-calendar /></el-icon>
+              <span class="font-medium">追番日历</span>
+            </div>
+            <span class="text-gray-400 text-sm">更多</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- 左侧日历 -->
+            <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/333333/FFFFFF/背景');">
+              <div v-for="anime in calendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
+                <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
+                <div class="ml-2 text-white">
+                  <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
+                  <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 右侧日历 -->
+            <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/666666/FFFFFF/背景');">
+              <div v-for="anime in rightCalendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
+                <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
+                <div class="ml-2 text-white">
+                  <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
+                  <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        
-        <!-- 指示器 -->
-        <div class="carousel-indicators">
-          <span 
-            v-for="(item, index) in swiperImages" 
-            :key="item.id"
-            class="indicator"
-            :class="{ 'active': index === currentRealIndex }"
-            @click="slideTo(index)"
-          ></span>
-        </div>
-      </div>
 
-      <!-- 快捷分类 -->
-      <div class="category-buttons mx-4 my-4">
-        <div class="category-btn category-btn-blue">
-          <span>全部</span>
-        </div>
-        <div class="category-btn category-btn-pink">
-          <span>榜单</span>
-        </div>
-        <div class="category-btn category-btn-purple">
-          <span>海贼王</span>
-        </div>
-        <div class="category-btn category-btn-indigo">
-          <span>追番</span>
-        </div>
-      </div>
-
-      <!-- 追番日历 -->
-      <div class="px-4 mt-4">
-        <div class="flex justify-between items-center mb-2">
-          <div class="flex items-center">
-            <el-icon class="mr-1"><el-icon-calendar /></el-icon>
-            <span class="font-medium">追番日历</span>
-          </div>
-          <span class="text-gray-400 text-sm">更多</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <!-- 左侧日历 -->
-          <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/333333/FFFFFF/背景');">
-            <div v-for="anime in calendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-              <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
-              <div class="ml-2 text-white">
-                <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
-                <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
-              </div>
+        <!-- 四月新番 -->
+        <div class="px-4 mt-5 pb-16">
+          <div class="flex justify-between items-center mb-3">
+            <div class="flex items-center">
+              <span class="text-amber-400 mr-1">🔥</span>
+              <span class="font-medium">四月新番</span>
             </div>
+            <span class="text-green-500 text-sm">颜北女角太多了！</span>
           </div>
 
-          <!-- 右侧日历 -->
-          <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/666666/FFFFFF/背景');">
-            <div v-for="anime in rightCalendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-              <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
-              <div class="ml-2 text-white">
-                <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
-                <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div v-for="anime in newAnimes" :key="anime.id" class="rounded-lg overflow-hidden">
+              <div class="relative">
+                <img :src="anime.cover" class="w-full h-auto" />
+                <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">{{ anime.episode }}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 四月新番 -->
-      <div class="px-4 mt-5 pb-16">
-        <div class="flex justify-between items-center mb-3">
-          <div class="flex items-center">
-            <span class="text-amber-400 mr-1">🔥</span>
-            <span class="font-medium">四月新番</span>
-          </div>
-          <span class="text-green-500 text-sm">颜北女角太多了！</span>
-        </div>
+      <!-- 番剧标签页内容 - 使用组件 -->
+      <AnimeList 
+        v-else-if="activeTab === '番剧'"
+        :anime-list="animeList"
+      />
 
-        <div class="grid grid-cols-2 gap-3">
-          <div v-for="anime in newAnimes" :key="anime.id" class="rounded-lg overflow-hidden">
-            <div class="relative">
-              <img :src="anime.cover" class="w-full h-auto" />
-              <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">{{ anime.episode }}</span>
-            </div>
-          </div>
-        </div>
+      <!-- 其他标签页内容 -->
+      <div v-else class="empty-content">
+        <div class="empty-text">{{ activeTab }}内容开发中...</div>
       </div>
     </div>
   </div>
@@ -699,5 +778,18 @@ const goToSearch = () => {
 
 .category-btn-indigo {
   background: linear-gradient(to right, #3a7bd5, #3a6073);
+}
+
+/* 空内容提示 */
+.empty-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+}
+
+.empty-text {
+  color: #999;
+  font-size: 16px;
 }
 </style> 

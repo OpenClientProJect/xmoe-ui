@@ -4,7 +4,7 @@ import { ref } from 'vue'
 // 用户信息
 const userInfo = {
   username: '小萌新',
-  avatar: 'https://placeholder.pics/svg/100x100/FFCAD4/555555/头像',
+  avatar: 'https://avatars.githubusercontent.com/u/156616301?v=4',
   level: 5,
   vipLevel: 1,
   coins: 120
@@ -61,27 +61,6 @@ const settingsItems = [
         </div>
       </div>
     </div>
-    
-    <!-- 数据统计 -->
-    <div class="bg-white p-4 grid grid-cols-4 border-b">
-      <div class="flex flex-col items-center">
-        <div class="text-lg font-medium">23</div>
-        <div class="text-xs text-gray-500 mt-1">追番</div>
-      </div>
-      <div class="flex flex-col items-center">
-        <div class="text-lg font-medium">168</div>
-        <div class="text-xs text-gray-500 mt-1">追剧</div>
-      </div>
-      <div class="flex flex-col items-center">
-        <div class="text-lg font-medium">45</div>
-        <div class="text-xs text-gray-500 mt-1">收藏</div>
-      </div>
-      <div class="flex flex-col items-center">
-        <div class="text-lg font-medium">732</div>
-        <div class="text-xs text-gray-500 mt-1">播放</div>
-      </div>
-    </div>
-    
     <!-- 功能菜单 -->
     <div class="bg-white mt-3">
       <div class="p-3 text-base font-medium border-b">我的功能</div>
