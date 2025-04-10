@@ -1,17 +1,15 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 // 导入样式
 import 'swiper/css'
 import 'swiper/css/pagination'
 
 const router = useRouter()
 const activeTab = ref('推荐')
-const swiperInstance = ref(null)
 
 // 轮播图状态
-const swiperCurrentIndex = ref(0)
+const swiperCurrentIndex = ref(1)
 
 const tabs = ['推荐', '番剧', '剧场版', '4K', '待添加']
 const userInfo = {
@@ -83,12 +81,12 @@ const swiperImages = [
   {
     id: 100,
     url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg',
-    title: '快藏起来！玛琪娜同学！'
+    title: '第一张轮播图'
   },
   {
     id: 101,
     url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg',
-    title: '庙屋少女'
+    title: '第二张轮播图'
   },
   {
     id: 102,
@@ -96,16 +94,26 @@ const swiperImages = [
     title: '第三张轮播图'
   },
   {
-    id: 101,
+    id: 103,
     url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg',
-    title: '庙屋少女'
+    title: '第四张轮播图'
   },
   {
-    id: 102,
-    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg',
-    title: '第三张轮播图'
+    id: 104,
+    url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg',
+    title: '第五张轮播图'
   },
 ]
+
+// 创建一个包含首尾额外项的轮播图数据，用于无缝循环
+const loopSwiperImages = computed(() => {
+  // 在数组开始添加最后一项，在数组结束添加第一项
+  return [
+    { ...swiperImages[swiperImages.length - 1] },
+    ...swiperImages,
+    { ...swiperImages[0] }
+  ]
+})
 
 // 轮播图相关
 const carouselRef = ref(null)
@@ -114,6 +122,7 @@ const isDragging = ref(false)
 const startX = ref(0)
 const currentTranslate = ref(0)
 const prevTranslate = ref(0)
+const isTransitioning = ref(false)
 
 // 轮播图触摸开始
 const touchStart = (e) => {
@@ -152,42 +161,10 @@ const touchEnd = () => {
   // 根据拖动距离决定是否切换幻灯片
   if (currentTranslate.value < prevTranslate.value - threshold) {
     // 向左拖动，显示下一张
-    swiperCurrentIndex.value = Math.min(swiperCurrentIndex.value + 1, swiperImages.length - 1)
-    
-    // 如果已经是最后一张，则循环到第一张
-    if (swiperCurrentIndex.value === swiperImages.length - 1) {
-      setTimeout(() => {
-        carouselRef.value.style.transition = 'none'
-        swiperCurrentIndex.value = 0
-        prevTranslate.value = -swiperCurrentIndex.value * slideWidth
-        currentTranslate.value = prevTranslate.value
-        setCarouselPosition()
-        
-        // 添加一个小延迟后恢复过渡效果
-        setTimeout(() => {
-          carouselRef.value.style.transition = 'transform 0.3s ease-out'
-        }, 50)
-      }, 300)
-    }
+    swiperCurrentIndex.value += 1
   } else if (currentTranslate.value > prevTranslate.value + threshold) {
     // 向右拖动，显示上一张
-    swiperCurrentIndex.value = Math.max(swiperCurrentIndex.value - 1, 0)
-    
-    // 如果已经是第一张，则循环到最后一张
-    if (swiperCurrentIndex.value === 0) {
-      setTimeout(() => {
-        carouselRef.value.style.transition = 'none'
-        swiperCurrentIndex.value = swiperImages.length - 1
-        prevTranslate.value = -swiperCurrentIndex.value * slideWidth
-        currentTranslate.value = prevTranslate.value
-        setCarouselPosition()
-        
-        // 添加一个小延迟后恢复过渡效果
-        setTimeout(() => {
-          carouselRef.value.style.transition = 'transform 0.3s ease-out'
-        }, 50)
-      }, 300)
-    }
+    swiperCurrentIndex.value -= 1
   }
   
   // 更新位置
@@ -197,6 +174,32 @@ const touchEnd = () => {
   // 添加过渡效果并更新位置
   carouselRef.value.style.transition = 'transform 0.3s ease-out'
   setCarouselPosition()
+  
+  // 处理循环逻辑
+  isTransitioning.value = true
+  
+  // 等待过渡结束后检查是否需要重置位置
+  setTimeout(() => {
+    isTransitioning.value = false
+    
+    // 如果滑动到了复制的第一张（也就是最后一个位置）
+    if (swiperCurrentIndex.value >= loopSwiperImages.value.length - 1) {
+      carouselRef.value.style.transition = 'none'
+      swiperCurrentIndex.value = 1
+      prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+      currentTranslate.value = prevTranslate.value
+      setCarouselPosition()
+    }
+    
+    // 如果滑动到了复制的最后一张（也就是第一个位置）
+    if (swiperCurrentIndex.value <= 0) {
+      carouselRef.value.style.transition = 'none'
+      swiperCurrentIndex.value = loopSwiperImages.value.length - 2
+      prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+      currentTranslate.value = prevTranslate.value
+      setCarouselPosition()
+    }
+  }, 300)
   
   // 恢复自动播放
   startAutoplay()
@@ -216,12 +219,14 @@ const setCarouselPosition = () => {
 
 // 跳转到指定幻灯片
 const slideTo = (index) => {
-  if (!carouselRef.value) return
+  if (!carouselRef.value || isTransitioning.value) return
   stopAutoplay()
-  swiperCurrentIndex.value = index
+  
+  // 将实际索引转换为循环数组索引（加1，因为第0项是克隆的最后一项）
+  swiperCurrentIndex.value = index + 1
   
   const slideWidth = carouselRef.value.clientWidth
-  prevTranslate.value = -index * slideWidth
+  prevTranslate.value = -swiperCurrentIndex.value * slideWidth
   currentTranslate.value = prevTranslate.value
   
   carouselRef.value.style.transition = 'transform 0.3s ease-out'
@@ -234,21 +239,32 @@ const slideTo = (index) => {
 const startAutoplay = () => {
   stopAutoplay()
   autoplayTimer.value = setInterval(() => {
-    if (swiperCurrentIndex.value >= swiperImages.length - 1) {
-      // 当到达最后一张时，立即切换回第一张
-      swiperCurrentIndex.value = 0
-    } else {
-      swiperCurrentIndex.value++
-    }
+    if (!carouselRef.value || isTransitioning.value) return
     
-    if (carouselRef.value) {
-      const slideWidth = carouselRef.value.clientWidth
-      prevTranslate.value = -swiperCurrentIndex.value * slideWidth
-      currentTranslate.value = prevTranslate.value
+    swiperCurrentIndex.value += 1
+    
+    const slideWidth = carouselRef.value.clientWidth
+    prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+    currentTranslate.value = prevTranslate.value
+    
+    carouselRef.value.style.transition = 'transform 0.3s ease-out'
+    setCarouselPosition()
+    
+    // 处理循环逻辑
+    isTransitioning.value = true
+    
+    // 等待过渡结束后检查是否需要重置位置
+    setTimeout(() => {
+      isTransitioning.value = false
       
-      carouselRef.value.style.transition = 'transform 0.3s ease-out'
-      setCarouselPosition()
-    }
+      if (swiperCurrentIndex.value >= loopSwiperImages.value.length - 1) {
+        carouselRef.value.style.transition = 'none'
+        swiperCurrentIndex.value = 1
+        prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+        currentTranslate.value = prevTranslate.value
+        setCarouselPosition()
+      }
+    }, 300)
   }, 5000)
 }
 
@@ -270,6 +286,19 @@ const handleResize = () => {
   
   setCarouselPosition()
 }
+
+// 获取当前展示的幻灯片真实索引（用于指示器展示）
+const currentRealIndex = computed(() => {
+  // 索引需要减1，因为我们在数组前面添加了一个元素
+  let index = swiperCurrentIndex.value - 1
+  // 处理边界情况
+  if (index < 0) {
+    index = swiperImages.length - 1
+  } else if (index >= swiperImages.length) {
+    index = 0
+  }
+  return index
+})
 
 onMounted(() => {
   startAutoplay()
@@ -335,8 +364,8 @@ const goToSearch = () => {
             @touchcancel="touchEnd"
           >
             <div 
-              v-for="(item, index) in swiperImages" 
-              :key="item.id"
+              v-for="(item, index) in loopSwiperImages" 
+              :key="`${item.id}-${index}`"
               class="carousel-slide"
             >
               <img :src="item.url" class="carousel-image" alt="carousel" draggable="false" />
@@ -353,7 +382,7 @@ const goToSearch = () => {
             v-for="(item, index) in swiperImages" 
             :key="item.id"
             class="indicator"
-            :class="{ 'active': index === swiperCurrentIndex }"
+            :class="{ 'active': index === currentRealIndex }"
             @click="slideTo(index)"
           ></span>
         </div>
@@ -451,11 +480,6 @@ const goToSearch = () => {
   z-index: 100;
   background-color: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  /* 硬件加速，减少抖动 */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
-  backface-visibility: hidden;
 }
 
 /* 搜索栏样式 */
@@ -502,14 +526,6 @@ const goToSearch = () => {
 
 .action-icon {
   margin-left: 12px;
-  color: white;
-}
-
-.history-icon {
-  color: white;
-}
-
-.more-icon {
   color: white;
 }
 
@@ -573,7 +589,7 @@ const goToSearch = () => {
   width: 100%;
   height: 180px;
   will-change: transform;
-  transform: translateX(0);
+  transform: translateX(-100%); /* 初始显示真实的第一张图片，也就是loopSwiperImages中的第二个元素 */
 }
 
 .carousel-slide {
