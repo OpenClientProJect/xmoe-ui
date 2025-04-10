@@ -1,14 +1,23 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Navigation, Pagination, Autoplay } from 'swiper/modules'
+// 导入样式
+import 'swiper/css'
+import 'swiper/css/pagination'
 
 const router = useRouter()
 const activeTab = ref('推荐')
+const swiperInstance = ref(null)
+
+// 轮播图状态
+const swiperCurrentIndex = ref(0)
 
 const tabs = ['推荐', '番剧', '剧场版', '4K', '待添加']
 const userInfo = {
   avatar: 'https://avatars.githubusercontent.com/u/156616301?v=4'
 }
+
 // 模拟追番日历数据
 const calendarAnimes = [
   {
@@ -80,8 +89,146 @@ const swiperImages = [
     id: 101,
     url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg',
     title: '庙屋少女'
+  },
+  {
+    id: 102,
+    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg', 
+    title: '第三张轮播图'
   }
 ]
+
+// 轮播图相关
+const carouselRef = ref(null)
+const autoplayTimer = ref(null)
+const isDragging = ref(false)
+const startX = ref(0)
+const currentTranslate = ref(0)
+const prevTranslate = ref(0)
+
+// 轮播图触摸开始
+const touchStart = (e) => {
+  if (!carouselRef.value) return
+  stopAutoplay()
+  isDragging.value = true
+  startX.value = getPositionX(e)
+  carouselRef.value.style.transition = 'none'
+}
+
+// 轮播图触摸移动
+const touchMove = (e) => {
+  if (!isDragging.value || !carouselRef.value) return
+  const currentX = getPositionX(e)
+  const diff = currentX - startX.value
+  currentTranslate.value = prevTranslate.value + diff
+  setCarouselPosition()
+}
+
+// 轮播图触摸结束
+const touchEnd = () => {
+  if (!isDragging.value || !carouselRef.value) return
+  isDragging.value = false
+  
+  const threshold = window.innerWidth * 0.2 // 20%的屏幕宽度作为阈值
+  const slideWidth = carouselRef.value.clientWidth
+  
+  // 根据拖动距离决定是否切换幻灯片
+  if (currentTranslate.value < prevTranslate.value - threshold) {
+    // 向左拖动，显示下一张
+    swiperCurrentIndex.value = Math.min(swiperCurrentIndex.value + 1, swiperImages.length - 1)
+  } else if (currentTranslate.value > prevTranslate.value + threshold) {
+    // 向右拖动，显示上一张
+    swiperCurrentIndex.value = Math.max(swiperCurrentIndex.value - 1, 0)
+  }
+  
+  // 更新位置
+  prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+  currentTranslate.value = prevTranslate.value
+  
+  // 添加过渡效果并更新位置
+  carouselRef.value.style.transition = 'transform 0.3s ease-out'
+  setCarouselPosition()
+  
+  // 恢复自动播放
+  startAutoplay()
+}
+
+// 获取水平位置
+const getPositionX = (e) => {
+  return e.type.includes('mouse') ? e.pageX : e.touches[0].pageX
+}
+
+// 设置轮播图位置
+const setCarouselPosition = () => {
+  if (carouselRef.value) {
+    carouselRef.value.style.transform = `translateX(${currentTranslate.value}px)`
+  }
+}
+
+// 跳转到指定幻灯片
+const slideTo = (index) => {
+  if (!carouselRef.value) return
+  stopAutoplay()
+  swiperCurrentIndex.value = index
+  
+  const slideWidth = carouselRef.value.clientWidth
+  prevTranslate.value = -index * slideWidth
+  currentTranslate.value = prevTranslate.value
+  
+  carouselRef.value.style.transition = 'transform 0.3s ease-out'
+  setCarouselPosition()
+  
+  startAutoplay()
+}
+
+// 自动轮播
+const startAutoplay = () => {
+  stopAutoplay()
+  autoplayTimer.value = setInterval(() => {
+    if (swiperCurrentIndex.value >= swiperImages.length - 1) {
+      swiperCurrentIndex.value = 0
+    } else {
+      swiperCurrentIndex.value++
+    }
+    
+    if (carouselRef.value) {
+      const slideWidth = carouselRef.value.clientWidth
+      prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+      currentTranslate.value = prevTranslate.value
+      
+      carouselRef.value.style.transition = 'transform 0.3s ease-out'
+      setCarouselPosition()
+    }
+  }, 5000)
+}
+
+// 停止自动轮播
+const stopAutoplay = () => {
+  if (autoplayTimer.value) {
+    clearInterval(autoplayTimer.value)
+    autoplayTimer.value = null
+  }
+}
+
+// 窗口大小变化时重置轮播图位置
+const handleResize = () => {
+  if (!carouselRef.value) return
+  
+  const slideWidth = carouselRef.value.clientWidth
+  prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+  currentTranslate.value = prevTranslate.value
+  
+  setCarouselPosition()
+}
+
+onMounted(() => {
+  startAutoplay()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  stopAutoplay()
+  window.removeEventListener('resize', handleResize)
+})
 
 const goToSearch = () => {
   router.push('/search')
@@ -124,31 +271,44 @@ const goToSearch = () => {
 
     <!-- 内容区域 - 添加足够的上边距避免被顶部遮挡 -->
     <div class="page-content">
-      <!-- 轮播图 -->
-      <div class="px-4 py-3">
-        <el-carousel
-          height="180px"
-          indicator-position="none"
-          class="carousel-container"
-          :autoplay="true"
-          :interval="5000"
-          :loop="true"
-          arrow="never"
-          direction="horizontal"
-        >
-          <el-carousel-item 
-            v-for="item in swiperImages" 
-            :key="item.id"
-            class="carousel-item"
+      <!-- 自定义轮播图 -->
+      <div class="carousel-container px-4 py-3">
+        <div class="carousel-overflow">
+          <div 
+            ref="carouselRef"
+            class="carousel-track"
+            @mousedown="touchStart"
+            @mousemove="touchMove"
+            @mouseup="touchEnd"
+            @mouseleave="touchEnd"
+            @touchstart="touchStart"
+            @touchmove="touchMove"
+            @touchend="touchEnd"
+            @touchcancel="touchEnd"
           >
-            <div class="carousel-content">
-              <img :src="item.url" class="carousel-image" />
+            <div 
+              v-for="(item, index) in swiperImages" 
+              :key="item.id"
+              class="carousel-slide"
+            >
+              <img :src="item.url" class="carousel-image" alt="carousel" draggable="false" />
               <div class="carousel-caption">
                 <p class="carousel-title">{{ item.title }}</p>
               </div>
             </div>
-          </el-carousel-item>
-        </el-carousel>
+          </div>
+        </div>
+        
+        <!-- 指示器 -->
+        <div class="carousel-indicators">
+          <span 
+            v-for="(item, index) in swiperImages" 
+            :key="item.id"
+            class="indicator"
+            :class="{ 'active': index === swiperCurrentIndex }"
+            @click="slideTo(index)"
+          ></span>
+        </div>
       </div>
 
       <!-- 快捷分类 -->
@@ -349,41 +509,88 @@ const goToSearch = () => {
   width: 100%;
 }
 
-/* 轮播图样式 */
+/* 自定义轮播图样式 */
 .carousel-container {
-  border-radius: 8px;
-  overflow: hidden;
-  touch-action: pan-y;
-}
-
-.carousel-item {
-  height: 100%;
-}
-
-.carousel-content {
   position: relative;
-  height: 100%;
   width: 100%;
+  padding-bottom: 24px;
+}
+
+.carousel-overflow {
+  overflow: hidden;
+  width: 100%;
+  border-radius: 12px;
+  position: relative;
+}
+
+.carousel-track {
+  display: flex;
+  width: 100%;
+  height: 180px;
+  will-change: transform;
+  transform: translateX(0);
+}
+
+.carousel-track:active {
+  /* 移除cursor: grabbing; */
+}
+
+.carousel-slide {
+  flex: 0 0 100%;
+  min-width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* 添加指针效果，表示可点击 */
+  cursor: pointer;
 }
 
 .carousel-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .carousel-caption {
   position: absolute;
   bottom: 0;
   left: 0;
-  padding: 16px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
   width: 100%;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
 }
 
 .carousel-title {
   color: white;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.carousel-indicators {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  gap: 6px;
+}
+
+.indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.indicator.active {
+  width: 18px;
+  border-radius: 3px;
+  background-color: #ff6b8b;
 }
 
 /* 快捷分类按钮 */

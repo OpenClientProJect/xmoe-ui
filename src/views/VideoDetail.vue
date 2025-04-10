@@ -93,74 +93,57 @@ onMounted(() => {
 
 <template>
   <div class="video-detail-container">
-    <!-- 视频播放区域 -->
-    <div class="video-player-section">
+    <!-- 视频播放器区域 - 修改为固定定位 -->
+    <div class="player-container">
       <div class="video-player">
-        <img :src="videoInfo.cover" class="video-cover" alt="video cover" />
-        <div class="play-button-overlay">
-          <div class="play-button">
-            <el-icon :size="32" class="text-white"><el-icon-video-play /></el-icon>
-          </div>
+        <img :src="videoInfo.cover" class="video-cover" />
+        <div class="play-button">
+          <el-icon size="32"><VideoPlay /></el-icon>
         </div>
       </div>
-      
-      <!-- 返回按钮 -->
-      <div class="back-button">
-        <div class="back-button-inner" @click="goBack">
-          <el-icon class="text-white"><el-icon-arrow-left /></el-icon>
+
+      <!-- 视频信息 -->
+      <div class="video-info">
+        <h1 class="video-title">{{ videoInfo.title }}</h1>
+        <div class="video-stats">
+          <span class="stat-item">{{ videoInfo.views }}次观看</span>
+          <span class="stat-item">{{ videoInfo.releaseDate }}</span>
+        </div>
+      </div>
+
+      <!-- 操作栏 -->
+      <div class="action-bar">
+        <div class="action-btn">
+          <el-icon size="22"><ThumbUp /></el-icon>
+          <span class="action-text">{{ videoInfo.likes }}</span>
+        </div>
+        <div class="action-btn">
+          <el-icon size="22"><StarFilled /></el-icon>
+          <span class="action-text">收藏</span>
+        </div>
+        <div class="action-btn">
+          <el-icon size="22"><Collection /></el-icon>
+          <span class="action-text">追番</span>
+        </div>
+        <div class="action-btn">
+          <el-icon size="22"><Share /></el-icon>
+          <span class="action-text">分享</span>
         </div>
       </div>
     </div>
-    
-    <!-- 视频信息 -->
-    <div class="video-info-section">
-      <h1 class="video-title">{{ videoInfo.title }} {{ videoInfo.episode }}</h1>
-      
-      <div class="video-stats">
-        <div>{{ videoInfo.views }}播放 · {{ videoInfo.releaseDate }}</div>
-        <div>{{ videoInfo.likes }}点赞</div>
-      </div>
-      
-      <!-- 操作栏 -->
-      <div class="action-bar">
-        <div class="action-item" @click="toggleLike">
-          <el-icon :size="24" :class="{'text-red-500': videoInfo.isLiked}">
-            <el-icon-thumb v-if="!videoInfo.isLiked" />
-            <el-icon-thumb v-else />
-          </el-icon>
-          <span class="action-label">点赞</span>
-        </div>
-        
-        <div class="action-item" @click="toggleCollect">
-          <el-icon :size="24" :class="{'text-yellow-500': videoInfo.isCollected}">
-            <el-icon-star v-if="!videoInfo.isCollected" />
-            <el-icon-star-filled v-else />
-          </el-icon>
-          <span class="action-label">收藏</span>
-        </div>
-        
-        <div class="action-item">
-          <el-icon :size="24"><el-icon-share /></el-icon>
-          <span class="action-label">分享</span>
-        </div>
-        
-        <div class="action-item">
-          <el-icon :size="24"><el-icon-download /></el-icon>
-          <span class="action-label">缓存</span>
-        </div>
-      </div>
-      
+
+    <!-- 内容区域 - 添加足够的上边距 -->
+    <div class="content-container">
       <!-- 标签页 -->
       <div class="tabs">
         <div 
           v-for="tab in tabs" 
-          :key="tab" 
+          :key="tab.name"
           class="tab"
-          :class="{'active-tab': activeTab === tab}"
-          @click="activeTab = tab"
+          :class="{'active-tab': activeTab === tab.name}"
+          @click="setActiveTab(tab.name)"
         >
-          {{ tab }}
-          <div v-if="activeTab === tab" class="tab-indicator"></div>
+          {{ tab.name }}
         </div>
       </div>
       
@@ -259,22 +242,24 @@ onMounted(() => {
 .video-detail-container {
   min-height: 100vh;
   background-color: #f5f5f5;
-  padding-bottom: 1rem;
-  position: relative;
-  overflow-x: hidden;
+  padding-bottom: 16px;
 }
 
-/* 视频播放区域 */
-.video-player-section {
-  position: relative;
+/* 视频播放器区域 - 固定到顶部 */
+.player-container {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  background-color: white;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .video-player {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background-color: black;
-  position: relative;
 }
 
 .video-cover {
@@ -283,80 +268,63 @@ onMounted(() => {
   object-fit: cover;
 }
 
-.play-button-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .play-button {
-  width: 64px;
-  height: 64px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.back-button {
   position: absolute;
-  top: 12px;
-  left: 12px;
-}
-
-.back-button-inner {
-  width: 32px;
-  height: 32px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 16px;
   border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
 }
 
-/* 视频信息区域 */
-.video-info-section {
-  background-color: white;
-  padding: 16px;
+.video-info {
+  padding: 12px 16px;
 }
 
 .video-title {
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 600;
+  margin: 0;
 }
 
 .video-stats {
   display: flex;
-  justify-content: space-between;
   margin-top: 8px;
-  font-size: 14px;
-  color: #666;
+  color: #6b7280;
+  font-size: 13px;
 }
 
-/* 操作栏 */
+.stat-item {
+  margin-right: 12px;
+}
+
 .action-bar {
   display: flex;
-  justify-content: space-between;
-  margin-top: 16px;
-  padding: 12px 0;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
+  justify-content: space-around;
+  padding: 8px 0;
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.action-item {
+.action-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  cursor: pointer;
 }
 
-.action-label {
+.action-text {
   font-size: 12px;
   margin-top: 4px;
+  color: #374151;
+}
+
+/* 内容区域 - 为固定头部添加足够的上边距 */
+.content-container {
+  padding-top: calc(56.25vw + 124px); /* 视频播放器高度(16:9比例) + 信息区和操作栏高度 */
+  background-color: white;
 }
 
 /* 标签页 */
