@@ -143,9 +143,41 @@ const touchEnd = () => {
   if (currentTranslate.value < prevTranslate.value - threshold) {
     // 向左拖动，显示下一张
     swiperCurrentIndex.value = Math.min(swiperCurrentIndex.value + 1, swiperImages.length - 1)
+    
+    // 如果已经是最后一张，则循环到第一张
+    if (swiperCurrentIndex.value === swiperImages.length - 1) {
+      setTimeout(() => {
+        carouselRef.value.style.transition = 'none'
+        swiperCurrentIndex.value = 0
+        prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+        currentTranslate.value = prevTranslate.value
+        setCarouselPosition()
+        
+        // 添加一个小延迟后恢复过渡效果
+        setTimeout(() => {
+          carouselRef.value.style.transition = 'transform 0.3s ease-out'
+        }, 50)
+      }, 300)
+    }
   } else if (currentTranslate.value > prevTranslate.value + threshold) {
     // 向右拖动，显示上一张
     swiperCurrentIndex.value = Math.max(swiperCurrentIndex.value - 1, 0)
+    
+    // 如果已经是第一张，则循环到最后一张
+    if (swiperCurrentIndex.value === 0) {
+      setTimeout(() => {
+        carouselRef.value.style.transition = 'none'
+        swiperCurrentIndex.value = swiperImages.length - 1
+        prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+        currentTranslate.value = prevTranslate.value
+        setCarouselPosition()
+        
+        // 添加一个小延迟后恢复过渡效果
+        setTimeout(() => {
+          carouselRef.value.style.transition = 'transform 0.3s ease-out'
+        }, 50)
+      }, 300)
+    }
   }
   
   // 更新位置
@@ -193,6 +225,7 @@ const startAutoplay = () => {
   stopAutoplay()
   autoplayTimer.value = setInterval(() => {
     if (swiperCurrentIndex.value >= swiperImages.length - 1) {
+      // 当到达最后一张时，立即切换回第一张
       swiperCurrentIndex.value = 0
     } else {
       swiperCurrentIndex.value++
