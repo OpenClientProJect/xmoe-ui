@@ -292,8 +292,6 @@ const goToSearch = () => {
         </div>
         
         <img src="@/assets/icon/Recording.svg" class="action-icon recording-icon" alt="recording" />
-        <el-icon class="action-icon history-icon"><el-icon-clock /></el-icon>
-        <el-icon class="action-icon more-icon"><el-icon-more-filled /></el-icon>
       </div>
       
       <!-- 分类导航栏 -->
@@ -570,10 +568,6 @@ const goToSearch = () => {
   height: 180px;
   will-change: transform;
   transform: translateX(0);
-}
-
-.carousel-track:active {
-  /* 移除cursor: grabbing; */
 }
 
 .carousel-slide {
