@@ -74,11 +74,10 @@ const clearSearchKeyword = () => {
   <div class="search-container">
     <!-- 搜索头部 -->
     <div class="search-header">
-      <el-icon class="back-icon" @click="goBack"><el-icon-arrow-left /></el-icon>
+      <el-icon class="back-icon" @click="goBack"><img src="@/assets/icon/return.svg"></el-icon>
       
       <div class="search-input-container">
-        <img src="@/assets/icon/search.svg" class="search-icon" alt="search" />
-        <input 
+        <input
           v-model="searchKeyword"
           class="search-input"
           placeholder="搜索" 
@@ -88,8 +87,7 @@ const clearSearchKeyword = () => {
           <el-icon-close-bold />
         </el-icon>
       </div>
-      
-      <el-button class="search-button" type="danger" plain size="small" @click="handleSearch">搜索</el-button>
+      <div @click="handleSearch">搜索</div>
     </div>
     
     <!-- 搜索内容区域 -->

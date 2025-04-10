@@ -94,7 +94,17 @@ const swiperImages = [
     id: 102,
     url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg', 
     title: '第三张轮播图'
-  }
+  },
+  {
+    id: 101,
+    url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg',
+    title: '庙屋少女'
+  },
+  {
+    id: 102,
+    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg',
+    title: '第三张轮播图'
+  },
 ]
 
 // 轮播图相关
@@ -290,7 +300,6 @@ const goToSearch = () => {
           <img src="@/assets/icon/search.svg" class="search-icon" alt="search" />
           <span class="placeholder-text">搜索</span>
         </div>
-        
         <img src="@/assets/icon/Recording.svg" class="action-icon recording-icon" alt="recording" />
       </div>
       
