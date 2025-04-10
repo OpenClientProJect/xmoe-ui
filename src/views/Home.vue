@@ -462,8 +462,9 @@ const goToSearch = () => {
 .search-bar {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
-  background-image: linear-gradient(to right, #ff6b8b, #ff8e72);
+  padding: 10px 16px;
+  /* 粉色到白色的上下渐变 */
+  background-image: linear-gradient(to bottom, rgba(255, 107, 139, 0.48), rgba(255, 255, 255, 1));
 }
 
 .avatar-container {
@@ -529,10 +530,6 @@ const goToSearch = () => {
   padding: 0;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
-}
-
-.tab-container::-webkit-scrollbar {
-  display: none; /* Chrome, Safari */
 }
 
 .tab-item {
