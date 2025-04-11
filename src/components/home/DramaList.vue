@@ -34,7 +34,7 @@ const getDramaList = async () => {
 
 // 跳转到详情页
 const goToAnimeDetail = (id) => {
-  router.push(`/video-detail?id=${id}`)
+  router.push(`/video/${id}`)
 }
 
 //挂载函数
