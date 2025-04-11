@@ -1,14 +1,13 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import {onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {getDramaListService} from "@/api/Drama.js";
 
 const router = useRouter()
-const props = defineProps({
-  animeList: {
-    type: Array,
-    default: () => []
-  }
-})
+
+// 番剧列表
+const DramaList = ref([
+])
 
 // 筛选分类
 const animeFilters = [
@@ -26,10 +25,22 @@ const changeFilter = (filter) => {
   activeFilter.value = filter
 }
 
+//获取番剧列表
+const getDramaList = async () => {
+  const data = await getDramaListService()
+  DramaList.value = data.data
+}
+
+
 // 跳转到详情页
 const goToAnimeDetail = (id) => {
   router.push(`/video-detail?id=${id}`)
 }
+
+//挂载函数
+onMounted(() => {
+  getDramaList()
+})
 </script>
 
 <template>
@@ -51,16 +62,16 @@ const goToAnimeDetail = (id) => {
     <!-- 番剧列表 -->
     <div class="anime-list">
       <div 
-        v-for="anime in animeList" 
-        :key="anime.id"
+        v-for="anime in DramaList"
+        :key="anime.vod_id"
         class="anime-card"
-        @click="goToAnimeDetail(anime.id)"
+        @click="goToAnimeDetail(anime.vodId)"
       >
         <div class="anime-cover">
-          <img :src="anime.cover" alt="anime cover" class="anime-img" />
-          <span class="anime-episodes">{{ anime.episodes }}</span>
+          <img :src="anime.vodPic" alt="anime cover" class="anime-img" />
+          <span class="anime-episodes">{{ anime.vodRemarks }}</span>
         </div>
-        <div class="anime-title">{{ anime.title }}</div>
+        <div class="anime-title">{{ anime.vodName }}</div>
       </div>
     </div>
   </div>

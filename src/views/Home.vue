@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import 'swiper/css'
 import 'swiper/css/pagination'
 // 导入番剧列表组件
-import AnimeList from '@/components/home/AnimeList.vue'
+import AnimeList from '@/components/home/DramaList.vue'
 
 const router = useRouter()
 const activeTab = ref('推荐')
