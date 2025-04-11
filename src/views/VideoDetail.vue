@@ -1,26 +1,106 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { getDramaDetailService } from '@/api/Drama.js'
+import { VideoPlay , StarFilled, Collection, Share, ChatDotRound, ArrowDown } from "@element-plus/icons-vue"
+import Artplayer from 'artplayer'
+import Hls from 'hls.js'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 const videoId = route.params.id
+const artRef = ref(null)
+const artInstance = ref(null)
+const currentEpisode = ref(null)
 
-// 模拟视频数据
+// 视频信息
 const videoInfo = ref({
   id: videoId,
-  title: '快藏起来！玛琪娜同学！',
-  cover: 'https://placeholder.pics/svg/360x200/FF9CAA/FFFFFF/视频封面',
-  episode: '第12集',
-  views: '298.6万',
-  likes: '12.5万',
-  releaseDate: '2024-04-02',
-  description: '讲述了女主角玛琪娜和男主角的有趣故事。本集中，玛琪娜在学校的各种逗趣表现让同学们忍俊不禁...',
-  tags: ['恋爱', '校园', '喜剧'],
+  title: '',
+  cover: '',
+  episode: '',
+  views: '',
+  likes: '',
+  releaseDate: '',
+  description: '',
+  tags: [],
   isLiked: false,
   isCollected: false,
   isSubscribed: true
 })
+
+// 获取视频详情
+const getVideoDetail = async () => {
+  try {
+    const res = await getDramaDetailService(videoId)
+    if (res.data) {
+      const data = res.data
+      
+      // 打印原始数据便于调试
+      console.log('原始视频数据:', data)
+      
+      // 处理剧集数据 - 修复URL处理逻辑
+      const episodesData = data.vod_play_url.split(',').map((item, index) => {
+        // 查找https://的位置
+        const httpsIndex = item.indexOf('https://')
+        let title = '第' + (index + 1) + '集'
+        let url = ''
+        
+        if (httpsIndex !== -1) {
+          // 提取标题和URL
+          title = item.substring(0, httpsIndex)
+          
+          // 直接使用代理路径
+          // 根据示例："第01集https://cloud.xmoe.app/01"，我们需要提取出"/01"
+          const fullUrl = item.substring(httpsIndex)
+          const pathIndex = fullUrl.lastIndexOf('/')
+          
+          if (pathIndex !== -1) {
+            const path = fullUrl.substring(pathIndex) // 提取出"/01"
+            url = '/cloud' + path // 变成"/cloud/01"
+          }
+        }
+        
+        return {
+          id: index + 1,
+          title: title || `第${index + 1}集`,
+          url: url,
+          watched: false,
+          duration: '24:00'
+        }
+      })
+      
+      console.log('处理后的剧集数据:', episodesData)
+      
+      // 更新视频信息
+      videoInfo.value = {
+        id: data.vod_id,
+        title: data.vod_name,
+        cover: data.vod_pic,
+        episode: data.vod_remarks,
+        views: '0',
+        likes: '0',
+        releaseDate: '',
+        description: data.vod_blurb,
+        tags: data.vod_actor ? data.vod_actor.split(' / ') : [],
+        isLiked: false,
+        isCollected: false,
+        isSubscribed: true
+      }
+      
+      // 更新剧集列表
+      episodes.value = episodesData
+      
+      // 默认播放第一集
+      if (episodesData.length > 0) {
+        playVideo(episodesData[0].id)
+      }
+    }
+  } catch (error) {
+    console.error('获取视频详情失败:', error)
+  }
+}
 
 const episodes = ref([
   { id: 1, title: '第1集', duration: '24:30', watched: true },
@@ -42,28 +122,31 @@ const relatedVideos = ref([
   { 
     id: 101, 
     title: '间谍过家家 第二季', 
-    cover: 'https://placeholder.pics/svg/120x80/AACEEF/FFFFFF/封面1',
+    cover: 'https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2874976551.jpg',
     views: '356万',
     episode: '更新至24集'
   },
   { 
     id: 102, 
     title: '葬送的芙莉莲', 
-    cover: 'https://placeholder.pics/svg/120x80/CEAAFF/FFFFFF/封面2',
+    cover: 'https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2886492022.jpg',
     views: '289万',
     episode: '更新至25集'
   },
   { 
     id: 103, 
     title: '咒术回战 第二季', 
-    cover: 'https://placeholder.pics/svg/120x80/AAFFAA/555555/封面3',
+    cover: 'https://img9.doubanio.com/view/photo/m/public/p2886273597.jpg',
     views: '412万',
     episode: '更新至23集'
   }
 ])
 
 const activeTab = ref('简介')
-const tabs = ['简介', '评论(128)']
+const tabs = [
+  { name: '简介' },
+  { name: '评论(128)' }
+]
 
 const goBack = () => {
   router.back()
@@ -81,26 +164,172 @@ const toggleSubscribe = () => {
   videoInfo.value.isSubscribed = !videoInfo.value.isSubscribed
 }
 
+// 播放视频
 const playVideo = (episodeId) => {
-  console.log('播放视频', episodeId)
-  // 这里应该处理视频播放逻辑
+  const episode = episodes.value.find(ep => ep.id === episodeId)
+  if (episode && episode.url) {
+    currentEpisode.value = episode
+    console.log('准备播放URL:', episode.url)
+    initPlayer(episode.url)
+  } else {
+    console.error('无效的剧集或URL不存在')
+    handlePlayError('无效的剧集或URL不存在')
+  }
 }
+
+// 处理播放错误
+const handlePlayError = (errorMsg) => {
+  ElMessage.error(errorMsg || '视频加载失败，请稍后再试')
+}
+
+// 初始化播放器
+const initPlayer = (url) => {
+  if (!url) {
+    console.error('播放URL为空')
+    handlePlayError('播放地址无效')
+    return
+  }
+
+  if (artInstance.value) {
+    artInstance.value.destroy()
+  }
+  
+  try {
+    console.log('初始化播放器，URL:', url)
+    
+    artInstance.value = new Artplayer({
+      container: artRef.value,
+      url: url,
+      poster: videoInfo.value.cover,
+      title: videoInfo.value.title,
+      volume: 0.7,
+      isLive: false,
+      muted: false,
+      autoplay: true,
+      pip: true,
+      autoSize: false,
+      autoMini: true,
+      screenshot: true,
+      setting: true,
+      loop: false,
+      flip: true,
+      playbackRate: true,
+      aspectRatio: true,
+      fullscreen: true,
+      fullscreenWeb: true,
+      subtitleOffset: true,
+      miniProgressBar: true,
+      mutex: true,
+      backdrop: true,
+      playsInline: true,
+      autoPlayback: true,
+      airplay: true,
+      theme: '#dc2626',
+      lang: 'zh-cn',
+      moreVideoAttr: {
+        crossOrigin: 'anonymous'
+      },
+      customType: {
+        m3u8: function(video, url) {
+          if (Hls.isSupported()) {
+            const hls = new Hls({
+              // 增加HLS配置以提高兼容性
+              xhrSetup: function(xhr) {
+                xhr.withCredentials = false; // 不发送凭证
+              }
+            })
+            
+            hls.loadSource(url)
+            hls.attachMedia(video)
+            
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+              video.play().catch(e => {
+                console.error('自动播放失败:', e)
+              })
+            })
+            
+            hls.on(Hls.Events.ERROR, function(event, data) {
+              console.error('HLS错误:', data)
+              if (data.fatal) {
+                handlePlayError('视频流加载失败')
+              }
+            })
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url
+            video.addEventListener('loadedmetadata', function() {
+              video.play().catch(e => {
+                console.error('自动播放失败:', e)
+              })
+            })
+            video.addEventListener('error', function(e) {
+              console.error('视频加载错误:', e)
+              handlePlayError('视频加载失败')
+            })
+          } else {
+            handlePlayError('您的浏览器不支持播放此视频格式')
+          }
+        }
+      }
+    })
+    
+    // 播放器事件监听
+    artInstance.value.on('ready', () => {
+      console.log('播放器准备就绪')
+    })
+    
+    artInstance.value.on('play', () => {
+      console.log('开始播放')
+      
+      // 标记当前集为已观看
+      if (currentEpisode.value) {
+        const index = episodes.value.findIndex(ep => ep.id === currentEpisode.value.id)
+        if (index !== -1) {
+          episodes.value[index].watched = true
+        }
+      }
+    })
+    
+    artInstance.value.on('pause', () => {
+      console.log('暂停播放')
+    })
+    
+    artInstance.value.on('error', (error) => {
+      console.error('播放器错误:', error)
+      handlePlayError()
+    })
+    
+    artInstance.value.on('destroy', () => {
+      console.log('播放器销毁')
+    })
+  } catch (error) {
+    console.error('初始化播放器失败:', error)
+    handlePlayError('初始化播放器失败')
+  }
+}
+
+// 改进tab切换
+const setActiveTab = (tab) => {
+  activeTab.value = tab
+}
+
+// 组件卸载时销毁播放器
+onUnmounted(() => {
+  if (artInstance.value) {
+    artInstance.value.destroy()
+  }
+})
 
 onMounted(() => {
   console.log('视频ID:', videoId)
+  getVideoDetail()
 })
 </script>
 
 <template>
   <div class="video-detail-container">
-    <!-- 视频播放器区域 - 修改为固定定位 -->
+    <!-- 视频播放器区域 -->
     <div class="player-container">
-      <div class="video-player">
-        <img :src="videoInfo.cover" class="video-cover" />
-        <div class="play-button">
-          <el-icon size="32"><VideoPlay /></el-icon>
-        </div>
-      </div>
+      <div ref="artRef" class="video-player"></div>
 
       <!-- 视频信息 -->
       <div class="video-info">
@@ -113,15 +342,15 @@ onMounted(() => {
 
       <!-- 操作栏 -->
       <div class="action-bar">
-        <div class="action-btn">
+        <div class="action-btn" @click="toggleLike">
           <el-icon size="22"><ThumbUp /></el-icon>
           <span class="action-text">{{ videoInfo.likes }}</span>
         </div>
-        <div class="action-btn">
+        <div class="action-btn" @click="toggleCollect">
           <el-icon size="22"><StarFilled /></el-icon>
           <span class="action-text">收藏</span>
         </div>
-        <div class="action-btn">
+        <div class="action-btn" @click="toggleSubscribe">
           <el-icon size="22"><Collection /></el-icon>
           <span class="action-text">追番</span>
         </div>
@@ -144,6 +373,7 @@ onMounted(() => {
           @click="setActiveTab(tab.name)"
         >
           {{ tab.name }}
+          <div v-if="activeTab === tab.name" class="tab-indicator"></div>
         </div>
       </div>
       
@@ -179,7 +409,7 @@ onMounted(() => {
       
       <!-- 评论内容 -->
       <div v-else class="comment-placeholder">
-        <el-icon :size="32" class="mb-2"><el-icon-chat-dot-round /></el-icon>
+        <el-icon :size="32" class="mb-2"><ChatDotRound /></el-icon>
         <p class="text-sm">评论功能开发中...</p>
       </div>
     </div>
@@ -189,16 +419,23 @@ onMounted(() => {
       <div class="episodes-header">
         <h3 class="section-title">剧集</h3>
         <div class="episode-count">
-          共12集，更新至12集 <el-icon><el-icon-arrow-down /></el-icon>
+          共{{ episodes.length }}集，{{ videoInfo.episode }} <el-icon><ArrowDown /></el-icon>
         </div>
       </div>
       
-      <div class="episodes-grid">
+      <div v-if="episodes.length === 0" class="no-episodes">
+        加载剧集中...
+      </div>
+      
+      <div v-else class="episodes-grid">
         <div 
           v-for="episode in episodes" 
           :key="episode.id"
           class="episode-item"
-          :class="{'current-episode': episode.id === 12, 'watched-episode': episode.watched}"
+          :class="{
+            'current-episode': currentEpisode && episode.id === currentEpisode.id, 
+            'watched-episode': episode.watched
+          }"
           @click="playVideo(episode.id)"
         >
           <div class="episode-title">{{ episode.title }}</div>
@@ -260,6 +497,7 @@ onMounted(() => {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
+  background-color: #000;
 }
 
 .video-cover {
@@ -528,5 +766,11 @@ onMounted(() => {
   font-size: 12px;
   color: #6b7280;
   margin-top: 8px;
+}
+
+.no-episodes {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
 }
 </style>

@@ -12,6 +12,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/cloud': {
+        target: 'https://cloud.xmoe.app',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/cloud/, '')
       }
     }
   },
