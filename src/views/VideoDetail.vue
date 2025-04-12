@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getDramaDetailService } from '@/api/Drama.js'
-import { VideoPlay , StarFilled, Collection, Share, ChatDotRound, ArrowDown } from "@element-plus/icons-vue"
+import { StarFilled, Collection, Share, ChatDotRound, ArrowDown } from "@element-plus/icons-vue"
 import Artplayer from 'artplayer'
 import Hls from 'hls.js'
 import { ElMessage } from 'element-plus'
@@ -13,6 +13,19 @@ const videoId = route.params.id
 const artRef = ref(null)
 const artInstance = ref(null)
 const currentEpisode = ref(null)
+
+// 处理图片URL，解决豆瓣图片防盗链问题
+const handleImageUrl = (url) => {
+  if (!url) return '';
+  
+  // 检查是否为豆瓣图片链接
+  if (url.includes('doubanio.com') || url.includes('douban.com')) {
+    // 使用图片缓存服务
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+  }
+  
+  return url;
+}
 
 // 视频信息
 const videoInfo = ref({
@@ -460,7 +473,7 @@ onMounted(() => {
           class="recommendation-item"
         >
           <div class="thumbnail-container">
-            <img :src="video.cover" class="thumbnail" />
+            <img :src="handleImageUrl(video.cover)" class="thumbnail" />
           </div>
           <div class="recommendation-info">
             <h4 class="recommendation-title">{{ video.title }}</h4>

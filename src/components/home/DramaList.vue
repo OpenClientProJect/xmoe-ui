@@ -2,6 +2,7 @@
 import {onMounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {getDramaListService} from "@/api/Drama.js";
+import { handleImageUrl } from '@/utils/imageUtils';
 
 const router = useRouter()
 
@@ -68,7 +69,7 @@ onMounted(() => {
         @click="goToAnimeDetail(anime.vodId)"
       >
         <div class="anime-cover">
-          <img :src="anime.vodPic" alt="anime cover" class="anime-img" />
+          <img :src="handleImageUrl(anime.vodPic)" alt="anime cover" class="anime-img" />
           <span class="anime-episodes">{{ anime.vodRemarks }}</span>
         </div>
         <div class="anime-title">{{ anime.vodName }}</div>
