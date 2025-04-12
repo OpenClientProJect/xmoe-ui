@@ -6,6 +6,7 @@ import { StarFilled, Collection, Share, ChatDotRound, ArrowDown } from "@element
 import Artplayer from 'artplayer'
 import Hls from 'hls.js'
 import { ElMessage } from 'element-plus'
+import { handleImageUrl } from '@/utils/imageUtils'
 
 const router = useRouter()
 const route = useRoute()
@@ -13,19 +14,6 @@ const videoId = route.params.id
 const artRef = ref(null)
 const artInstance = ref(null)
 const currentEpisode = ref(null)
-
-// 处理图片URL，解决豆瓣图片防盗链问题
-const handleImageUrl = (url) => {
-  if (!url) return '';
-  
-  // 检查是否为豆瓣图片链接
-  if (url.includes('doubanio.com') || url.includes('douban.com')) {
-    // 使用图片缓存服务
-    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
-  }
-  
-  return url;
-}
 
 // 视频信息
 const videoInfo = ref({
@@ -90,7 +78,7 @@ const getVideoDetail = async () => {
       videoInfo.value = {
         id: data.vod_id,
         title: data.vod_name,
-        cover: data.vod_pic,
+        cover: handleImageUrl(data.vod_pic),
         episode: data.vod_remarks,
         views: '0',
         likes: '0',
@@ -135,21 +123,21 @@ const relatedVideos = ref([
   { 
     id: 101, 
     title: '间谍过家家 第二季', 
-    cover: 'https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2874976551.jpg',
+    cover: handleImageUrl('https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2874976551.jpg'),
     views: '356万',
     episode: '更新至24集'
   },
   { 
     id: 102, 
     title: '葬送的芙莉莲', 
-    cover: 'https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2886492022.jpg',
+    cover: handleImageUrl('https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2886492022.jpg'),
     views: '289万',
     episode: '更新至25集'
   },
   { 
     id: 103, 
     title: '咒术回战 第二季', 
-    cover: 'https://img9.doubanio.com/view/photo/m/public/p2886273597.jpg',
+    cover: handleImageUrl('https://img9.doubanio.com/view/photo/m/public/p2886273597.jpg'),
     views: '412万',
     episode: '更新至23集'
   }
@@ -473,7 +461,7 @@ onMounted(() => {
           class="recommendation-item"
         >
           <div class="thumbnail-container">
-            <img :src="handleImageUrl(video.cover)" class="thumbnail" />
+            <img :src="video.cover" class="thumbnail" />
           </div>
           <div class="recommendation-info">
             <h4 class="recommendation-title">{{ video.title }}</h4>

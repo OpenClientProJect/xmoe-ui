@@ -16,5 +16,11 @@ export const handleImageUrl = (url) => {
     return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
   }
   
+  // 检查是否为B站图片链接
+  if (url.includes('hdslb.com') || url.includes('i0.hdslb.com')) {
+    // B站图片也可能存在防盗链，使用相同处理方法
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+  }
+  
   return url;
 } 
