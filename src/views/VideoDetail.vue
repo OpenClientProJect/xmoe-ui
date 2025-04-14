@@ -242,7 +242,6 @@ const initPlayer = (url) => {
             
             hls.loadSource(url)
             hls.attachMedia(video)
-            
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
               video.play().catch(e => {
                 console.error('自动播放失败:', e)
