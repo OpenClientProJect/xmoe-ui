@@ -24,6 +24,18 @@ const routes = [
     name: 'Search',
     component: () => import('../views/Search.vue'),
     meta: { showTabBar: false }
+  },
+  {
+    path: '/aes-test',
+    name: 'AESTest',
+    component: () => import('../components/AESTest.vue'),
+    meta: { showTabBar: false }
+  },
+  {
+    path: '/decrypt',
+    name: 'VideoLinkDecrypt',
+    component: () => import('../components/VideoLinkDecrypt.vue'),
+    meta: { showTabBar: false }
   }
 ]
 
