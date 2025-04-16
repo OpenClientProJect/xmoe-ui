@@ -17,10 +17,8 @@ export const getDramaListService = (params = {}) => {
   // 合并默认参数和传入参数
   const finalParams = { ...defaultParams, ...params }
   
-  // 移除所有不安全的请求头，直接发送请求
   return request.get('/vod/list', {
     params: finalParams
-    // 不设置任何浏览器限制的请求头
   })
 }
 

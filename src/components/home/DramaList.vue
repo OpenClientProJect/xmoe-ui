@@ -31,56 +31,6 @@ const changeFilter = (filter) => {
   getDramaList()
 }
 
-// 处理加密的数据
-const decryptData = (encryptedData) => {
-  try {
-    console.log('原始响应数据类型:', typeof encryptedData)
-    if (typeof encryptedData === 'object') {
-      console.log('响应数据已经是对象:', encryptedData)
-      return encryptedData
-    }
-    
-    // 判断数据是否以'FROMSKZZJM'开头
-    if (typeof encryptedData === 'string') {
-      let hexData = encryptedData
-      if (hexData.startsWith('FROMSKZZJM')) {
-        console.log('检测到加密数据，准备解密')
-        // 去掉前缀'FROMSKZZJM'
-        hexData = hexData.substring('FROMSKZZJM'.length)
-        
-        // 使用aesUtils中的方法解密
-        const decrypted = decryptHexString(hexData)
-        
-        // 解析JSON
-        try {
-          const jsonData = JSON.parse(decrypted)
-          console.log('解密成功，数据结构:', jsonData)
-          return jsonData
-        } catch (jsonError) {
-          console.error('JSON解析错误:', jsonError)
-          errorMessage.value = '解析JSON数据失败'
-          return null
-        }
-      } else {
-        console.log('数据不是加密格式')
-        // 尝试直接解析JSON
-        try {
-          return JSON.parse(encryptedData)
-        } catch (e) {
-          console.log('无法解析为JSON，返回原始数据')
-          return encryptedData
-        }
-      }
-    }
-    
-    return encryptedData
-  } catch (error) {
-    console.error('解密数据失败:', error)
-    errorMessage.value = '解密数据失败: ' + error.message
-    return null
-  }
-}
-
 // 获取番剧列表
 const getDramaList = async () => {
   try {
@@ -88,68 +38,19 @@ const getDramaList = async () => {
     hasError.value = false
     errorMessage.value = ''
     
-    console.log('开始获取番剧列表')
-    const response = await getDramaListService()
-    console.log('获取到原始响应:', response)
+    const res = await getDramaListService()
     
-    // 检查响应是否有效
-    if (!response) {
-      throw new Error('未收到有效响应')
-    }
-    
-    // 处理响应数据
-    let responseData = response
-    if (response.data !== undefined) {
-      responseData = response.data
-    }
-    
-    // 解密数据
-    const decryptedData = decryptData(responseData)
-    
-    if (!decryptedData) {
-      throw new Error('数据解密失败或解密结果为空')
-    }
-    
-    console.log('解密后的数据:', decryptedData)
-    
-    // 处理解密后的数据
-    let finalList = []
-    
-    // 根据实际数据结构提取列表
-    if (Array.isArray(decryptedData)) {
-      finalList = decryptedData
-    } else if (decryptedData.list && Array.isArray(decryptedData.list)) {
-      finalList = decryptedData.list
-    } else if (decryptedData.data) {
-      if (Array.isArray(decryptedData.data)) {
-        finalList = decryptedData.data
-      } else if (decryptedData.data.list && Array.isArray(decryptedData.data.list)) {
-        finalList = decryptedData.data.list
-      }
+    // 检查返回数据格式
+    if (res && res.code === 200 && Array.isArray(res.data)) {
+      DramaList.value = res.data
+      console.log('番剧列表获取成功', DramaList.value)
     } else {
-      // 未识别的数据结构，可能是单个对象
-      console.log('未识别的数据结构:', decryptedData)
-      
-      // 如果看起来像一个番剧对象，放入数组
-      if (decryptedData.vod_id || decryptedData.id || decryptedData.name || decryptedData.vod_name) {
-        finalList = [decryptedData]
-      } else {
-        // 真的无法处理
-        throw new Error('无法识别的数据结构')
-      }
-    }
-    
-    console.log('最终处理后的番剧列表:', finalList)
-    DramaList.value = finalList
-    
-    if (finalList.length === 0) {
-      console.log('番剧列表为空')
+      throw new Error('数据格式异常')
     }
   } catch (error) {
-    console.error('获取番剧列表失败:', error)
+    console.error('获取番剧列表失败', error)
     hasError.value = true
-    errorMessage.value = error.message || '获取数据失败'
-    DramaList.value = []
+    errorMessage.value = error.message || '获取番剧列表失败'
   } finally {
     isLoading.value = false
   }
@@ -208,15 +109,16 @@ onMounted(() => {
     <div v-else class="anime-list">
       <div 
         v-for="anime in DramaList"
-        :key="anime.vod_id || anime.id"
+        :key="anime.vod_id"
         class="anime-card"
-        @click="goToAnimeDetail(anime.vod_id || anime.id)"
+        @click="goToAnimeDetail(anime.vod_id)"
       >
         <div class="anime-cover">
-          <img :src="handleImageUrl(anime.vod_pic || anime.pic)" alt="anime cover" class="anime-img" />
-          <span class="anime-episodes">{{ anime.vod_remarks || anime.remarks || '更新中' }}</span>
+          <img :src="handleImageUrl(anime.vod_pic)" alt="anime cover" class="anime-img" />
+          <span class="anime-episodes">{{ anime.vod_remarks || '更新中' }}</span>
         </div>
-        <div class="anime-title">{{ anime.vod_name || anime.name }}</div>
+        <div class="anime-title">{{ anime.vod_name }}</div>
+        <div class="anime-sub" v-if="anime.vod_sub">{{ anime.vod_sub }}</div>
       </div>
     </div>
   </div>
@@ -307,11 +209,22 @@ onMounted(() => {
   margin-top: 6px;
   text-align: center;
   line-height: 1.3;
-  height: 2.6em;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.anime-sub {
+  font-size: 10px;
+  color: #666;
+  text-align: center;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 

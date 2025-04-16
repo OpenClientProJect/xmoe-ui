@@ -58,14 +58,14 @@ const decrypt = () => {
   error.value = '';
   
   // 验证输入
-  if (!key.value || !iv.value || !ciphertext.value) {
-    error.value = '请填写所有字段';
-    return;
-  }
+  // if (!key.value || !iv.value || !ciphertext.value) {
+  //   error.value = '请填写所有字段';
+  //   return;
+  // }
   
   try {
     // 执行解密
-    const decrypted = decryptHexString(ciphertext.value, key.value, iv.value);
+    const decrypted = decryptHexString(ciphertext.value);
     
     if (!decrypted) {
       error.value = '解密失败或结果为空';
