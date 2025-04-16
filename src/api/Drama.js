@@ -1,4 +1,5 @@
 import request from '@/utils/request.js'
+import { decryptHexString } from '@/utils/aesUtils'
 
 /**
  * 获取番剧列表
@@ -24,61 +25,38 @@ export const getDramaListService = (params = {}) => {
 
 /**
  * 获取番剧详情
- * @param {string|number} id 番剧ID
- * @returns {Promise} 请求Promise
  */
-export const getDramaDetailService = (id) => {
-  if (!id) {
-    return Promise.reject(new Error('缺少视频ID参数'))
-  }
-  
-  return request.get(`/vod/detail`, {
-    params: { id }
-    // 不设置任何浏览器限制的请求头
-  })
+export const getDramaDetailService = (vodId) => {
+  return request.get('/vod/one?vodId=' + vodId)
 }
 
 /**
- * 搜索番剧
- * @param {string} keyword 搜索关键词
- * @param {Object} params 其他参数
- * @returns {Promise} 请求Promise
+ * 获取视频播放地址
+ * @param {string} id 视频ID（可能是加密的）
+ * @returns {Promise} 包含播放地址的Promise
  */
-export const searchDramaService = (keyword, params = {}) => {
-  if (!keyword) {
-    return Promise.reject(new Error('缺少搜索关键词'))
-  }
-  
-  const defaultParams = {
-    page: 1,
-    limit: 20
-  }
-  
-  const finalParams = { 
-    ...defaultParams, 
-    ...params,
-    keyword
-  }
-  
-  return request.get('/vod/search', {
-    params: finalParams
-    // 不设置任何浏览器限制的请求头
-  })
-}
-
-/**
- * 番剧详情页数据
- * @param {string|number} id 番剧ID
- * @returns {Promise} 请求Promise
- */
-export const getDramaDetailDataService = (id) => {
-  return request.get('/vod/list', {
-    params: {
-      typeId: 1,
-      page: 1,
-      limit: 18,
-      type: 'updateTime'
+export const getVideoPlayUrlService = (id) => {
+  // 检查ID是否是加密格式
+  if (id.startsWith('MOE')) {
+    // 直接返回代理地址
+    return Promise.resolve({ code: 200, data: { url: `/cloud/${id}` } })
+  } else if (id.startsWith('id_')) {
+    // 移除前缀
+    const realId = id.substring(3)
+    // 返回代理地址
+    return Promise.resolve({ code: 200, data: { url: `/cloud/${realId}` } })
+  } else {
+    // 尝试解密ID
+    try {
+      const decryptedUrl = decryptHexString(id)
+      if (decryptedUrl) {
+        return Promise.resolve({ code: 200, data: { url: decryptedUrl } })
+      } else {
+        return Promise.reject(new Error('解密视频地址失败'))
+      }
+    } catch (error) {
+      console.error('解析视频ID失败:', error)
+      return Promise.reject(error)
     }
-    // 不设置任何浏览器限制的请求头
-  })
+  }
 }

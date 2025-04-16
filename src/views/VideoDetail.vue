@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getDramaDetailService } from '@/api/Drama.js'
+import { getDramaDetailService, getVideoPlayUrlService } from '@/api/Drama.js'
 import { StarFilled, Collection, Share, ChatDotRound, ArrowDown } from "@element-plus/icons-vue"
 import Artplayer from 'artplayer'
 import Hls from 'hls.js'
 import { ElMessage } from 'element-plus'
 import { handleImageUrl } from '@/utils/imageUtils'
+import { handleVideoUrl } from '@/utils/videoUtils'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,42 +36,31 @@ const videoInfo = ref({
 const getVideoDetail = async () => {
   try {
     const res = await getDramaDetailService(videoId)
-    if (res.data) {
+    if (res.code === 200 && res.data) {
       const data = res.data
       
       // 打印原始数据便于调试
       console.log('原始视频数据:', data)
       
-      // 处理剧集数据 - 修复URL处理逻辑
-      const episodesData = data.vod_play_url.split(',').map((item, index) => {
-        // 查找https://的位置
-        const httpsIndex = item.indexOf('https://')
-        let title = '第' + (index + 1) + '集'
-        let url = ''
-        
-        if (httpsIndex !== -1) {
-          // 提取标题和URL
-          title = item.substring(0, httpsIndex)
-          
-          // 直接使用代理路径
-          // 根据示例："第01集https://cloud.xmoe.app/01"，我们需要提取出"/01"
-          const fullUrl = item.substring(httpsIndex)
-          const pathIndex = fullUrl.lastIndexOf('/')
-          
-          if (pathIndex !== -1) {
-            const path = fullUrl.substring(pathIndex) // 提取出"/01"
-            url = '/cloud' + path // 变成"/cloud/01"
-          }
-        }
+      // 处理剧集数据 - 新的vod_play_url格式处理
+      const playUrls = data.vod_play_url.split('$$$')
+      // 官方线路优先，如果没有则使用主线路
+      const officialPlayUrls = playUrls[0] || ''
+      
+      // 处理剧集列表
+      const episodesData = officialPlayUrls.split('#').map((item, index) => {
+        const parts = item.split('$')
+        const title = parts[0] || `第${index + 1}集`
+        const id = parts[1] || ''
         
         return {
           id: index + 1,
-          title: title || `第${index + 1}集`,
-          url: url,
+          title: title,
+          sourceId: id, // 保存原始ID用于请求
           watched: false,
           duration: '24:00'
         }
-      })
+      }).filter(item => item.sourceId); // 过滤掉没有sourceId的项
       
       console.log('处理后的剧集数据:', episodesData)
       
@@ -80,11 +70,15 @@ const getVideoDetail = async () => {
         title: data.vod_name,
         cover: handleImageUrl(data.vod_pic),
         episode: data.vod_remarks,
-        views: '0',
-        likes: '0',
-        releaseDate: '',
-        description: data.vod_blurb,
-        tags: data.vod_actor ? data.vod_actor.split(' / ') : [],
+        views: data.vod_hits || '0',
+        likes: data.vod_up || '0',
+        releaseDate: data.vod_pubdate || data.vod_year || '',
+        description: data.vod_content || data.vod_blurb || '',
+        tags: data.vod_class ? data.vod_class.split(',') : [],
+        actors: data.vod_actor ? data.vod_actor.split(' / ') : [],
+        area: data.vod_area || '',
+        year: data.vod_year || '',
+        weekday: data.vod_weekday || '',
         isLiked: false,
         isCollected: false,
         isSubscribed: true
@@ -96,10 +90,13 @@ const getVideoDetail = async () => {
       // 默认播放第一集
       if (episodesData.length > 0) {
         playVideo(episodesData[0].id)
+      } else {
+        ElMessage.warning('暂无可播放剧集')
       }
     }
   } catch (error) {
     console.error('获取视频详情失败:', error)
+    ElMessage.error('获取视频详情失败，请稍后再试')
   }
 }
 
@@ -166,15 +163,39 @@ const toggleSubscribe = () => {
 }
 
 // 播放视频
-const playVideo = (episodeId) => {
+const playVideo = async (episodeId) => {
   const episode = episodes.value.find(ep => ep.id === episodeId)
-  if (episode && episode.url) {
-    currentEpisode.value = episode
-    console.log('准备播放URL:', episode.url)
-    initPlayer(episode.url)
-  } else {
-    console.error('无效的剧集或URL不存在')
-    handlePlayError('无效的剧集或URL不存在')
+  if (!episode) {
+    console.error('找不到剧集信息')
+    handlePlayError('无效的剧集信息')
+    return
+  }
+  
+  if (!episode.sourceId) {
+    console.error('剧集缺少播放源ID')
+    handlePlayError('无效的视频源')
+    return
+  }
+  
+  currentEpisode.value = episode
+  
+  try {
+    // 使用新的API服务获取真实播放地址
+    const playUrlRes = await getVideoPlayUrlService(episode.sourceId)
+    
+    if (playUrlRes.code === 200 && playUrlRes.data && playUrlRes.data.url) {
+      // 处理视频URL
+      const videoUrl = handleVideoUrl(playUrlRes.data.url)
+      console.log('获取到实际播放URL:', videoUrl)
+      
+      // 初始化播放器
+      initPlayer(videoUrl)
+    } else {
+      throw new Error('获取播放地址失败')
+    }
+  } catch (error) {
+    console.error('获取播放地址失败:', error)
+    handlePlayError('获取视频播放地址失败，请稍后再试')
   }
 }
 
@@ -389,7 +410,27 @@ onMounted(() => {
           </span>
         </div>
         
-        <p class="description">{{ videoInfo.description }}</p>
+        <p class="description" v-html="videoInfo.description"></p>
+        
+        <!-- 视频信息 -->
+        <div class="video-meta">
+          <div class="meta-item" v-if="videoInfo.area">
+            <span class="meta-label">地区：</span>
+            <span class="meta-value">{{ videoInfo.area }}</span>
+          </div>
+          <div class="meta-item" v-if="videoInfo.year">
+            <span class="meta-label">年份：</span>
+            <span class="meta-value">{{ videoInfo.year }}</span>
+          </div>
+          <div class="meta-item" v-if="videoInfo.weekday">
+            <span class="meta-label">更新时间：</span>
+            <span class="meta-value">{{ videoInfo.weekday }}</span>
+          </div>
+          <div class="meta-item" v-if="videoInfo.actors && videoInfo.actors.length">
+            <span class="meta-label">声优：</span>
+            <span class="meta-value">{{ videoInfo.actors.join(' / ') }}</span>
+          </div>
+        </div>
         
         <!-- 订阅按钮 -->
         <div class="subscribe-section">
@@ -614,6 +655,28 @@ onMounted(() => {
 .description {
   font-size: 14px;
   color: #4b5563;
+  white-space: pre-line;
+}
+
+.video-meta {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meta-item {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.meta-label {
+  color: #6b7280;
+  margin-right: 8px;
+}
+
+.meta-value {
+  color: #374151;
 }
 
 .subscribe-section {

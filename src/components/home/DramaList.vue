@@ -39,16 +39,9 @@ const getDramaList = async () => {
     errorMessage.value = ''
     
     const res = await getDramaListService()
-    
-    // 检查返回数据格式
-    if (res && res.code === 200 && Array.isArray(res.data)) {
       DramaList.value = res.data
       console.log('番剧列表获取成功', DramaList.value)
-    } else {
-      throw new Error('数据格式异常')
-    }
   } catch (error) {
-    console.error('获取番剧列表失败', error)
     hasError.value = true
     errorMessage.value = error.message || '获取番剧列表失败'
   } finally {
