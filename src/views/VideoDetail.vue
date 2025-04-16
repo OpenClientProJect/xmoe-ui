@@ -15,6 +15,7 @@ const videoId = route.params.id
 const artRef = ref(null)
 const artInstance = ref(null)
 const currentEpisode = ref(null)
+const currentSource = ref(0) // 当前线路，默认为第一个
 
 // 视频信息
 const videoInfo = ref({
@@ -27,13 +28,37 @@ const videoInfo = ref({
   releaseDate: '',
   description: '',
   tags: [],
+  sources: [],
   isLiked: false,
   isCollected: false,
   isSubscribed: true
 })
 
+// 存储不同线路的剧集数据
+const allEpisodes = ref({})
+
+// 切换线路
+const switchSource = (sourceId) => {
+  currentSource.value = sourceId
+  
+  // 加载对应线路的剧集数据
+  if (allEpisodes.value[sourceId]) {
+    episodes.value = allEpisodes.value[sourceId]
+    
+    // 如果当前线路有剧集，自动播放第一集
+    if (episodes.value.length > 0) {
+      playVideo(episodes.value[0].id)
+    } else {
+      ElMessage.warning('该线路暂无可播放剧集')
+    }
+  } else {
+    // 如果没有该线路的数据，重新获取视频详情
+    getVideoDetail(sourceId)
+  }
+}
+
 // 获取视频详情
-const getVideoDetail = async () => {
+const getVideoDetail = async (sourceId = 0) => {
   try {
     const res = await getDramaDetailService(videoId)
     if (res.code === 200 && res.data) {
@@ -42,27 +67,25 @@ const getVideoDetail = async () => {
       // 打印原始数据便于调试
       console.log('原始视频数据:', data)
       
-      // 处理剧集数据 - 新的vod_play_url格式处理
+      // 处理所有线路的剧集数据
       const playUrls = data.vod_play_url.split('$$$')
-      // 官方线路优先，如果没有则使用主线路
-      const officialPlayUrls = playUrls[0] || ''
       
-      // 处理剧集列表
-      const episodesData = officialPlayUrls.split('#').map((item, index) => {
-        const parts = item.split('$')
-        const title = parts[0] || `第${index + 1}集`
-        const id = parts[1] || ''
+      // 处理线路信息
+      const sourcesInfo = playUrls.map((source, index) => {
+        const lines = ['官方', '主线', '备用']
+        const name = index < lines.length ? lines[index] : `线路${index + 1}`
+        
+        // 统计该线路的剧集数
+        const episodeCount = source.split('#').filter(ep => ep.includes('$')).length
         
         return {
-          id: index + 1,
-          title: title,
-          sourceId: id, // 保存原始ID用于请求
-          watched: false,
-          duration: '24:00'
+          id: index,
+          name: name,
+          count: episodeCount
         }
-      }).filter(item => item.sourceId); // 过滤掉没有sourceId的项
+      }).filter(item => item.count > 0) // 过滤掉没有剧集的线路
       
-      console.log('处理后的剧集数据:', episodesData)
+      console.log('线路信息:', sourcesInfo)
       
       // 更新视频信息
       videoInfo.value = {
@@ -79,18 +102,80 @@ const getVideoDetail = async () => {
         area: data.vod_area || '',
         year: data.vod_year || '',
         weekday: data.vod_weekday || '',
+        sources: sourcesInfo,
         isLiked: false,
         isCollected: false,
         isSubscribed: true
       }
       
-      // 更新剧集列表
-      episodes.value = episodesData
+      // 预先处理所有线路的剧集数据
+      playUrls.forEach((sourceUrl, index) => {
+        // 处理剧集列表
+        const episodesData = sourceUrl.split('#').map((item, epIndex) => {
+          // 排除空项
+          if (!item.trim()) {
+            return null;
+          }
+          
+          const parts = item.split('$');
+          // 确保至少有两部分：标题和ID
+          if (parts.length < 2) {
+            console.warn('剧集格式不正确:', item);
+            return null;
+          }
+          
+          const title = parts[0] || `第${epIndex + 1}集`;
+          
+          // 如果有多个$分隔符，则合并后面的部分作为ID
+          let id = '';
+          if (parts.length > 2) {
+            id = parts.slice(1).join('$');
+          } else {
+            id = parts[1] || '';
+          }
+          
+          // 为视频源ID添加额外数据，便于UI显示
+          let sourceType = '未知';
+          if (id.startsWith('MOE')) {
+            sourceType = 'MOE源';
+          } else if (id.startsWith('id_MOE')) {
+            sourceType = 'MOE源';
+          } else if (id.startsWith('id_XS')) {
+            sourceType = '备用源';
+          }
+          
+          return {
+            id: epIndex + 1,
+            title: title,
+            sourceId: id, // 保存原始ID用于请求
+            sourceType: sourceType,
+            watched: false,
+            duration: '24:00'
+          };
+        }).filter(item => item && item.sourceId); // 过滤掉无效和没有sourceId的项
+        
+        // 存储该线路的剧集数据
+        if (episodesData.length > 0) {
+          allEpisodes.value[index] = episodesData;
+        }
+      });
       
-      // 默认播放第一集
-      if (episodesData.length > 0) {
-        playVideo(episodesData[0].id)
+      // 使用指定的线路，或者默认使用第一个可用线路
+      if (sourcesInfo.length > 0) {
+        const targetSource = Math.min(sourceId, sourcesInfo.length - 1)
+        currentSource.value = targetSource
+        
+        // 更新剧集列表
+        episodes.value = allEpisodes.value[targetSource] || []
+        
+        // 默认播放第一集
+        if (episodes.value.length > 0) {
+          playVideo(episodes.value[0].id)
+        } else {
+          ElMessage.warning('暂无可播放剧集')
+        }
       } else {
+        episodes.value = []
         ElMessage.warning('暂无可播放剧集')
       }
     }
@@ -178,6 +263,7 @@ const playVideo = async (episodeId) => {
   }
   
   currentEpisode.value = episode
+  console.log('当前选择的剧集:', episode);
   
   try {
     // 使用新的API服务获取真实播放地址
@@ -202,6 +288,11 @@ const playVideo = async (episodeId) => {
 // 处理播放错误
 const handlePlayError = (errorMsg) => {
   ElMessage.error(errorMsg || '视频加载失败，请稍后再试')
+  
+  // 记录失败
+  if (currentEpisode.value) {
+    console.error('播放失败的剧集:', currentEpisode.value)
+  }
 }
 
 // 初始化播放器
@@ -219,9 +310,29 @@ const initPlayer = (url) => {
   try {
     console.log('初始化播放器，URL:', url)
     
-    artInstance.value = new Artplayer({
+    // 处理URL格式
+    let processedUrl = url;
+    let customType = null;
+    
+    // 根据URL类型选择适当的播放方式
+    if (url.includes('.m3u8') || url.includes('playlist') || url.includes('chunklist')) {
+      // HLS流
+      console.log('检测到HLS流媒体');
+      customType = 'm3u8';
+    } else if (url.includes('.flv')) {
+      // FLV视频
+      console.log('检测到FLV视频');
+      customType = 'flv';
+    } else if (url.startsWith('/cloud/')) {
+      // 内部代理地址，默认当作m3u8处理
+      console.log('使用内部代理地址');
+      customType = 'm3u8';
+    }
+    
+    // 播放器配置
+    const options = {
       container: artRef.value,
-      url: url,
+      url: processedUrl,
       poster: videoInfo.value.cover,
       title: videoInfo.value.title,
       volume: 0.7,
@@ -251,80 +362,129 @@ const initPlayer = (url) => {
       moreVideoAttr: {
         crossOrigin: 'anonymous'
       },
-      customType: {
-        m3u8: function(video, url) {
-          if (Hls.isSupported()) {
-            const hls = new Hls({
-              // 增加HLS配置以提高兼容性
-              xhrSetup: function(xhr) {
-                xhr.withCredentials = false; // 不发送凭证
+      customType: {}
+    };
+    
+    // 根据视频类型添加自定义处理器
+    if (customType === 'm3u8') {
+      options.customType['m3u8'] = function(video, url) {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            // 增加HLS配置以提高兼容性
+            xhrSetup: function(xhr) {
+              xhr.withCredentials = false; // 不发送凭证
+              console.log('设置HLS请求:', url);
+            },
+            maxBufferLength: 60,
+            maxMaxBufferLength: 120,
+            maxBufferSize: 20 * 1000 * 1000, // 增加缓冲区大小到20MB
+            maxBufferHole: 1,
+            lowLatencyMode: false
+          });
+          
+          hls.loadSource(url);
+          hls.attachMedia(video);
+          
+          // 添加更多事件监听
+          hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            console.log('HLS清单解析完成，开始播放');
+            video.play().catch(e => {
+              console.error('自动播放失败:', e);
+            });
+          });
+          
+          hls.on(Hls.Events.LEVEL_LOADED, function() {
+            console.log('HLS级别加载完成');
+          });
+          
+          hls.on(Hls.Events.ERROR, function(event, data) {
+            console.error('HLS错误:', data);
+            if (data.fatal) {
+              switch(data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.log('HLS网络错误，尝试恢复');
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.log('HLS媒体错误，尝试恢复');
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  handlePlayError('视频流加载失败: ' + data.details);
+                  break;
               }
-            })
-            
-            hls.loadSource(url)
-            hls.attachMedia(video)
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-              video.play().catch(e => {
-                console.error('自动播放失败:', e)
-              })
-            })
-            
-            hls.on(Hls.Events.ERROR, function(event, data) {
-              console.error('HLS错误:', data)
-              if (data.fatal) {
-                handlePlayError('视频流加载失败')
-              }
-            })
-          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = url
-            video.addEventListener('loadedmetadata', function() {
-              video.play().catch(e => {
-                console.error('自动播放失败:', e)
-              })
-            })
-            video.addEventListener('error', function(e) {
-              console.error('视频加载错误:', e)
-              handlePlayError('视频加载失败')
-            })
-          } else {
-            handlePlayError('您的浏览器不支持播放此视频格式')
-          }
+            }
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          console.log('使用原生HLS支持播放');
+          video.src = url;
+          video.addEventListener('loadedmetadata', function() {
+            video.play().catch(e => {
+              console.error('自动播放失败:', e);
+            });
+          });
+          video.addEventListener('error', function(e) {
+            console.error('视频加载错误:', e);
+            handlePlayError('视频加载失败');
+          });
+        } else {
+          handlePlayError('您的浏览器不支持播放此视频格式');
         }
-      }
-    })
+      };
+    } else if (customType === 'flv') {
+      options.customType['flv'] = function(video, url) {
+        console.log('使用FLV播放器');
+        // 如果需要支持FLV，需要引入flv.js库
+        if (window.flvjs && window.flvjs.isSupported()) {
+          const flvPlayer = window.flvjs.createPlayer({
+            type: 'flv',
+            url: url
+          });
+          flvPlayer.attachMediaElement(video);
+          flvPlayer.load();
+          flvPlayer.play();
+        } else {
+          console.error('未检测到FLV.js，无法播放FLV格式');
+          handlePlayError('不支持FLV格式播放');
+        }
+      };
+    }
+    
+    // 创建播放器实例
+    artInstance.value = new Artplayer(options);
     
     // 播放器事件监听
     artInstance.value.on('ready', () => {
-      console.log('播放器准备就绪')
-    })
+      console.log('播放器准备就绪');
+    });
     
     artInstance.value.on('play', () => {
-      console.log('开始播放')
+      console.log('开始播放');
       
       // 标记当前集为已观看
       if (currentEpisode.value) {
-        const index = episodes.value.findIndex(ep => ep.id === currentEpisode.value.id)
+        const index = episodes.value.findIndex(ep => ep.id === currentEpisode.value.id);
         if (index !== -1) {
-          episodes.value[index].watched = true
+          episodes.value[index].watched = true;
         }
       }
-    })
+    });
     
     artInstance.value.on('pause', () => {
-      console.log('暂停播放')
-    })
+      console.log('暂停播放');
+    });
     
     artInstance.value.on('error', (error) => {
-      console.error('播放器错误:', error)
-      handlePlayError()
-    })
+      console.error('播放器错误:', error);
+      handlePlayError();
+    });
     
     artInstance.value.on('destroy', () => {
-      console.log('播放器销毁')
-    })
+      console.log('播放器销毁');
+    });
   } catch (error) {
-    console.error('初始化播放器失败:', error)
-    handlePlayError('初始化播放器失败')
+    console.error('初始化播放器失败:', error);
+    handlePlayError('初始化播放器失败：' + error.message);
   }
 }
 
@@ -464,6 +624,19 @@ onMounted(() => {
         </div>
       </div>
       
+      <!-- 线路选择 -->
+      <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
+        <div 
+          v-for="source in videoInfo.sources" 
+          :key="source.id"
+          class="source-tab"
+          :class="{'active-source': currentSource === source.id}"
+          @click="switchSource(source.id)"
+        >
+          {{ source.name }} ({{ source.count }}集)
+        </div>
+      </div>
+      
       <div v-if="episodes.length === 0" class="no-episodes">
         加载剧集中...
       </div>
@@ -480,6 +653,7 @@ onMounted(() => {
           @click="playVideo(episode.id)"
         >
           <div class="episode-title">{{ episode.title }}</div>
+          <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
           <div 
             v-if="episode.watched" 
             class="progress-bar"
@@ -517,6 +691,45 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 来源标签样式 */
+.source-tabs {
+  display: flex;
+  overflow-x: auto;
+  margin-bottom: 12px;
+  scrollbar-width: none;
+}
+
+.source-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.source-tab {
+  padding: 6px 12px;
+  margin-right: 8px;
+  background-color: #f3f4f6;
+  border-radius: 16px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.active-source {
+  background-color: #dc2626;
+  color: white;
+}
+
+.episode-source-type {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 9px;
+  padding: 2px 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border-radius: 4px;
+}
+
+/* 原有样式 */
 .video-detail-container {
   min-height: 100vh;
   background-color: #f5f5f5;

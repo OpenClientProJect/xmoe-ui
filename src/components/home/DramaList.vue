@@ -3,7 +3,6 @@ import {onMounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {getDramaListService} from "@/api/Drama.js";
 import { handleImageUrl } from '@/utils/imageUtils';
-import { decryptHexString } from '@/utils/aesUtils'; // 导入解密工具
 
 const router = useRouter()
 
@@ -31,6 +30,74 @@ const changeFilter = (filter) => {
   getDramaList()
 }
 
+// 直接在组件中实现AES解密功能
+async function decryptData(encryptedData) {
+  try {
+    console.log('原始加密数据:', encryptedData);
+    
+    // 移除前缀
+    const prefix = 'FROMSKZZJM';
+    let ciphertextHex = encryptedData;
+    
+    if (encryptedData.startsWith(prefix)) {
+      ciphertextHex = encryptedData.substring(prefix.length);
+      console.log('移除前缀后:', ciphertextHex);
+    }
+    
+    // 将十六进制字符串转换为字节数组
+    const ciphertext = hexStringToByteArray(ciphertextHex);
+    const key = new TextEncoder().encode('ygcnbclnqzsmebxd');
+    const iv = new TextEncoder().encode('8249692684143708');
+    
+    // 导入密钥
+    const cryptoKey = await window.crypto.subtle.importKey(
+      "raw",
+      key,
+      { name: "AES-CBC" },
+      false,
+      ["decrypt"]
+    );
+    
+    // 解密数据
+    const decrypted = await window.crypto.subtle.decrypt(
+      {
+        name: "AES-CBC",
+        iv: iv
+      },
+      cryptoKey,
+      ciphertext
+    );
+    
+    // 将解密后的字节转换为字符串
+    const decryptedText = new TextDecoder().decode(decrypted);
+    console.log('解密结果:', decryptedText);
+    
+    // 解析JSON
+    try {
+      const jsonData = JSON.parse(decryptedText);
+      return jsonData;
+    } catch (jsonError) {
+      console.error('JSON解析失败:', jsonError);
+      return null;
+    }
+  } catch (error) {
+    console.error('解密失败:', error);
+    return null;
+  }
+}
+
+// 辅助函数：将十六进制字符串转换为字节数组
+function hexStringToByteArray(hexString) {
+  const len = hexString.length;
+  const bytes = new Uint8Array(len / 2);
+  
+  for (let i = 0; i < len; i += 2) {
+    bytes[i / 2] = parseInt(hexString.substr(i, 2), 16);
+  }
+  
+  return bytes;
+}
+
 // 获取番剧列表
 const getDramaList = async () => {
   try {
@@ -38,10 +105,43 @@ const getDramaList = async () => {
     hasError.value = false
     errorMessage.value = ''
     
+    // 调用接口获取数据
     const res = await getDramaListService()
+    
+    // 检查接口返回状态
+    if (res.code !== 200) {
+      throw new Error(res.message || '服务器返回错误')
+    }
+    
+    // 处理不同类型的数据响应
+    if (typeof res.data === 'string') {
+      // 如果是字符串，尝试解密
+      console.log('检测到加密数据，尝试解密');
+      
+      try {
+        const decryptedData = await decryptData(res.data);
+        
+        if (decryptedData && decryptedData.data && Array.isArray(decryptedData.data)) {
+          // 解密成功，使用解密后的数据
+          DramaList.value = decryptedData.data;
+          console.log('解密成功，获取到番剧数据', DramaList.value.length, '条');
+        } else {
+          throw new Error('解密后的数据格式不正确');
+        }
+      } catch (decryptError) {
+        console.error('解密过程出错:', decryptError);
+        throw new Error('解密数据失败: ' + res.data.substring(0, 50) + '...');
+      }
+    } else if (Array.isArray(res.data)) {
+      // 如果是数组，直接使用
       DramaList.value = res.data
-      console.log('番剧列表获取成功', DramaList.value)
+      console.log('获取到番剧数据', DramaList.value.length, '条');
+    } else {
+      // 其他情况
+      throw new Error('返回的数据格式不正确');
+    }
   } catch (error) {
+    console.error('获取番剧列表失败:', error)
     hasError.value = true
     errorMessage.value = error.message || '获取番剧列表失败'
   } finally {
