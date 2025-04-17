@@ -4,10 +4,8 @@ import {useRouter, useRoute} from 'vue-router'
 import {getDramaDetailService, getVideoUrlService} from '@/api/Drama.js'
 import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-plus/icons-vue"
 import Artplayer from 'artplayer'
-import Hls from 'hls.js'
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
-import {handleVideoUrl} from '@/utils/videoUtils'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,6 +14,8 @@ const artRef = ref(null)
 const artInstance = ref(null)
 const currentEpisode = ref(null)
 const currentSource = ref(0) // 当前线路，默认为第一个
+const episodes = ref([]) // 当前线路的剧集列表
+const allEpisodes = ref({}) // 存储所有线路的剧集数据
 
 // 视频信息
 const videoInfo = ref({
@@ -34,195 +34,7 @@ const videoInfo = ref({
   isSubscribed: true
 })
 
-// 存储不同线路的剧集数据
-const allEpisodes = ref({})
-
-// 切换线路
-const switchSource = (sourceId) => {
-  currentSource.value = sourceId
-
-  // 加载对应线路的剧集数据
-  if (allEpisodes.value[sourceId]) {
-    episodes.value = allEpisodes.value[sourceId]
-
-    // 如果当前线路有剧集，自动播放第一集
-    if (episodes.value.length > 0) {
-      playVideo(episodes.value[0].id)
-    } else {
-      ElMessage.warning('该线路暂无可播放剧集')
-    }
-  } else {
-    // 如果没有该线路的数据，重新获取视频详情
-    getVideoDetail(sourceId)
-  }
-}
-
-// 获取视频详情
-const getVideoDetail = async (sourceId = 0) => {
-  try {
-    const res = await getDramaDetailService(videoId)
-    if (res.code === 200 && res.data) {
-      const data = res.data
-
-      // 打印原始数据便于调试
-      console.log('原始视频数据:', data)
-
-      // 处理所有线路的剧集数据
-      const playUrls = data.vod_play_url.split('$$$')
-
-      // 处理线路信息
-      const sourcesInfo = playUrls.map((source, index) => {
-        const lines = ['官方', '主线', '备用']
-        const name = index < lines.length ? lines[index] : `线路${index + 1}`
-
-        // 统计该线路的剧集数
-        const episodeCount = source.split('#').filter(ep => ep.includes('$')).length
-
-        return {
-          id: index,
-          name: name,
-          count: episodeCount
-        }
-      }).filter(item => item.count > 0) // 过滤掉没有剧集的线路
-
-      console.log('线路信息:', sourcesInfo)
-
-      // 更新视频信息
-      videoInfo.value = {
-        id: data.vod_id,
-        title: data.vod_name,
-        cover: handleImageUrl(data.vod_pic),
-        episode: data.vod_remarks,
-        views: data.vod_hits || '0',
-        likes: data.vod_up || '0',
-        releaseDate: data.vod_pubdate || data.vod_year || '',
-        description: data.vod_content || data.vod_blurb || '',
-        tags: data.vod_class ? data.vod_class.split(',') : [],
-        actors: data.vod_actor ? data.vod_actor.split(' / ') : [],
-        area: data.vod_area || '',
-        year: data.vod_year || '',
-        weekday: data.vod_weekday || '',
-        sources: sourcesInfo,
-        isLiked: false,
-        isCollected: false,
-        isSubscribed: true
-      }
-
-      // 预先处理所有线路的剧集数据
-      playUrls.forEach((sourceUrl, index) => {
-        // 处理剧集列表
-        const episodesData = sourceUrl.split('#').map((item, epIndex) => {
-          // 排除空项
-          if (!item.trim()) {
-            return null;
-          }
-
-          const parts = item.split('$');
-          // 确保至少有两部分：标题和ID
-          if (parts.length < 2) {
-            console.warn('剧集格式不正确:', item);
-            return null;
-          }
-
-          const title = parts[0] || `第${epIndex + 1}集`;
-
-          // 如果有多个$分隔符，则合并后面的部分作为ID
-          let id = '';
-          if (parts.length > 2) {
-            id = parts.slice(1).join('$');
-          } else {
-            id = parts[1] || '';
-          }
-
-          // 为视频源ID添加额外数据，便于UI显示
-          let sourceType = '未知';
-          if (id.startsWith('MOE')) {
-            sourceType = 'MOE源';
-          } else if (id.startsWith('id_MOE')) {
-            sourceType = 'MOE源';
-          } else if (id.startsWith('id_XS')) {
-            sourceType = '备用源';
-          }
-
-          return {
-            id: epIndex + 1,
-            title: title,
-            sourceId: id, // 保存原始ID用于请求
-            sourceType: sourceType,
-            watched: false,
-            duration: '24:00'
-          };
-        }).filter(item => item && item.sourceId); // 过滤掉无效和没有sourceId的项
-
-        // 存储该线路的剧集数据
-        if (episodesData.length > 0) {
-          allEpisodes.value[index] = episodesData;
-        }
-      });
-
-      // 使用指定的线路，或者默认使用第一个可用线路
-      if (sourcesInfo.length > 0) {
-        const targetSource = Math.min(sourceId, sourcesInfo.length - 1)
-        currentSource.value = targetSource
-
-        // 更新剧集列表
-        episodes.value = allEpisodes.value[targetSource] || []
-
-        // 默认播放第一集
-        if (episodes.value.length > 0) {
-          playVideo(episodes.value[0].id)
-        } else {
-          ElMessage.warning('暂无可播放剧集')
-        }
-      } else {
-        episodes.value = []
-        ElMessage.warning('暂无可播放剧集')
-      }
-    }
-  } catch (error) {
-    console.error('获取视频详情失败:', error)
-    ElMessage.error('获取视频详情失败，请稍后再试')
-  }
-}
-
-const episodes = ref([
-  {id: 1, title: '第1集', duration: '24:30', watched: true},
-  {id: 2, title: '第2集', duration: '24:15', watched: true},
-  {id: 3, title: '第3集', duration: '24:45', watched: true},
-  {id: 4, title: '第4集', duration: '24:10', watched: true},
-  {id: 5, title: '第5集', duration: '24:35', watched: true},
-  {id: 6, title: '第6集', duration: '24:20', watched: true},
-  {id: 7, title: '第7集', duration: '24:40', watched: true},
-  {id: 8, title: '第8集', duration: '24:25', watched: true},
-  {id: 9, title: '第9集', duration: '24:50', watched: true},
-  {id: 10, title: '第10集', duration: '24:30', watched: true},
-  {id: 11, title: '第11集', duration: '24:15', watched: false},
-  {id: 12, title: '第12集', duration: '24:45', watched: false}
-])
-
-// 相关推荐
 const relatedVideos = ref([
-  {
-    id: 101,
-    title: '间谍过家家 第二季',
-    cover: handleImageUrl('https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2874976551.jpg'),
-    views: '356万',
-    episode: '更新至24集'
-  },
-  {
-    id: 102,
-    title: '葬送的芙莉莲',
-    cover: handleImageUrl('https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2886492022.jpg'),
-    views: '289万',
-    episode: '更新至25集'
-  },
-  {
-    id: 103,
-    title: '咒术回战 第二季',
-    cover: handleImageUrl('https://img9.doubanio.com/view/photo/m/public/p2886273597.jpg'),
-    views: '412万',
-    episode: '更新至23集'
-  }
 ])
 
 const activeTab = ref('简介')
@@ -231,9 +43,6 @@ const tabs = [
   {name: '评论(128)'}
 ]
 
-const goBack = () => {
-  router.back()
-}
 
 const toggleLike = () => {
   videoInfo.value.isLiked = !videoInfo.value.isLiked
@@ -252,123 +61,70 @@ const playVideo = async (episodeId) => {
   const episode = episodes.value.find(ep => ep.id === episodeId)
   if (!episode) {
     console.error('找不到剧集信息')
-    handlePlayError('无效的剧集信息')
+    ElMessage.error('无效的剧集信息')
     return
   }
 
   if (!episode.sourceId) {
     console.error('剧集缺少播放源ID')
-    handlePlayError('无效的视频源')
+    ElMessage.error('无效的视频源')
     return
   }
 
   currentEpisode.value = episode
-  console.log('当前选择的剧集:', episode);
-  console.log('原始视频源ID:', episode.sourceId);
+  console.log('当前选择的剧集:', episode)
+  console.log('原始视频源ID:', episode.sourceId)
 
-  // 使用新的API服务获取真实播放地址
-  // 传递视频ID和加密的视频源ID
-  const playUrlRes = await getVideoUrlService(videoInfo.value.id, episode.sourceId)
-  console.log(playUrlRes)
-}
-
-// 处理播放错误
-const handlePlayError = (errorMsg) => {
-  ElMessage.error(errorMsg || '视频加载失败，请稍后再试')
-
-  // 记录失败
-  if (currentEpisode.value) {
-    console.error('播放失败的剧集:', currentEpisode.value)
-  }
-}
-
-// 初始化播放器
-const initPlayer = (url) => {
-  if (!url) {
-    console.error('播放URL为空')
-    handlePlayError('播放地址无效')
-    return
-  }
-
-  if (artInstance.value) {
-    artInstance.value.destroy()
-  }
+  // 标记当前集为已观看
+  episode.watched = true
 
   try {
-    console.log('初始化播放器，URL:', url)
+    // 显示加载中提示
+    ElMessage.info(`正在加载: ${episode.title}`)
 
-    // 播放器配置
-    const options = {
-      container: artRef.value,
-      url: processedUrl,
-      poster: videoInfo.value.cover,
-      title: videoInfo.value.title,
-      volume: 0.7,
-      isLive: false,
-      muted: false,
-      autoplay: true,
-      pip: true,
-      autoSize: false,
-      autoMini: true,
-      screenshot: true,
-      setting: true,
-      loop: false,
-      flip: true,
-      playbackRate: true,
-      aspectRatio: true,
-      fullscreen: true,
-      fullscreenWeb: true,
-      subtitleOffset: true,
-      miniProgressBar: true,
-      mutex: true,
-      backdrop: true,
-      playsInline: true,
-      autoPlayback: true,
-      airplay: true,
-      theme: '#dc2626',
-      lang: 'zh-cn',
-      moreVideoAttr: {
-        crossOrigin: 'anonymous'
-      },
-      customType: {}
-    };
+    // 调用API获取视频地址
+    const res = await getVideoUrlService(videoInfo.value.id, episode.sourceId)
 
+    if (res.code === 200 && res.data) {
+      console.log('获取到视频地址:', res.data)
 
-    // 创建播放器实例
-    artInstance.value = new Artplayer(options);
+      // 这里可以添加播放视频的逻辑
+      // 如果有播放器组件，可以将视频地址传给播放器
+      ElMessage.success(`开始播放: ${episode.title}`)
 
-    // 播放器事件监听
-    artInstance.value.on('ready', () => {
-      console.log('播放器准备就绪');
-    });
-
-    artInstance.value.on('play', () => {
-      console.log('开始播放');
-
-      // 标记当前集为已观看
-      if (currentEpisode.value) {
-        const index = episodes.value.findIndex(ep => ep.id === currentEpisode.value.id);
-        if (index !== -1) {
-          episodes.value[index].watched = true;
-        }
-      }
-    });
-
-    artInstance.value.on('pause', () => {
-      console.log('暂停播放');
-    });
-
-    artInstance.value.on('error', (error) => {
-      console.error('播放器错误:', error);
-      handlePlayError();
-    });
-
-    artInstance.value.on('destroy', () => {
-      console.log('播放器销毁');
-    });
+      // 返回视频地址，便于后续处理
+      return res.data
+    } else {
+      ElMessage.error(res.message || '获取视频地址失败')
+    }
   } catch (error) {
-    console.error('初始化播放器失败:', error);
-    handlePlayError('初始化播放器失败：' + error.message);
+    console.error('获取视频地址失败:', error)
+    ElMessage.error('获取视频地址失败: ' + (error.message || '未知错误'))
+  }
+
+  return null
+}
+
+
+// 切换线路
+const switchSource = (sourceId) => {
+  currentSource.value = sourceId
+
+  // 加载对应线路的剧集数据
+  if (allEpisodes.value[sourceId]) {
+    episodes.value = allEpisodes.value[sourceId]
+    console.log('切换到线路', sourceId, '剧集数:', episodes.value.length)
+
+    // 如果当前线路有剧集，自动选中第一集
+    if (episodes.value.length > 0) {
+      // 仅选中不播放，防止自动播放带来的困扰
+      currentEpisode.value = episodes.value[0]
+    } else {
+      ElMessage.warning('该线路暂无可播放剧集')
+    }
+  } else {
+    ElMessage.warning('该线路暂无剧集数据')
+    episodes.value = []
   }
 }
 
@@ -384,8 +140,120 @@ onUnmounted(() => {
   }
 })
 
+// 获取视频详情
+const getVideoDetail = async () => {
+  try {
+    console.log('获取视频详情，ID:', videoId)
+    const res = await getDramaDetailService(videoId)
+
+    if (res.code === 200 && res.data) {
+      const data = res.data
+
+      // 打印原始数据便于调试
+      console.log('原始视频数据:', data)
+
+      // 更新视频信息
+      videoInfo.value = {
+        id: data.vod_id,
+        title: data.vod_name,
+        cover: handleImageUrl(data.vod_pic),
+        episode: data.vod_remarks,
+        views: data.vod_hits || '0',
+        likes: data.vod_up || '0',
+        releaseDate: data.vod_pubdate || data.vod_year || '',
+        description: data.vod_content || data.vod_blurb || '',
+        tags: data.vod_class ? data.vod_class.split(',') : [],
+        actors: data.vod_actor ? data.vod_actor.split(' / ') : [],
+        area: data.vod_area || '',
+        year: data.vod_year || '',
+        weekday: data.vod_weekday || '',
+        isLiked: false,
+        isCollected: false,
+        isSubscribed: true
+      }
+
+      // 存储不同线路的剧集数据
+      allEpisodes.value = {}
+
+      // 如果有播放地址，处理剧集信息
+      if (data.vod_play_url) {
+        // 处理所有线路的剧集数据
+        const playUrls = data.vod_play_url.split('$$$')
+
+        // 处理线路信息
+        const sourcesInfo = playUrls.map((source, index) => {
+          const lines = ['官方', '主线', '备用']
+          const name = index < lines.length ? lines[index] : `线路${index + 1}`
+
+          // 统计该线路的剧集数
+          const episodeCount = source.split('#').filter(ep => ep.includes('$')).length
+
+          // 处理该线路的剧集列表
+          const episodesData = source.split('#').map((item, epIndex) => {
+            // 排除空项
+            if (!item.trim()) {
+              return null;
+            }
+
+            const parts = item.split('$');
+            // 确保至少有两部分：标题和ID
+            if (parts.length < 2) {
+              console.warn('剧集格式不正确:', item);
+              return null;
+            }
+
+            const title = parts[0] || `第${epIndex + 1}集`;
+
+            // 如果有多个$分隔符，则合并后面的部分作为ID
+            let id = '';
+            if (parts.length > 2) {
+              id = parts.slice(1).join('$');
+            } else {
+              id = parts[1] || '';
+            }
+
+            return {
+              id: epIndex + 1,
+              title: title,
+              sourceId: id, // 保存原始ID用于请求
+              watched: false,
+              duration: '24:00'
+            };
+          }).filter(item => item && item.sourceId); // 过滤掉无效和没有sourceId的项
+
+          // 存储该线路的剧集数据
+          if (episodesData.length > 0) {
+            allEpisodes.value[index] = episodesData;
+          }
+
+          return {
+            id: index,
+            name: name,
+            count: episodeCount
+          }
+        }).filter(item => item.count > 0) // 过滤掉没有剧集的线路
+
+        videoInfo.value.sources = sourcesInfo
+        console.log('线路信息:', sourcesInfo)
+
+        // 更新剧集列表
+        if (sourcesInfo.length > 0) {
+          // 默认使用第一个线路
+          currentSource.value = 0;
+          episodes.value = allEpisodes.value[0] || [];
+          console.log('当前线路剧集:', episodes.value);
+        }
+      }
+    } else {
+      ElMessage.warning(res.message || '获取视频信息失败')
+    }
+  } catch (error) {
+    console.error('获取视频详情失败:', error)
+    ElMessage.error('获取视频详情失败，请稍后再试')
+  }
+}
+
 onMounted(() => {
-  console.log('视频ID:', videoId)
   getVideoDetail()
 })
 </script>
