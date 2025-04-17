@@ -18,6 +18,11 @@ export default defineConfig({
         target: 'https://cloud.xmoe.app',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/cloud/, '')
+      },
+      '/video-proxy': {
+        target: 'https://xmoe.video',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/video-proxy/, '')
       }
     }
   },

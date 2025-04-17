@@ -201,14 +201,109 @@ const playVideo = async (episodeId) => {
       console.log('获取到视频地址:', res.data)
 
       // 处理视频URL，确保可以正确播放
+      let videoUrl = ''
 
-      // 初始化播放器
-      initPlayer(res.data.url, episode.title)
+      // 检查res.data的类型并提取URL
+      if (typeof res.data === 'string') {
+        videoUrl = res.data
+      } else if (typeof res.data === 'object') {
+        if (res.data.url) {
+          videoUrl = res.data.url
+        } else {
+          console.log('响应数据对象:', res.data)
+          for (const key in res.data) {
+            if (typeof res.data[key] === 'string' &&
+                (res.data[key].includes('http') ||
+                 res.data[key].includes('.mp4') ||
+                 res.data[key].includes('.m3u8'))) {
+              videoUrl = res.data[key]
+              break
+            }
+          }
+        }
+      }
 
-      ElMessage.success(`开始播放: ${episode.title}`)
+      if (!videoUrl) {
+        throw new Error('无法从响应中提取视频地址')
+      }
 
-      // 返回视频地址，便于后续处理
-      return res.data.url
+      console.log('提取到的原始视频地址:', videoUrl)
+
+      // 处理视频URL，解决CORS问题
+      let proxyUrl = ''
+
+      // 判断是否是外部URL
+      if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
+        // 将外部URL转换为代理URL
+        const urlObj = new URL(videoUrl)
+
+        // 如果是xmoe.video域名，使用video-proxy代理
+        if (urlObj.hostname === 'xmoe.video') {
+          proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
+          console.log('使用代理URL:', proxyUrl)
+        } else {
+          // 其他域名使用原始URL
+          proxyUrl = videoUrl
+        }
+      } else {
+        // 如果已经是本地URL，直接使用
+        proxyUrl = videoUrl
+      }
+
+      // 显示加载中提示
+      ElMessage.info('正在下载视频文件...')
+
+      try {
+        // 使用fetch下载文件
+        console.log('开始下载视频文件:', proxyUrl)
+        const response = await fetch(proxyUrl)
+
+        if (!response.ok) {
+          throw new Error(`下载失败: ${response.status} ${response.statusText}`)
+        }
+
+        // 获取文件内容为Blob
+        const videoBlob = await response.blob()
+        console.log('获取到视频Blob:', videoBlob.type, videoBlob.size)
+
+        // 创建一个新的Blob，指定正确的MIME类型
+        const mp4Blob = new Blob([videoBlob], { type: 'video/mp4' })
+
+        // 创建BlobURL
+        const blobUrl = URL.createObjectURL(mp4Blob)
+        console.log('创建的BlobURL:', blobUrl)
+
+        // 初始化播放器使用BlobURL
+        initPlayer(blobUrl, episode.title)
+
+        // 注册组件卸载时释放BlobURL
+        const revokeUrl = () => {
+          URL.revokeObjectURL(blobUrl)
+          console.log('释放BlobURL:', blobUrl)
+        }
+
+        // 在组件卸载或播放器销毁时释放BlobURL
+        if (artInstance.value) {
+          const originalDestroy = artInstance.value.destroy
+          artInstance.value.destroy = function() {
+            originalDestroy.call(this)
+            revokeUrl()
+          }
+        }
+
+        ElMessage.success(`开始播放: ${episode.title}`)
+        return blobUrl
+      } catch (error) {
+        console.error('下载视频文件失败:', error)
+        ElMessage.error('下载视频文件失败: ' + error.message)
+
+        // 如果下载失败，尝试直接使用原始URL初始化播放器
+        console.log('尝试直接使用原始URL初始化播放器')
+        const fallbackUrl = proxyUrl + '.mp4'
+        initPlayer(fallbackUrl, episode.title)
+        ElMessage.success(`开始播放: ${episode.title}`)
+        return fallbackUrl
+      }
     } else {
       ElMessage.error(res.message || '获取视频地址失败')
     }
