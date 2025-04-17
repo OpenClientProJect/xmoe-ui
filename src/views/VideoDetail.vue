@@ -297,25 +297,6 @@ const initPlayer = (url) => {
   try {
     console.log('初始化播放器，URL:', url)
 
-    // 处理URL格式
-    let processedUrl = url;
-    let customType = null;
-
-    // 根据URL类型选择适当的播放方式
-    if (url.includes('.m3u8') || url.includes('playlist') || url.includes('chunklist')) {
-      // HLS流
-      console.log('检测到HLS流媒体');
-      customType = 'm3u8';
-    } else if (url.includes('.flv')) {
-      // FLV视频
-      console.log('检测到FLV视频');
-      customType = 'flv';
-    } else if (url.startsWith('/cloud/')) {
-      // 内部代理地址，默认当作m3u8处理
-      console.log('使用内部代理地址');
-      customType = 'm3u8';
-    }
-
     // 播放器配置
     const options = {
       container: artRef.value,
@@ -352,90 +333,6 @@ const initPlayer = (url) => {
       customType: {}
     };
 
-    // 根据视频类型添加自定义处理器
-    if (customType === 'm3u8') {
-      options.customType['m3u8'] = function (video, url) {
-        if (Hls.isSupported()) {
-          const hls = new Hls({
-            // 增加HLS配置以提高兼容性
-            xhrSetup: function (xhr) {
-              xhr.withCredentials = false; // 不发送凭证
-              console.log('设置HLS请求:', url);
-            },
-            maxBufferLength: 60,
-            maxMaxBufferLength: 120,
-            maxBufferSize: 20 * 1000 * 1000, // 增加缓冲区大小到20MB
-            maxBufferHole: 1,
-            lowLatencyMode: false
-          });
-
-          hls.loadSource(url);
-          hls.attachMedia(video);
-
-          // 添加更多事件监听
-          hls.on(Hls.Events.MANIFEST_PARSED, function () {
-            console.log('HLS清单解析完成，开始播放');
-            video.play().catch(e => {
-              console.error('自动播放失败:', e);
-            });
-          });
-
-          hls.on(Hls.Events.LEVEL_LOADED, function () {
-            console.log('HLS级别加载完成');
-          });
-
-          hls.on(Hls.Events.ERROR, function (event, data) {
-            console.error('HLS错误:', data);
-            if (data.fatal) {
-              switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  console.log('HLS网络错误，尝试恢复');
-                  hls.startLoad();
-                  break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  console.log('HLS媒体错误，尝试恢复');
-                  hls.recoverMediaError();
-                  break;
-                default:
-                  handlePlayError('视频流加载失败: ' + data.details);
-                  break;
-              }
-            }
-          });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          console.log('使用原生HLS支持播放');
-          video.src = url;
-          video.addEventListener('loadedmetadata', function () {
-            video.play().catch(e => {
-              console.error('自动播放失败:', e);
-            });
-          });
-          video.addEventListener('error', function (e) {
-            console.error('视频加载错误:', e);
-            handlePlayError('视频加载失败');
-          });
-        } else {
-          handlePlayError('您的浏览器不支持播放此视频格式');
-        }
-      };
-    } else if (customType === 'flv') {
-      options.customType['flv'] = function (video, url) {
-        console.log('使用FLV播放器');
-        // 如果需要支持FLV，需要引入flv.js库
-        if (window.flvjs && window.flvjs.isSupported()) {
-          const flvPlayer = window.flvjs.createPlayer({
-            type: 'flv',
-            url: url
-          });
-          flvPlayer.attachMediaElement(video);
-          flvPlayer.load();
-          flvPlayer.play();
-        } else {
-          console.error('未检测到FLV.js，无法播放FLV格式');
-          handlePlayError('不支持FLV格式播放');
-        }
-      };
-    }
 
     // 创建播放器实例
     artInstance.value = new Artplayer(options);
