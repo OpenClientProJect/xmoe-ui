@@ -1,13 +1,13 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { getDramaDetailService, getVideoPlayUrlService } from '@/api/Drama.js'
-import { StarFilled, Collection, Share, ChatDotRound, ArrowDown } from "@element-plus/icons-vue"
+import {ref, onMounted, onUnmounted} from 'vue'
+import {useRouter, useRoute} from 'vue-router'
+import {getDramaDetailService, getVideoUrlService} from '@/api/Drama.js'
+import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-plus/icons-vue"
 import Artplayer from 'artplayer'
 import Hls from 'hls.js'
-import { ElMessage } from 'element-plus'
-import { handleImageUrl } from '@/utils/imageUtils'
-import { handleVideoUrl } from '@/utils/videoUtils'
+import {ElMessage} from 'element-plus'
+import {handleImageUrl} from '@/utils/imageUtils'
+import {handleVideoUrl} from '@/utils/videoUtils'
 
 const router = useRouter()
 const route = useRoute()
@@ -40,11 +40,11 @@ const allEpisodes = ref({})
 // 切换线路
 const switchSource = (sourceId) => {
   currentSource.value = sourceId
-  
+
   // 加载对应线路的剧集数据
   if (allEpisodes.value[sourceId]) {
     episodes.value = allEpisodes.value[sourceId]
-    
+
     // 如果当前线路有剧集，自动播放第一集
     if (episodes.value.length > 0) {
       playVideo(episodes.value[0].id)
@@ -63,30 +63,30 @@ const getVideoDetail = async (sourceId = 0) => {
     const res = await getDramaDetailService(videoId)
     if (res.code === 200 && res.data) {
       const data = res.data
-      
+
       // 打印原始数据便于调试
       console.log('原始视频数据:', data)
-      
+
       // 处理所有线路的剧集数据
       const playUrls = data.vod_play_url.split('$$$')
-      
+
       // 处理线路信息
       const sourcesInfo = playUrls.map((source, index) => {
         const lines = ['官方', '主线', '备用']
         const name = index < lines.length ? lines[index] : `线路${index + 1}`
-        
+
         // 统计该线路的剧集数
         const episodeCount = source.split('#').filter(ep => ep.includes('$')).length
-        
+
         return {
           id: index,
           name: name,
           count: episodeCount
         }
       }).filter(item => item.count > 0) // 过滤掉没有剧集的线路
-      
+
       console.log('线路信息:', sourcesInfo)
-      
+
       // 更新视频信息
       videoInfo.value = {
         id: data.vod_id,
@@ -107,7 +107,7 @@ const getVideoDetail = async (sourceId = 0) => {
         isCollected: false,
         isSubscribed: true
       }
-      
+
       // 预先处理所有线路的剧集数据
       playUrls.forEach((sourceUrl, index) => {
         // 处理剧集列表
@@ -116,16 +116,16 @@ const getVideoDetail = async (sourceId = 0) => {
           if (!item.trim()) {
             return null;
           }
-          
+
           const parts = item.split('$');
           // 确保至少有两部分：标题和ID
           if (parts.length < 2) {
             console.warn('剧集格式不正确:', item);
             return null;
           }
-          
+
           const title = parts[0] || `第${epIndex + 1}集`;
-          
+
           // 如果有多个$分隔符，则合并后面的部分作为ID
           let id = '';
           if (parts.length > 2) {
@@ -133,7 +133,7 @@ const getVideoDetail = async (sourceId = 0) => {
           } else {
             id = parts[1] || '';
           }
-          
+
           // 为视频源ID添加额外数据，便于UI显示
           let sourceType = '未知';
           if (id.startsWith('MOE')) {
@@ -143,7 +143,7 @@ const getVideoDetail = async (sourceId = 0) => {
           } else if (id.startsWith('id_XS')) {
             sourceType = '备用源';
           }
-          
+
           return {
             id: epIndex + 1,
             title: title,
@@ -153,21 +153,21 @@ const getVideoDetail = async (sourceId = 0) => {
             duration: '24:00'
           };
         }).filter(item => item && item.sourceId); // 过滤掉无效和没有sourceId的项
-        
+
         // 存储该线路的剧集数据
         if (episodesData.length > 0) {
           allEpisodes.value[index] = episodesData;
         }
       });
-      
+
       // 使用指定的线路，或者默认使用第一个可用线路
       if (sourcesInfo.length > 0) {
         const targetSource = Math.min(sourceId, sourcesInfo.length - 1)
         currentSource.value = targetSource
-        
+
         // 更新剧集列表
         episodes.value = allEpisodes.value[targetSource] || []
-        
+
         // 默认播放第一集
         if (episodes.value.length > 0) {
           playVideo(episodes.value[0].id)
@@ -186,39 +186,39 @@ const getVideoDetail = async (sourceId = 0) => {
 }
 
 const episodes = ref([
-  { id: 1, title: '第1集', duration: '24:30', watched: true },
-  { id: 2, title: '第2集', duration: '24:15', watched: true },
-  { id: 3, title: '第3集', duration: '24:45', watched: true },
-  { id: 4, title: '第4集', duration: '24:10', watched: true },
-  { id: 5, title: '第5集', duration: '24:35', watched: true },
-  { id: 6, title: '第6集', duration: '24:20', watched: true },
-  { id: 7, title: '第7集', duration: '24:40', watched: true },
-  { id: 8, title: '第8集', duration: '24:25', watched: true },
-  { id: 9, title: '第9集', duration: '24:50', watched: true },
-  { id: 10, title: '第10集', duration: '24:30', watched: true },
-  { id: 11, title: '第11集', duration: '24:15', watched: false },
-  { id: 12, title: '第12集', duration: '24:45', watched: false }
+  {id: 1, title: '第1集', duration: '24:30', watched: true},
+  {id: 2, title: '第2集', duration: '24:15', watched: true},
+  {id: 3, title: '第3集', duration: '24:45', watched: true},
+  {id: 4, title: '第4集', duration: '24:10', watched: true},
+  {id: 5, title: '第5集', duration: '24:35', watched: true},
+  {id: 6, title: '第6集', duration: '24:20', watched: true},
+  {id: 7, title: '第7集', duration: '24:40', watched: true},
+  {id: 8, title: '第8集', duration: '24:25', watched: true},
+  {id: 9, title: '第9集', duration: '24:50', watched: true},
+  {id: 10, title: '第10集', duration: '24:30', watched: true},
+  {id: 11, title: '第11集', duration: '24:15', watched: false},
+  {id: 12, title: '第12集', duration: '24:45', watched: false}
 ])
 
 // 相关推荐
 const relatedVideos = ref([
-  { 
-    id: 101, 
-    title: '间谍过家家 第二季', 
+  {
+    id: 101,
+    title: '间谍过家家 第二季',
     cover: handleImageUrl('https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2874976551.jpg'),
     views: '356万',
     episode: '更新至24集'
   },
-  { 
-    id: 102, 
-    title: '葬送的芙莉莲', 
+  {
+    id: 102,
+    title: '葬送的芙莉莲',
     cover: handleImageUrl('https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2886492022.jpg'),
     views: '289万',
     episode: '更新至25集'
   },
-  { 
-    id: 103, 
-    title: '咒术回战 第二季', 
+  {
+    id: 103,
+    title: '咒术回战 第二季',
     cover: handleImageUrl('https://img9.doubanio.com/view/photo/m/public/p2886273597.jpg'),
     views: '412万',
     episode: '更新至23集'
@@ -227,8 +227,8 @@ const relatedVideos = ref([
 
 const activeTab = ref('简介')
 const tabs = [
-  { name: '简介' },
-  { name: '评论(128)' }
+  {name: '简介'},
+  {name: '评论(128)'}
 ]
 
 const goBack = () => {
@@ -255,40 +255,27 @@ const playVideo = async (episodeId) => {
     handlePlayError('无效的剧集信息')
     return
   }
-  
+
   if (!episode.sourceId) {
     console.error('剧集缺少播放源ID')
     handlePlayError('无效的视频源')
     return
   }
-  
+
   currentEpisode.value = episode
   console.log('当前选择的剧集:', episode);
-  
-  try {
-    // 使用新的API服务获取真实播放地址
-    const playUrlRes = await getVideoPlayUrlService(episode.sourceId)
-    
-    if (playUrlRes.code === 200 && playUrlRes.data && playUrlRes.data.url) {
-      // 处理视频URL
-      const videoUrl = handleVideoUrl(playUrlRes.data.url)
-      console.log('获取到实际播放URL:', videoUrl)
-      
-      // 初始化播放器
-      initPlayer(videoUrl)
-    } else {
-      throw new Error('获取播放地址失败')
-    }
-  } catch (error) {
-    console.error('获取播放地址失败:', error)
-    handlePlayError('获取视频播放地址失败，请稍后再试')
-  }
+  console.log('原始视频源ID:', episode.sourceId);
+
+  // 使用新的API服务获取真实播放地址
+  // 传递视频ID和加密的视频源ID
+  const playUrlRes = await getVideoUrlService(videoInfo.value.id, episode.sourceId)
+  console.log(playUrlRes)
 }
 
 // 处理播放错误
 const handlePlayError = (errorMsg) => {
   ElMessage.error(errorMsg || '视频加载失败，请稍后再试')
-  
+
   // 记录失败
   if (currentEpisode.value) {
     console.error('播放失败的剧集:', currentEpisode.value)
@@ -306,14 +293,14 @@ const initPlayer = (url) => {
   if (artInstance.value) {
     artInstance.value.destroy()
   }
-  
+
   try {
     console.log('初始化播放器，URL:', url)
-    
+
     // 处理URL格式
     let processedUrl = url;
     let customType = null;
-    
+
     // 根据URL类型选择适当的播放方式
     if (url.includes('.m3u8') || url.includes('playlist') || url.includes('chunklist')) {
       // HLS流
@@ -328,7 +315,7 @@ const initPlayer = (url) => {
       console.log('使用内部代理地址');
       customType = 'm3u8';
     }
-    
+
     // 播放器配置
     const options = {
       container: artRef.value,
@@ -364,14 +351,14 @@ const initPlayer = (url) => {
       },
       customType: {}
     };
-    
+
     // 根据视频类型添加自定义处理器
     if (customType === 'm3u8') {
-      options.customType['m3u8'] = function(video, url) {
+      options.customType['m3u8'] = function (video, url) {
         if (Hls.isSupported()) {
           const hls = new Hls({
             // 增加HLS配置以提高兼容性
-            xhrSetup: function(xhr) {
+            xhrSetup: function (xhr) {
               xhr.withCredentials = false; // 不发送凭证
               console.log('设置HLS请求:', url);
             },
@@ -381,26 +368,26 @@ const initPlayer = (url) => {
             maxBufferHole: 1,
             lowLatencyMode: false
           });
-          
+
           hls.loadSource(url);
           hls.attachMedia(video);
-          
+
           // 添加更多事件监听
-          hls.on(Hls.Events.MANIFEST_PARSED, function() {
+          hls.on(Hls.Events.MANIFEST_PARSED, function () {
             console.log('HLS清单解析完成，开始播放');
             video.play().catch(e => {
               console.error('自动播放失败:', e);
             });
           });
-          
-          hls.on(Hls.Events.LEVEL_LOADED, function() {
+
+          hls.on(Hls.Events.LEVEL_LOADED, function () {
             console.log('HLS级别加载完成');
           });
-          
-          hls.on(Hls.Events.ERROR, function(event, data) {
+
+          hls.on(Hls.Events.ERROR, function (event, data) {
             console.error('HLS错误:', data);
             if (data.fatal) {
-              switch(data.type) {
+              switch (data.type) {
                 case Hls.ErrorTypes.NETWORK_ERROR:
                   console.log('HLS网络错误，尝试恢复');
                   hls.startLoad();
@@ -418,12 +405,12 @@ const initPlayer = (url) => {
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           console.log('使用原生HLS支持播放');
           video.src = url;
-          video.addEventListener('loadedmetadata', function() {
+          video.addEventListener('loadedmetadata', function () {
             video.play().catch(e => {
               console.error('自动播放失败:', e);
             });
           });
-          video.addEventListener('error', function(e) {
+          video.addEventListener('error', function (e) {
             console.error('视频加载错误:', e);
             handlePlayError('视频加载失败');
           });
@@ -432,7 +419,7 @@ const initPlayer = (url) => {
         }
       };
     } else if (customType === 'flv') {
-      options.customType['flv'] = function(video, url) {
+      options.customType['flv'] = function (video, url) {
         console.log('使用FLV播放器');
         // 如果需要支持FLV，需要引入flv.js库
         if (window.flvjs && window.flvjs.isSupported()) {
@@ -449,18 +436,18 @@ const initPlayer = (url) => {
         }
       };
     }
-    
+
     // 创建播放器实例
     artInstance.value = new Artplayer(options);
-    
+
     // 播放器事件监听
     artInstance.value.on('ready', () => {
       console.log('播放器准备就绪');
     });
-    
+
     artInstance.value.on('play', () => {
       console.log('开始播放');
-      
+
       // 标记当前集为已观看
       if (currentEpisode.value) {
         const index = episodes.value.findIndex(ep => ep.id === currentEpisode.value.id);
@@ -469,16 +456,16 @@ const initPlayer = (url) => {
         }
       }
     });
-    
+
     artInstance.value.on('pause', () => {
       console.log('暂停播放');
     });
-    
+
     artInstance.value.on('error', (error) => {
       console.error('播放器错误:', error);
       handlePlayError();
     });
-    
+
     artInstance.value.on('destroy', () => {
       console.log('播放器销毁');
     });
@@ -524,19 +511,27 @@ onMounted(() => {
       <!-- 操作栏 -->
       <div class="action-bar">
         <div class="action-btn" @click="toggleLike">
-          <el-icon size="22"><ThumbUp /></el-icon>
+          <el-icon size="22">
+            <ThumbUp/>
+          </el-icon>
           <span class="action-text">{{ videoInfo.likes }}</span>
         </div>
         <div class="action-btn" @click="toggleCollect">
-          <el-icon size="22"><StarFilled /></el-icon>
+          <el-icon size="22">
+            <StarFilled/>
+          </el-icon>
           <span class="action-text">收藏</span>
         </div>
         <div class="action-btn" @click="toggleSubscribe">
-          <el-icon size="22"><Collection /></el-icon>
+          <el-icon size="22">
+            <Collection/>
+          </el-icon>
           <span class="action-text">追番</span>
         </div>
         <div class="action-btn">
-          <el-icon size="22"><Share /></el-icon>
+          <el-icon size="22">
+            <Share/>
+          </el-icon>
           <span class="action-text">分享</span>
         </div>
       </div>
@@ -546,32 +541,32 @@ onMounted(() => {
     <div class="content-container">
       <!-- 标签页 -->
       <div class="tabs">
-        <div 
-          v-for="tab in tabs" 
-          :key="tab.name"
-          class="tab"
-          :class="{'active-tab': activeTab === tab.name}"
-          @click="setActiveTab(tab.name)"
+        <div
+            v-for="tab in tabs"
+            :key="tab.name"
+            class="tab"
+            :class="{'active-tab': activeTab === tab.name}"
+            @click="setActiveTab(tab.name)"
         >
           {{ tab.name }}
           <div v-if="activeTab === tab.name" class="tab-indicator"></div>
         </div>
       </div>
-      
+
       <!-- 简介内容 -->
       <div v-if="activeTab === '简介'" class="tab-content">
         <div class="tag-list">
-          <span 
-            v-for="tag in videoInfo.tags" 
-            :key="tag"
-            class="tag"
+          <span
+              v-for="tag in videoInfo.tags"
+              :key="tag"
+              class="tag"
           >
             {{ tag }}
           </span>
         </div>
-        
+
         <p class="description" v-html="videoInfo.description"></p>
-        
+
         <!-- 视频信息 -->
         <div class="video-meta">
           <div class="meta-item" v-if="videoInfo.area">
@@ -591,91 +586,96 @@ onMounted(() => {
             <span class="meta-value">{{ videoInfo.actors.join(' / ') }}</span>
           </div>
         </div>
-        
+
         <!-- 订阅按钮 -->
         <div class="subscribe-section">
           <div class="channel-info">
             <div class="channel-avatar"></div>
             <span class="channel-name">XMoe动漫</span>
           </div>
-          <el-button 
-            :type="videoInfo.isSubscribed ? 'default' : 'danger'" 
-            size="small" 
-            @click="toggleSubscribe"
+          <el-button
+              :type="videoInfo.isSubscribed ? 'default' : 'danger'"
+              size="small"
+              @click="toggleSubscribe"
           >
             {{ videoInfo.isSubscribed ? '已追番' : '+ 追番' }}
           </el-button>
         </div>
       </div>
-      
+
       <!-- 评论内容 -->
       <div v-else class="comment-placeholder">
-        <el-icon :size="32" class="mb-2"><ChatDotRound /></el-icon>
+        <el-icon :size="32" class="mb-2">
+          <ChatDotRound/>
+        </el-icon>
         <p class="text-sm">评论功能开发中...</p>
       </div>
     </div>
-    
+
     <!-- 剧集列表 -->
     <div class="episodes-section">
       <div class="episodes-header">
         <h3 class="section-title">剧集</h3>
         <div class="episode-count">
-          共{{ episodes.length }}集，{{ videoInfo.episode }} <el-icon><ArrowDown /></el-icon>
+          共{{ episodes.length }}集，{{ videoInfo.episode }}
+          <el-icon>
+            <ArrowDown/>
+          </el-icon>
         </div>
       </div>
-      
+
       <!-- 线路选择 -->
       <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
-        <div 
-          v-for="source in videoInfo.sources" 
-          :key="source.id"
-          class="source-tab"
-          :class="{'active-source': currentSource === source.id}"
-          @click="switchSource(source.id)"
+        <div
+            v-for="source in videoInfo.sources"
+            :key="source.id"
+            class="source-tab"
+            :class="{'active-source': currentSource === source.id}"
+            @click="switchSource(source.id)"
         >
           {{ source.name }} ({{ source.count }}集)
         </div>
       </div>
-      
+
       <div v-if="episodes.length === 0" class="no-episodes">
         加载剧集中...
       </div>
-      
+
       <div v-else class="episodes-grid">
-        <div 
-          v-for="episode in episodes" 
-          :key="episode.id"
-          class="episode-item"
-          :class="{
-            'current-episode': currentEpisode && episode.id === currentEpisode.id, 
+        <div
+            v-for="episode in episodes"
+            :key="episode.id"
+            class="episode-item"
+            :class="{
+            'current-episode': currentEpisode && episode.id === currentEpisode.id,
             'watched-episode': episode.watched
           }"
-          @click="playVideo(episode.id)"
+            @click="playVideo(episode.id)"
         >
           <div class="episode-title">{{ episode.title }}</div>
           <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
-          <div 
-            v-if="episode.watched" 
-            class="progress-bar"
+          <div
+              v-if="episode.watched"
+              class="progress-bar"
           >
             <div class="progress-fill"></div>
           </div>
         </div>
       </div>
     </div>
-    
+
     <!-- 相关推荐 -->
     <div class="recommendations-section">
       <h3 class="section-title">相关推荐</h3>
-      
+
       <div class="recommendations-list">
-        <div 
-          v-for="video in relatedVideos" 
-          :key="video.id"
-          class="recommendation-item"
+        <div
+            v-for="video in relatedVideos"
+            :key="video.id"
+            class="recommendation-item"
         >
           <div class="thumbnail-container">
-            <img :src="video.cover" class="thumbnail" />
+            <img :src="video.cover" class="thumbnail"/>
           </div>
           <div class="recommendation-info">
             <h4 class="recommendation-title">{{ video.title }}</h4>
