@@ -191,8 +191,6 @@ const playVideo = async (episodeId) => {
   episode.watched = true
 
   try {
-    // 显示加载中提示
-    ElMessage.info(`正在加载: ${episode.title}`)
 
     // 调用API获取视频地址
     const res = await getVideoUrlService(videoInfo.value.id, episode.sourceId)
@@ -251,11 +249,11 @@ const playVideo = async (episodeId) => {
       }
 
       // 显示加载中提示
-      ElMessage.info('正在下载视频文件...')
+      ElMessage.info('视频解析中...')
 
       try {
         // 使用fetch下载文件
-        console.log('开始下载视频文件:', proxyUrl)
+        console.log('视频解析中:', proxyUrl)
         const response = await fetch(proxyUrl)
 
         if (!response.ok) {
@@ -295,14 +293,7 @@ const playVideo = async (episodeId) => {
         return blobUrl
       } catch (error) {
         console.error('下载视频文件失败:', error)
-        ElMessage.error('下载视频文件失败: ' + error.message)
-
-        // 如果下载失败，尝试直接使用原始URL初始化播放器
-        console.log('尝试直接使用原始URL初始化播放器')
-        const fallbackUrl = proxyUrl + '.mp4'
-        initPlayer(fallbackUrl, episode.title)
-        ElMessage.success(`开始播放: ${episode.title}`)
-        return fallbackUrl
+        return
       }
     } else {
       ElMessage.error(res.message || '获取视频地址失败')
