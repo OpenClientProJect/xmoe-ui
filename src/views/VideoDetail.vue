@@ -6,6 +6,7 @@ import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-p
 import Artplayer from 'artplayer'
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
+import Hls from 'hls.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -56,6 +57,117 @@ const toggleSubscribe = () => {
   videoInfo.value.isSubscribed = !videoInfo.value.isSubscribed
 }
 
+// 初始化播放器
+const initPlayer = (url, title) => {
+  if (!url) {
+    console.error('播放URL为空')
+    ElMessage.error('播放地址无效')
+    return
+  }
+
+  // 如果已经有播放器实例，先销毁
+  if (artInstance.value) {
+    artInstance.value.destroy()
+  }
+
+  try {
+    console.log('初始化播放器，URL:', url)
+
+    // 播放器配置
+    const options = {
+      container: artRef.value,
+      url: url,
+      poster: videoInfo.value.cover,
+      title: title || videoInfo.value.title,
+      volume: 0.7,
+      isLive: false,
+      muted: false,
+      autoplay: true,
+      pip: true,
+      autoSize: false,
+      autoMini: true,
+      screenshot: true,
+      setting: true,
+      loop: false,
+      flip: true,
+      playbackRate: true,
+      aspectRatio: true,
+      fullscreen: true,
+      fullscreenWeb: true,
+      subtitleOffset: true,
+      miniProgressBar: true,
+      mutex: true,
+      backdrop: true,
+      playsInline: true,
+      autoPlayback: true,
+      airplay: true,
+      theme: '#dc2626',
+      lang: 'zh-cn',
+      moreVideoAttr: {
+        crossOrigin: 'anonymous'
+      },
+      customType: {
+        // 添加对m3u8格式的支持
+        m3u8: function(video, url) {
+          if (Hls.isSupported()) {
+            const hls = new Hls({
+              debug: false,
+              enableWorker: true,
+              lowLatencyMode: false,
+              maxBufferLength: 30,
+              maxBufferSize: 10 * 1000 * 1000, // 10MB
+              maxRetryCount: 3
+            });
+            hls.loadSource(url);
+            hls.attachMedia(video);
+
+            // 保存hls实例以便后续清理
+            artInstance.value.$hls = hls;
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // 对于Safari等原生支持HLS的浏览器
+            video.src = url;
+          } else {
+            console.warn('当前浏览器不支持HLS播放');
+          }
+        }
+      }
+    };
+
+    // 创建播放器实例
+    artInstance.value = new Artplayer(options);
+
+    // 播放器事件监听
+    artInstance.value.on('ready', () => {
+      console.log('播放器准备就绪');
+    });
+
+    artInstance.value.on('play', () => {
+      console.log('开始播放');
+    });
+
+    artInstance.value.on('pause', () => {
+      console.log('暂停播放');
+    });
+
+    artInstance.value.on('error', (error) => {
+      console.error('播放器错误:', error);
+      ElMessage.error('视频播放失败，请尝试其他线路');
+    });
+
+    artInstance.value.on('destroy', () => {
+      console.log('播放器销毁');
+      // 清理HLS实例
+      if (artInstance.value.$hls) {
+        artInstance.value.$hls.destroy();
+        artInstance.value.$hls = null;
+      }
+    });
+  } catch (error) {
+    console.error('初始化播放器失败:', error);
+    ElMessage.error('初始化播放器失败: ' + (error.message || '未知错误'));
+  }
+}
+
 // 播放视频
 const playVideo = async (episodeId) => {
   const episode = episodes.value.find(ep => ep.id === episodeId)
@@ -88,12 +200,15 @@ const playVideo = async (episodeId) => {
     if (res.code === 200 && res.data) {
       console.log('获取到视频地址:', res.data)
 
-      // 这里可以添加播放视频的逻辑
-      // 如果有播放器组件，可以将视频地址传给播放器
+      // 处理视频URL，确保可以正确播放
+
+      // 初始化播放器
+      initPlayer(res.data.url, episode.title)
+
       ElMessage.success(`开始播放: ${episode.title}`)
 
       // 返回视频地址，便于后续处理
-      return res.data
+      return res.data.url
     } else {
       ElMessage.error(res.message || '获取视频地址失败')
     }
