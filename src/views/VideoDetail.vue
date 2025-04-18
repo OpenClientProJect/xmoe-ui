@@ -2,9 +2,12 @@
 import {ref, onMounted, onUnmounted} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import {getDramaDetailService, getRelatedDramaService, getVideoUrlService} from '@/api/Drama.js'
-import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-plus/icons-vue"
+import {ChatDotRound, ArrowDown, ArrowUp, Share} from "@element-plus/icons-vue"
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
+//icon
+import Collection from '@/assets/icon/collection.svg'
+import Ringtones from '@/assets/icon/ringtones.svg'
 // 导入顶部导航栏组件
 import HeaderNav from '@/components/home/common/HeaderNav.vue'
 // 导入播放器组件
@@ -50,6 +53,12 @@ const tabs = [
   {name: '简介'},
   {name: '评论(128)'}
 ]
+
+// 控制简介内容的显示/隐藏
+const showFullDescription = ref(false)
+const toggleDescription = () => {
+  showFullDescription.value = !showFullDescription.value
+}
 
 
 const toggleLike = () => {
@@ -460,20 +469,17 @@ onMounted(async () => {
 
       <!-- 操作栏 -->
       <div class="action-bar">
-        <div class="action-btn" @click="toggleLike">
-          <span class="action-text">{{ videoInfo.likes }}</span>
-        </div>
         <div class="action-btn" @click="toggleCollect">
           <el-icon size="22">
-            <StarFilled/>
+            <img :src="Collection" alt="">
           </el-icon>
-          <span class="action-text">收藏</span>
+          <span class="action-text">追番</span>
         </div>
         <div class="action-btn" @click="toggleSubscribe">
           <el-icon size="22">
-            <Collection/>
+            <img :src="Ringtones" alt="">
           </el-icon>
-          <span class="action-text">追番</span>
+          <span class="action-text">催更</span>
         </div>
         <div class="action-btn">
           <el-icon size="22">
@@ -500,6 +506,58 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- 剧集列表 -->
+      <div class="episodes-section">
+        <div class="episodes-header">
+          <h3 class="section-title">剧集</h3>
+          <div class="episode-count">
+            共{{ episodes.length }}集，{{ videoInfo.episode }}
+            <el-icon>
+              <ArrowDown/>
+            </el-icon>
+          </div>
+        </div>
+
+        <!-- 线路选择 -->
+        <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
+          <div
+              v-for="source in videoInfo.sources"
+              :key="source.id"
+              class="source-tab"
+              :class="{'active-source': currentSource === source.id}"
+              @click="switchSource(source.id)"
+          >
+            {{ source.name }} ({{ source.count }}集)
+          </div>
+        </div>
+
+        <div v-if="episodes.length === 0" class="no-episodes">
+          加载剧集中...
+        </div>
+
+        <div v-else class="episodes-grid">
+          <div
+              v-for="episode in episodes"
+              :key="episode.id"
+              class="episode-item"
+              :class="{
+            'current-episode': currentEpisode && episode.id === currentEpisode.id,
+            'watched-episode': episode.watched
+          }"
+              @click="playVideo(episode.id)"
+          >
+            <div class="episode-title">{{ episode.title }}</div>
+            <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
+            <div
+                v-if="episode.watched"
+                class="progress-bar"
+            >
+              <div class="progress-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 简介内容 -->
       <div v-if="activeTab === '简介'" class="tab-content">
         <div class="tag-list">
@@ -511,8 +569,6 @@ onMounted(async () => {
             {{ tag }}
           </span>
         </div>
-
-        <p class="description" v-html="videoInfo.description"></p>
 
         <!-- 视频信息 -->
         <div class="video-meta">
@@ -532,21 +588,17 @@ onMounted(async () => {
             <span class="meta-label">声优：</span>
             <span class="meta-value">{{ videoInfo.actors.join(' / ') }}</span>
           </div>
-        </div>
 
-        <!-- 订阅按钮 -->
-        <div class="subscribe-section">
-          <div class="channel-info">
-            <div class="channel-avatar"></div>
-            <span class="channel-name">XMoe动漫</span>
+          <div class="description-container">
+            <p class="description"
+               v-html="videoInfo.description"
+               :class="{'collapsed': !showFullDescription}"></p>
+            <div class="show-more" @click="toggleDescription">
+              {{ showFullDescription ? '收起' : '显示更多' }}
+              <el-icon v-if="showFullDescription"><ArrowUp /></el-icon>
+              <el-icon v-else><ArrowDown /></el-icon>
+            </div>
           </div>
-          <el-button
-              :type="videoInfo.isSubscribed ? 'default' : 'danger'"
-              size="small"
-              @click="toggleSubscribe"
-          >
-            {{ videoInfo.isSubscribed ? '已追番' : '+ 追番' }}
-          </el-button>
         </div>
       </div>
 
@@ -556,58 +608,6 @@ onMounted(async () => {
           <ChatDotRound/>
         </el-icon>
         <p class="text-sm">评论功能开发中...</p>
-      </div>
-    </div>
-
-    <!-- 剧集列表 -->
-    <div class="episodes-section">
-      <div class="episodes-header">
-        <h3 class="section-title">剧集</h3>
-        <div class="episode-count">
-          共{{ episodes.length }}集，{{ videoInfo.episode }}
-          <el-icon>
-            <ArrowDown/>
-          </el-icon>
-        </div>
-      </div>
-
-      <!-- 线路选择 -->
-      <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
-        <div
-            v-for="source in videoInfo.sources"
-            :key="source.id"
-            class="source-tab"
-            :class="{'active-source': currentSource === source.id}"
-            @click="switchSource(source.id)"
-        >
-          {{ source.name }} ({{ source.count }}集)
-        </div>
-      </div>
-
-      <div v-if="episodes.length === 0" class="no-episodes">
-        加载剧集中...
-      </div>
-
-      <div v-else class="episodes-grid">
-        <div
-            v-for="episode in episodes"
-            :key="episode.id"
-            class="episode-item"
-            :class="{
-            'current-episode': currentEpisode && episode.id === currentEpisode.id,
-            'watched-episode': episode.watched
-          }"
-            @click="playVideo(episode.id)"
-        >
-          <div class="episode-title">{{ episode.title }}</div>
-          <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
-          <div
-              v-if="episode.watched"
-              class="progress-bar"
-          >
-            <div class="progress-fill"></div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -833,10 +833,43 @@ onMounted(async () => {
   font-size: 12px;
 }
 
+.description-container {
+  position: relative;
+  margin-bottom: 4px;
+}
+
 .description {
   font-size: 14px;
   color: #4b5563;
   white-space: pre-line;
+  margin: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.description.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 限制显示三行 */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.show-more {
+  color: #dc2626;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  margin-top: 4px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 20%);
+}
+
+.show-more i {
+  margin-left: 4px;
+  font-size: 12px;
 }
 
 .video-meta {
