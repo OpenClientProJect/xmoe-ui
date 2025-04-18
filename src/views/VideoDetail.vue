@@ -791,6 +791,7 @@ onMounted(async () => {
   display: flex;
   border-bottom: 1px solid #eee;
   margin-top: 8px;
+  padding: 0 16px; /* 添加左右间距，与内容区域保持一致 */
 }
 
 .tab {
@@ -815,7 +816,7 @@ onMounted(async () => {
 }
 
 .tab-content {
-  padding: 12px 0;
+  padding: 12px 16px; /* 添加左右间距，上下保持12px */
 }
 
 .tag-list {
