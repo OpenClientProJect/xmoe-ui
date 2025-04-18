@@ -47,13 +47,30 @@ const videoInfo = ref({
   isCollected: false,
   isSubscribed: true
 })
-
+//评论数据
+const comments = ref({
+  count: 0,
+  lists: []
+})
 
 const activeTab = ref('简介')
 const tabs = [
   {name: '简介'},
-  {name: '评论(128)'}
+  {name: '评论(0)'}
 ]
+
+// 格式化时间戳为可读日期
+const formatDate = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp * 1000)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 // 控制简介内容的显示/隐藏
 const showFullDescription = ref(false)
@@ -482,7 +499,17 @@ const getRelatedDrama = async () => {
  * 获取评论数据
  */
 const getComments = async () => {
-  const res = await getCommentsService(videoId)
+  try {
+    const res = await getCommentsService(videoId)
+    if (res.code === 200 && res.data) {
+      comments.value = res.data
+      // 更新评论数量显示
+      tabs[1].name = `评论(${comments.value.count || 0})`
+    }
+  } catch (error) {
+    console.error('获取评论数据失败:', error)
+    ElMessage.error('获取评论数据失败')
+  }
 }
 
 onMounted(async () => {
@@ -570,7 +597,7 @@ onMounted(async () => {
       </div>
 
       <!-- 剧集列表 -->
-      <div class="episodes-section">
+      <div class="episodes-section" v-if="activeTab === '简介'">
         <div class="episodes-header">
           <h3 class="section-title">剧集</h3>
           <div class="episode-count">
@@ -670,11 +697,67 @@ onMounted(async () => {
       </div>
 
       <!-- 评论内容 -->
-      <div v-else class="comment-placeholder">
-        <el-icon :size="32" class="mb-2">
-          <ChatDotRound/>
-        </el-icon>
-        <p class="text-sm">评论功能开发中...</p>
+      <div v-else class="comment-container">
+        <!-- 评论列表 -->
+        <div v-if="comments.lists && comments.lists.length > 0" class="comment-list">
+          <div v-for="comment in comments.lists"
+               :key="comment.comment_id"
+               class="comment-item">
+            <div class="comment-avatar">
+              <img :src="comment.user_pic" alt="用户头像">
+            </div>
+            <div class="comment-content">
+              <div class="comment-header">
+                <div class="comment-author">{{ comment.comment_name }}</div>
+                <div class="comment-date">{{ formatDate(comment.comment_time) }}</div>
+              </div>
+              <div class="comment-text">{{ comment.comment_content }}</div>
+              <div class="comment-actions">
+                <div class="action-btn">
+                  <el-icon size="14"><ArrowUp /></el-icon>
+                  <span>{{ comment.comment_up || 0 }}</span>
+                </div>
+                <div class="action-btn">
+                  <el-icon size="14"><ArrowDown /></el-icon>
+                  <span>{{ comment.comment_down || 0 }}</span>
+                </div>
+                <div class="action-btn reply-btn">
+                  <el-icon size="14"><ChatDotRound /></el-icon>
+                  <span>回复</span>
+                </div>
+              </div>
+              
+              <!-- 回复列表 -->
+              <div v-if="comment.rp_lists && comment.rp_lists.length > 0" class="reply-list">
+                <div v-for="reply in comment.rp_lists" 
+                     :key="reply.comment_id"
+                     class="reply-item">
+                  <div class="reply-avatar">
+                    <img :src="reply.user_pic" alt="用户头像">
+                  </div>
+                  <div class="reply-content">
+                    <div class="reply-header">
+                      <div class="reply-author">{{ reply.comment_name }}</div>
+                      <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
+                    </div>
+                    <div class="reply-text">
+                      <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
+                      {{ reply.comment_content }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 无评论时显示 -->
+        <div v-else class="comment-placeholder">
+          <el-icon :size="32" class="mb-2">
+            <ChatDotRound/>
+          </el-icon>
+          <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
+        </div>
       </div>
     </div>
 
@@ -992,8 +1075,141 @@ onMounted(async () => {
   font-weight: 500;
 }
 
+.comment-container {
+  padding: 12px 16px;
+  margin: 0 auto;
+  max-width: 100%;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 4px;
+}
+
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comment-item {
+  display: flex;
+  gap: 12px;
+}
+
+.comment-avatar img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.comment-content {
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.comment-author {
+  font-weight: 500;
+  font-size: 14px;
+  color: #374151;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.comment-text {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.action-btn:hover {
+  color: #dc2626;
+}
+
+.reply-btn {
+  margin-left: auto;
+}
+
+.reply-list {
+  margin-top: 12px;
+  padding-left: 12px;
+  border-left: 2px solid #e5e7eb;
+}
+
+.reply-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.reply-avatar img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.reply-content {
+  flex: 1;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.reply-author {
+  font-weight: 500;
+  font-size: 13px;
+  color: #374151;
+}
+
+.reply-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.reply-text {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.reply-to {
+  color: #2563eb;
+}
+
 .comment-placeholder {
-  padding: 12px 0;
+  padding: 24px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1072,6 +1288,20 @@ onMounted(async () => {
   background-color: white;
   margin-top: 8px;
   padding: 16px;
+}
+
+/* 评论区域响应式样式 */
+@media (min-width: 768px) {
+  .comment-container {
+    padding: 16px 24px;
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 767px) {
+  .comment-container {
+    padding: 12px 16px;
+  }
 }
 
 .recommendations-list {
