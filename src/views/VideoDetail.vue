@@ -6,6 +6,8 @@ import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-p
 import Artplayer from 'artplayer'
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
+// 导入顶部导航栏组件
+import HeaderNav from '@/components/home/common/HeaderNav.vue'
 const router = useRouter()
 const route = useRoute()
 const videoId = route.params.id
@@ -413,6 +415,10 @@ onMounted(() => {
 
 <template>
   <div class="video-detail-container">
+    <!-- 顶部导航栏 -->
+    <div class="header-container">
+      <HeaderNav :tabs="['推荐', '番剧', '剧场版', '4K']"/>
+    </div>
     <!-- 视频播放器区域 -->
     <div class="player-container">
       <div ref="artRef" class="video-player"></div>
@@ -963,5 +969,19 @@ onMounted(() => {
   text-align: center;
   padding: 20px;
   color: #6b7280;
+}
+
+/* 顶部导航栏样式 */
+.header-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+}
+
+/* 调整播放器区域的上边距，留出空间给顶部导航栏 */
+.player-container {
+  margin-top: 90px; /* 根据顶部导航栏的高度调整 */
 }
 </style>
