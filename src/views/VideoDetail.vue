@@ -657,15 +657,12 @@ onMounted(() => {
   padding-bottom: 16px;
 }
 
-/* 视频播放器区域 - 固定到顶部 */
+/* 视频播放器区域 - 随页面滚动 */
 .player-container {
-  position: fixed;
-  top: 0;
-  left: 0;
   width: 100%;
   background-color: white;
-  z-index: 100;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 90px; /* 为顶部导航栏留出空间 */
 }
 
 .video-player {
@@ -734,9 +731,8 @@ onMounted(() => {
   color: #374151;
 }
 
-/* 内容区域 - 为固定头部添加足够的上边距 */
+/* 内容区域 */
 .content-container {
-  padding-top: calc(56.25vw + 124px); /* 视频播放器高度(16:9比例) + 信息区和操作栏高度 */
   background-color: white;
 }
 
@@ -980,8 +976,5 @@ onMounted(() => {
   z-index: 100;
 }
 
-/* 调整播放器区域的上边距，留出空间给顶部导航栏 */
-.player-container {
-  margin-top: 90px; /* 根据顶部导航栏的高度调整 */
-}
+
 </style>
