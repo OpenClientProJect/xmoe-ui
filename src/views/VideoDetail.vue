@@ -229,6 +229,69 @@ const setActiveTab = (tab) => {
   activeTab.value = tab
 }
 
+// 复制当前页面链接
+const copyCurrentUrl = () => {
+  // 获取当前页面的完整URL
+  const currentUrl = window.location.href
+
+  // 检查是否支持Clipboard API
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    // 使用Clipboard API复制到剪贴板
+    navigator.clipboard.writeText(currentUrl)
+      .then(() => {
+        // 复制成功提示
+        ElMessage.success('链接已复制到剪贴板')
+      })
+      .catch(err => {
+        // 复制失败提示
+        console.error('复制失败:', err)
+        fallbackCopyTextToClipboard(currentUrl)
+      })
+  } else {
+    // 使用备用方案
+    fallbackCopyTextToClipboard(currentUrl)
+  }
+}
+
+// 备用复制方案
+const fallbackCopyTextToClipboard = (text) => {
+  try {
+    // 创建一个临时文本区域
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+
+    // 避免滚动到视图中
+    textArea.style.position = 'fixed'
+    textArea.style.top = '0'
+    textArea.style.left = '0'
+    textArea.style.width = '2em'
+    textArea.style.height = '2em'
+    textArea.style.padding = '0'
+    textArea.style.border = 'none'
+    textArea.style.outline = 'none'
+    textArea.style.boxShadow = 'none'
+    textArea.style.background = 'transparent'
+
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+
+    // 执行复制命令
+    const successful = document.execCommand('copy')
+    if (successful) {
+      ElMessage.success('链接已复制到剪贴板')
+    } else {
+      ElMessage.error('复制失败，请手动复制')
+    }
+
+    // 清理
+    document.body.removeChild(textArea)
+  } catch (err) {
+    console.error('复制失败:', err)
+    ElMessage.error('复制失败，请手动复制')
+  }
+}
+
 // 跳转到视频详情页
 const goToVideoDetail = (id) => {
   if (!id) {
@@ -481,7 +544,7 @@ onMounted(async () => {
           </el-icon>
           <span class="action-text">催更</span>
         </div>
-        <div class="action-btn">
+        <div class="action-btn" @click="copyCurrentUrl">
           <el-icon size="22">
             <Share/>
           </el-icon>
@@ -767,6 +830,13 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 
 .action-text {
