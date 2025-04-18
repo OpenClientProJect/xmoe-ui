@@ -16,7 +16,8 @@ const route = useRoute()
 const headerActiveTab = ref('番剧') // 默认选中番剧标签
 
 
-const videoId = route.params.id
+// 获取视频ID，同时支持路由参数和查询参数
+const videoId = route.params.id || route.query.id
 const playerRef = ref(null) // 播放器组件引用
 const currentVideoUrl = ref('') // 当前播放的视频URL
 const currentEpisode = ref(null)
@@ -217,6 +218,38 @@ const switchSource = (sourceId) => {
 // 改进tab切换
 const setActiveTab = (tab) => {
   activeTab.value = tab
+}
+
+// 跳转到视频详情页
+const goToVideoDetail = (id) => {
+  if (!id) {
+    console.error('无效的视频ID')
+    return
+  }
+
+  // 如果是当前视频，不需要跳转
+  if (id.toString() === videoId.toString()) {
+    console.log('当前已经是该视频，无需跳转')
+    return
+  }
+
+  console.log('跳转到视频详情页,ID:', id)
+
+  // 清空当前状态
+  currentEpisode.value = null
+  currentVideoUrl.value = ''
+  episodes.value = []
+  allEpisodes.value = {}
+  relatedVideos.value = []
+
+  // 跳转到新的视频详情页，使用正确的路由格式
+  router.push(`/video/${id}`)
+
+  // 重新加载数据
+  setTimeout(() => {
+    getVideoDetail()
+    getRelatedDrama()
+  }, 100)
 }
 
 // 组件卸载时清理资源
