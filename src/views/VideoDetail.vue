@@ -6,8 +6,6 @@ import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-p
 import Artplayer from 'artplayer'
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
-import Hls from 'hls.js'
-
 const router = useRouter()
 const route = useRoute()
 const videoId = route.params.id
@@ -116,77 +114,6 @@ const initPlayer = (url, title) => {
       moreVideoAttr: {
         crossOrigin: 'anonymous'
       },
-      customType: {
-        // 添加对m3u8格式的支持
-        m3u8: function(video, url) {
-          if (Hls.isSupported()) {
-            const hls = new Hls({
-              debug: false,
-              enableWorker: true,
-              lowLatencyMode: false,
-              maxBufferLength: 60,
-              maxMaxBufferLength: 120,
-              maxBufferSize: 20 * 1000 * 1000, // 20MB
-              maxRetryCount: 5,
-              // 设置XHR请求配置
-              xhrSetup: function(xhr, url) {
-                // 不发送凭证，避免CORS预检请求
-                xhr.withCredentials = false;
-                // 设置请求头
-                xhr.setRequestHeader('Accept', '*/*');
-                xhr.setRequestHeader('Origin', window.location.origin);
-                console.log('HLS请求:', url);
-              }
-            });
-
-            // 添加错误处理
-            hls.on(Hls.Events.ERROR, function(event, data) {
-              console.error('HLS错误:', data);
-              if (data.fatal) {
-                switch(data.type) {
-                  case Hls.ErrorTypes.NETWORK_ERROR:
-                    console.log('HLS网络错误，尝试恢复');
-                    hls.startLoad();
-                    break;
-                  case Hls.ErrorTypes.MEDIA_ERROR:
-                    console.log('HLS媒体错误，尝试恢复');
-                    hls.recoverMediaError();
-                    break;
-                  default:
-                    console.error('无法恢复的HLS错误:', data);
-                    ElMessage.error('视频加载失败，请尝试其他线路');
-                    break;
-                }
-              }
-            });
-
-            // 添加成功事件
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-              console.log('HLS清单解析完成，开始播放');
-              video.play().catch(e => {
-                console.error('自动播放失败:', e);
-              });
-            });
-
-            hls.loadSource(url);
-            hls.attachMedia(video);
-
-            // 保存hls实例以便后续清理
-            artInstance.value.$hls = hls;
-          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // 对于Safari等原生支持HLS的浏览器
-            video.src = url;
-            video.addEventListener('loadedmetadata', function() {
-              video.play().catch(e => {
-                console.error('自动播放失败:', e);
-              });
-            });
-          } else {
-            console.warn('当前浏览器不支持HLS播放');
-            ElMessage.error('您的浏览器不支持此视频格式，请使用Chrome或Edge浏览器');
-          }
-        }
-      }
     };
 
     // // 如果检测到特定类型，设置自定义类型
@@ -213,20 +140,13 @@ const initPlayer = (url, title) => {
 
     artInstance.value.on('error', (error) => {
       console.error('播放器错误:', error);
-      ElMessage.error('视频播放失败，请尝试其他线路');
     });
 
     artInstance.value.on('destroy', () => {
       console.log('播放器销毁');
-      // 清理HLS实例
-      if (artInstance.value.$hls) {
-        artInstance.value.$hls.destroy();
-        artInstance.value.$hls = null;
-      }
     });
   } catch (error) {
     console.error('初始化播放器失败:', error);
-    ElMessage.error('初始化播放器失败: ' + (error.message || '未知错误'));
   }
 }
 
@@ -288,10 +208,6 @@ const playVideo = async (episodeId) => {
       }
 
       console.log('提取到的原始视频地址:', videoUrl)
-
-      // 显示加载中提示
-      ElMessage.info('视频解析中...')
-
       // 处理跨域问题，使用代理URL
       let proxyUrl = videoUrl
 
@@ -328,8 +244,6 @@ const playVideo = async (episodeId) => {
             revokeUrl()
           }
         }
-
-        ElMessage.success(`开始播放: ${episode.title}`)
         return videoUrl
       } catch (error) {
         console.error('播放失败:', error)
