@@ -109,9 +109,15 @@ const initPlayer = (url, title) => {
     //   console.log('检测到MP4视频');
     // }
 
-    // 播放器配置
+    // 创建内容容器
+    const playerContent = document.createElement('div');
+    playerContent.className = 'video-player-content';
+    artRef.value.innerHTML = '';
+    artRef.value.appendChild(playerContent);
+
+    // 播放器配置 - 优化性能
     const options = {
-      container: artRef.value,
+      container: playerContent,
       url: url,
       poster: videoInfo.value.cover,
       title: title || videoInfo.value.title,
@@ -122,25 +128,28 @@ const initPlayer = (url, title) => {
       pip: true,
       autoSize: false,
       autoMini: true,
-      screenshot: true,
+      screenshot: false, // 禁用截图功能以提高性能
       setting: true,
       loop: false,
-      flip: true,
+      flip: false, // 禁用翻转功能以提高性能
       playbackRate: true,
-      aspectRatio: true,
+      aspectRatio: false, // 禁用宽高比调整以提高性能
       fullscreen: true,
       fullscreenWeb: true,
-      subtitleOffset: true,
+      subtitleOffset: false, // 禁用字幕偏移以提高性能
       miniProgressBar: true,
       mutex: true,
-      backdrop: true,
+      backdrop: false, // 禁用背景模糊以提高性能
       playsInline: true,
       autoPlayback: true,
-      airplay: true,
+      airplay: false, // 禁用需要额外资源的功能
       theme: '#dc2626',
       lang: 'zh-cn',
       moreVideoAttr: {
-        crossOrigin: 'anonymous'
+        crossOrigin: 'anonymous',
+        preload: 'metadata', // 只预加载元数据以提高性能
+        'webkit-playsinline': true,
+        playsinline: true,
       },
     };
 
@@ -695,15 +704,34 @@ onMounted(() => {
 .player-container {
   width: 100%;
   background-color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* 使用更高效的阴影实现 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   margin-top: 90px; /* 为顶部导航栏留出空间 */
+  /* 添加硬件加速 */
+  transform: translateZ(0);
+  will-change: transform;
+  z-index: 2;
 }
 
 .video-player {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  /* 使用固定高度比例而不是 aspect-ratio 以减少重排 */
+  padding-top: 56.25%; /* 16:9 的高度比例 */
   background-color: #000;
+  /* 添加硬件加速 */
+  transform: translateZ(0);
+  will-change: transform;
+  overflow: hidden;
+}
+
+/* 添加一个内容容器来定位播放器 */
+.video-player-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .video-cover {
