@@ -10,6 +10,32 @@ import {handleImageUrl} from '@/utils/imageUtils'
 import HeaderNav from '@/components/home/common/HeaderNav.vue'
 const router = useRouter()
 const route = useRoute()
+
+// 顶部导航栏选中的标签
+const headerActiveTab = ref('番剧') // 默认选中番剧标签
+
+// 处理顶部导航栏标签切换
+const handleHeaderTabChange = (tab) => {
+  headerActiveTab.value = tab
+
+  // 根据标签跳转到相应页面
+  switch (tab) {
+    case '推荐':
+      router.push('/')
+      break
+    case '番剧':
+      // 当前已经在番剧页面，不需要跳转
+      break
+    case '剧场版':
+      router.push('/movie')
+      break
+    case '4K':
+      router.push('/4k')
+      break
+    default:
+      break
+  }
+}
 const videoId = route.params.id
 const artRef = ref(null)
 const artInstance = ref(null)
@@ -409,7 +435,11 @@ const getVideoDetail = async () => {
 }
 
 onMounted(() => {
+  // 获取视频详情
   getVideoDetail()
+
+  // 设置顶部导航栏的选中标签
+  // 根据路由或其他条件决定选中哪个标签
 })
 </script>
 
@@ -417,7 +447,11 @@ onMounted(() => {
   <div class="video-detail-container">
     <!-- 顶部导航栏 -->
     <div class="header-container">
-      <HeaderNav :tabs="['推荐', '番剧', '剧场版', '4K']"/>
+      <HeaderNav
+        :tabs="['推荐', '番剧', '剧场版', '4K']"
+        :active-tab="headerActiveTab"
+        @tab-change="handleHeaderTabChange"
+      />
     </div>
     <!-- 视频播放器区域 -->
     <div class="player-container">
