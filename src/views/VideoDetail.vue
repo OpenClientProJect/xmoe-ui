@@ -12,6 +12,8 @@ import Ringtones from '@/assets/icon/ringtones.svg'
 import HeaderNav from '@/components/home/common/HeaderNav.vue'
 // 导入播放器组件
 import VideoPlayer from '@/components/player/VideoPlayer.vue'
+import {getCommentsService} from "@/api/comments.js";
+
 const router = useRouter()
 const route = useRoute()
 
@@ -45,7 +47,6 @@ const videoInfo = ref({
   isCollected: false,
   isSubscribed: true
 })
-
 
 
 const activeTab = ref('简介')
@@ -162,8 +163,8 @@ const playVideo = async (episodeId) => {
           for (const key in res.data) {
             if (typeof res.data[key] === 'string' &&
                 (res.data[key].includes('http') ||
-                 res.data[key].includes('.mp4') ||
-                 res.data[key].includes('.m3u8'))) {
+                    res.data[key].includes('.mp4') ||
+                    res.data[key].includes('.m3u8'))) {
               videoUrl = res.data[key]
               break
             }
@@ -238,15 +239,15 @@ const copyCurrentUrl = () => {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     // 使用Clipboard API复制到剪贴板
     navigator.clipboard.writeText(currentUrl)
-      .then(() => {
-        // 复制成功提示
-        ElMessage.success('链接已复制到剪贴板')
-      })
-      .catch(err => {
-        // 复制失败提示
-        console.error('复制失败:', err)
-        fallbackCopyTextToClipboard(currentUrl)
-      })
+        .then(() => {
+          // 复制成功提示
+          ElMessage.success('链接已复制到剪贴板')
+        })
+        .catch(err => {
+          // 复制失败提示
+          console.error('复制失败:', err)
+          fallbackCopyTextToClipboard(currentUrl)
+        })
   } else {
     // 使用备用方案
     fallbackCopyTextToClipboard(currentUrl)
@@ -449,49 +450,48 @@ const getRelatedDrama = async () => {
 
     const res = await getRelatedDramaService(videoInfo.value.typeId)
 
-    if (res.code === 200) {
-      // 根据响应数据结构进行适配
-      let relatedData = [];
+    // 根据响应数据结构进行适配
+    let relatedData = [];
 
-      if (Array.isArray(res.data)) {
-        // 新的响应格式，直接是数组
-        relatedData = res.data;
-        console.log('获取到相关推荐(新格式):', relatedData);
-      } else if (res.data && res.data.list) {
-        // 旧的响应格式，有list属性
-        relatedData = res.data.list;
-        console.log('获取到相关推荐(旧格式):', relatedData);
-      }
-
-      if (relatedData.length > 0) {
-        // 处理相关推荐数据
-        relatedVideos.value = relatedData.map(item => ({
-          id: item.vod_id,
-          title: item.vod_name,
-          cover: handleImageUrl(item.vod_pic),
-          views: item.vod_hits || '0',
-          episode: item.vod_remarks || '',
-          score: item.vod_score || '0',
-          tags: item.vod_class ? item.vod_class.split(',') : []
-        }));
-
-        console.log('处理后的相关推荐:', relatedVideos.value);
-      } else {
-        console.warn('相关推荐数据为空');
-      }
-    } else {
-      console.warn('获取相关推荐失败:', res.message || '未知错误');
+    if (Array.isArray(res.data)) {
+      // 新的响应格式，直接是数组
+      relatedData = res.data;
+      console.log('获取到相关推荐(新格式):', relatedData);
+    } else if (res.data && res.data.list) {
+      // 旧的响应格式，有list属性
+      relatedData = res.data.list;
+      console.log('获取到相关推荐(旧格式):', relatedData);
     }
+
+    // 处理相关推荐数据
+    relatedVideos.value = relatedData.map(item => ({
+      id: item.vod_id,
+      title: item.vod_name,
+      cover: handleImageUrl(item.vod_pic),
+      views: item.vod_hits || '0',
+      episode: item.vod_remarks || '',
+      score: item.vod_score || '0',
+      tags: item.vod_class ? item.vod_class.split(',') : []
+    }));
   } catch (error) {
     console.error('获取相关推荐失败:', error);
   }
 }
 
+/**
+ * 获取评论数据
+ */
+const getComments = async () => {
+  const res = await getCommentsService(videoId)
+}
+
 onMounted(async () => {
-    console.log('组件挂载，开始获取数据')
-    await getVideoDetail()
-    console.log('视频详情加载完成，开始获取相关推荐')
-    await getRelatedDrama()
+  console.log('组件挂载，开始获取数据')
+  await getVideoDetail()
+  console.log('视频详情加载完成，开始获取相关推荐')
+  await getRelatedDrama()
+  console.log('开始获取评论数据')
+  await getComments()
 })
 </script>
 
@@ -500,25 +500,25 @@ onMounted(async () => {
     <!-- 顶部导航栏 -->
     <div class="header-container">
       <HeaderNav
-        :tabs="['推荐', '番剧', '剧场版', '4K']"
-        :active-tab="headerActiveTab"
-        @tab-change="handleHeaderTabChange"
+          :tabs="['推荐', '番剧', '剧场版', '4K']"
+          :active-tab="headerActiveTab"
+          @tab-change="handleHeaderTabChange"
       />
     </div>
     <!-- 视频播放器区域 -->
     <div class="player-container">
       <!-- 使用新的播放器组件 -->
       <VideoPlayer
-        ref="playerRef"
-        :url="currentVideoUrl"
-        :title="currentEpisode?.title || videoInfo.title"
-        :poster="videoInfo.cover"
-        :video-id="videoId"
-        @error="handlePlayerError"
-        @play="handlePlayerPlay"
-        @pause="handlePlayerPause"
-        @ended="handlePlayerEnded"
-        @timeupdate="handlePlayerTimeUpdate"
+          ref="playerRef"
+          :url="currentVideoUrl"
+          :title="currentEpisode?.title || videoInfo.title"
+          :poster="videoInfo.cover"
+          :video-id="videoId"
+          @error="handlePlayerError"
+          @play="handlePlayerPlay"
+          @pause="handlePlayerPause"
+          @ended="handlePlayerEnded"
+          @timeupdate="handlePlayerTimeUpdate"
       />
 
       <!-- 视频信息 -->
@@ -658,8 +658,12 @@ onMounted(async () => {
                :class="{'collapsed': !showFullDescription}"></p>
             <div class="show-more" @click="toggleDescription">
               {{ showFullDescription ? '收起' : '显示更多' }}
-              <el-icon v-if="showFullDescription"><ArrowUp /></el-icon>
-              <el-icon v-else><ArrowDown /></el-icon>
+              <el-icon v-if="showFullDescription">
+                <ArrowUp/>
+              </el-icon>
+              <el-icon v-else>
+                <ArrowDown/>
+              </el-icon>
             </div>
           </div>
         </div>
@@ -934,7 +938,7 @@ onMounted(async () => {
   justify-content: center;
   padding: 8px 0;
   margin-top: 4px;
-  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 20%);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 20%);
 }
 
 .show-more i {
