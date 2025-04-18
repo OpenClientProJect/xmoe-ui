@@ -12,6 +12,8 @@ import Ringtones from '@/assets/icon/ringtones.svg'
 import HeaderNav from '@/components/home/common/HeaderNav.vue'
 // 导入播放器组件
 import VideoPlayer from '@/components/player/VideoPlayer.vue'
+// 导入相关推荐组件
+import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
 import {getCommentsService} from "@/api/comments.js";
 
 const router = useRouter()
@@ -30,6 +32,7 @@ const currentSource = ref(0) // 当前线路，默认为第一个
 const episodes = ref([]) // 当前线路的剧集列表
 const allEpisodes = ref({}) // 存储所有线路的剧集数据
 const relatedVideos = ref([])// 相关视频列表
+const isRelatedLoading = ref(false) // 相关推荐加载状态
 // 视频信息
 const videoInfo = ref({
   id: videoId,
@@ -464,7 +467,8 @@ const getVideoDetail = async () => {
 //相关推荐
 const getRelatedDrama = async () => {
   try {
-
+    isRelatedLoading.value = true;
+    
     const res = await getRelatedDramaService(videoInfo.value.typeId)
 
     // 根据响应数据结构进行适配
@@ -492,6 +496,8 @@ const getRelatedDrama = async () => {
     }));
   } catch (error) {
     console.error('获取相关推荐失败:', error);
+  } finally {
+    isRelatedLoading.value = false;
   }
 }
 
@@ -761,44 +767,13 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 相关推荐 -->
-    <div class="recommendations-section">
-      <h3 class="section-title">相关推荐</h3>
-
-      <div v-if="relatedVideos.length === 0" class="no-recommendations">
-        加载推荐中...
-      </div>
-
-      <div v-else class="recommendations-list">
-        <div
-            v-for="video in relatedVideos"
-            :key="video.id"
-            class="recommendation-item"
-            @click="goToVideoDetail(video.id)"
-        >
-          <div class="thumbnail-container">
-            <img :src="video.cover" class="thumbnail" alt=""/>
-            <div class="episode-badge" v-if="video.episode">
-              {{ video.episode }}
-            </div>
-          </div>
-          <div class="recommendation-info">
-            <h4 class="recommendation-title">{{ video.title }}</h4>
-            <div class="recommendation-tags" v-if="video.tags && video.tags.length">
-              <span class="recommendation-tag" v-for="(tag, index) in video.tags.slice(0, 2)" :key="index">
-                {{ tag }}
-              </span>
-            </div>
-            <div class="recommendation-stats">
-              <span class="views">{{ video.views }}播放</span>
-              <span class="score" v-if="video.score && video.score !== '0'">
-                <i class="el-icon-star-on"></i> {{ video.score }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- 相关推荐组件 -->
+    <RelatedRecommend 
+      :videos="relatedVideos" 
+      :title="'相关推荐'" 
+      :loading="isRelatedLoading"
+      @itemClick="goToVideoDetail" 
+    />
   </div>
 </template>
 
@@ -1283,11 +1258,20 @@ onMounted(async () => {
   width: 100%;
 }
 
-/* 推荐列表 */
-.recommendations-section {
-  background-color: white;
-  margin-top: 8px;
-  padding: 16px;
+/* 顶部导航栏样式 */
+.header-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+}
+
+/* 移除recommendations-section相关样式，已迁移到组件中 */
+.no-episodes {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
 }
 
 /* 评论区域响应式样式 */
@@ -1303,107 +1287,4 @@ onMounted(async () => {
     padding: 12px 16px;
   }
 }
-
-.recommendations-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.recommendation-item {
-  display: flex;
-}
-
-.thumbnail-container {
-  width: 112px;
-  aspect-ratio: 16 / 9;
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-
-.thumbnail {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.recommendation-info {
-  margin-left: 12px;
-  flex: 1;
-}
-
-.recommendation-title {
-  font-size: 14px;
-  font-weight: 500;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.recommendation-tags {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.recommendation-tag {
-  font-size: 10px;
-  padding: 1px 4px;
-  background-color: #f3f4f6;
-  border-radius: 2px;
-  color: #6b7280;
-}
-
-.recommendation-stats {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.recommendation-stats .views {
-  color: #6b7280;
-}
-
-.recommendation-stats .score {
-  color: #f59e0b;
-  font-weight: 500;
-}
-
-.episode-badge {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 2px;
-}
-
-.no-recommendations {
-  text-align: center;
-  padding: 20px;
-  color: #6b7280;
-}
-
-.no-episodes {
-  text-align: center;
-  padding: 20px;
-  color: #6b7280;
-}
-
-/* 顶部导航栏样式 */
-.header-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 100;
-}
-
-
 </style>
