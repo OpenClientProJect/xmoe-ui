@@ -2,6 +2,11 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import Artplayer from 'artplayer'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+
+// 获取路由实例
+const router = useRouter()
 
 // 定义组件属性
 const props = defineProps({
@@ -29,11 +34,16 @@ const props = defineProps({
   autoplay: {
     type: Boolean,
     default: true
+  },
+  // 是否显示返回按钮
+  showBackButton: {
+    type: Boolean,
+    default: false
   }
 })
 
 // 定义事件
-const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error'])
+const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back'])
 
 // 播放器容器引用
 const artRef = ref(null)
@@ -42,6 +52,42 @@ const artInstance = ref(null)
 // 创建ResizeObserver来处理缩放事件
 let resizeObserver = null
 let resizeTimeout = null
+// 控制返回按钮显示状态
+const isControlsVisible = ref(false)
+// 控制延迟隐藏的定时器
+let hideControlsTimer = null
+
+// 显示控制栏
+const showControls = () => {
+  isControlsVisible.value = true;
+  
+  // 清除现有的隐藏定时器
+  if (hideControlsTimer) {
+    clearTimeout(hideControlsTimer);
+  }
+  
+  // 设置延迟隐藏定时器
+  hideControlsTimer = setTimeout(() => {
+    isControlsVisible.value = false;
+  }, 3000); // 3秒后自动隐藏
+}
+
+// 隐藏控制栏
+const hideControls = () => {
+  if (hideControlsTimer) {
+    clearTimeout(hideControlsTimer);
+  }
+  hideControlsTimer = setTimeout(() => {
+    isControlsVisible.value = false;
+  }, 800); // 延迟800毫秒隐藏，避免切换时闪烁
+}
+
+// 返回上一页
+const goBack = () => {
+  emit('back');
+  // 如果父组件没有处理back事件，则默认行为是返回首页
+  router.push('/');
+}
 
 // 节流函数 - 限制函数调用频率
 // 在指定的时间间隔内只执行一次函数
@@ -303,6 +349,12 @@ onUnmounted(() => {
     clearTimeout(resizeTimeout)
     resizeTimeout = null
   }
+  
+  // 清理控制栏隐藏定时器
+  if (hideControlsTimer) {
+    clearTimeout(hideControlsTimer)
+    hideControlsTimer = null
+  }
 })
 
 // 暴露方法给父组件
@@ -331,8 +383,23 @@ defineExpose({
 </script>
 
 <template>
-  <div class="video-player">
+  <div 
+    class="video-player" 
+    @mousemove="showControls" 
+    @mouseleave="hideControls"
+    @touchstart="showControls"
+  >
     <div ref="artRef" class="video-player-content"></div>
+    
+    <!-- 返回按钮 - 添加动态显示控制 -->
+    <div 
+      v-if="showBackButton" 
+      class="back-button" 
+      @click="goBack"
+      :class="{ 'visible': isControlsVisible }"
+    >
+      <el-icon><ArrowLeft /></el-icon>
+    </div>
   </div>
 </template>
 
@@ -355,5 +422,42 @@ defineExpose({
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+/* 返回按钮样式 */
+.back-button {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 18px;
+  z-index: 10;
+  transition: all 0.3s;
+  /* 默认状态 - 隐藏 */
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 可见状态 */
+.back-button.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.back-button:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.05);
+}
+
+.back-button:active {
+  transform: scale(0.95);
 }
 </style>

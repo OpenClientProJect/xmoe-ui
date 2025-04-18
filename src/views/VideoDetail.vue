@@ -119,6 +119,12 @@ const handleHeaderTabChange = (tab) => {
   }
 }
 
+// 处理播放器返回按钮事件
+const handlePlayerBack = () => {
+  console.log('播放器返回按钮点击');
+  router.push('/'); // 返回首页
+}
+
 // 处理播放器事件
 const handlePlayerError = (error) => {
   console.error('播放器错误:', error)
@@ -544,11 +550,13 @@ onMounted(async () => {
           :title="currentEpisode?.title || videoInfo.title"
           :poster="videoInfo.cover"
           :video-id="videoId"
+          :show-back-button="true"
           @error="handlePlayerError"
           @play="handlePlayerPlay"
           @pause="handlePlayerPause"
           @ended="handlePlayerEnded"
           @timeupdate="handlePlayerTimeUpdate"
+          @back="handlePlayerBack"
       />
 
       <!-- 视频信息 -->
