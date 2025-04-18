@@ -350,8 +350,46 @@ const getVideoDetail = async () => {
 }
 //相关推荐
 const getRelatedDrama = async () => {
+  try {
+
     const res = await getRelatedDramaService(videoInfo.value.typeId)
 
+    if (res.code === 200) {
+      // 根据响应数据结构进行适配
+      let relatedData = [];
+
+      if (Array.isArray(res.data)) {
+        // 新的响应格式，直接是数组
+        relatedData = res.data;
+        console.log('获取到相关推荐(新格式):', relatedData);
+      } else if (res.data && res.data.list) {
+        // 旧的响应格式，有list属性
+        relatedData = res.data.list;
+        console.log('获取到相关推荐(旧格式):', relatedData);
+      }
+
+      if (relatedData.length > 0) {
+        // 处理相关推荐数据
+        relatedVideos.value = relatedData.map(item => ({
+          id: item.vod_id,
+          title: item.vod_name,
+          cover: handleImageUrl(item.vod_pic),
+          views: item.vod_hits || '0',
+          episode: item.vod_remarks || '',
+          score: item.vod_score || '0',
+          tags: item.vod_class ? item.vod_class.split(',') : []
+        }));
+
+        console.log('处理后的相关推荐:', relatedVideos.value);
+      } else {
+        console.warn('相关推荐数据为空');
+      }
+    } else {
+      console.warn('获取相关推荐失败:', res.message || '未知错误');
+    }
+  } catch (error) {
+    console.error('获取相关推荐失败:', error);
+  }
 }
 
 onMounted(async () => {
@@ -554,20 +592,35 @@ onMounted(async () => {
     <div class="recommendations-section">
       <h3 class="section-title">相关推荐</h3>
 
-      <div class="recommendations-list">
+      <div v-if="relatedVideos.length === 0" class="no-recommendations">
+        加载推荐中...
+      </div>
+
+      <div v-else class="recommendations-list">
         <div
             v-for="video in relatedVideos"
             :key="video.id"
             class="recommendation-item"
+            @click="goToVideoDetail(video.id)"
         >
           <div class="thumbnail-container">
-            <img :src="video.cover" class="thumbnail"/>
+            <img :src="video.cover" class="thumbnail" alt=""/>
+            <div class="episode-badge" v-if="video.episode">
+              {{ video.episode }}
+            </div>
           </div>
           <div class="recommendation-info">
             <h4 class="recommendation-title">{{ video.title }}</h4>
+            <div class="recommendation-tags" v-if="video.tags && video.tags.length">
+              <span class="recommendation-tag" v-for="(tag, index) in video.tags.slice(0, 2)" :key="index">
+                {{ tag }}
+              </span>
+            </div>
             <div class="recommendation-stats">
-              <span>{{ video.views }}播放</span>
-              <span>{{ video.episode }}</span>
+              <span class="views">{{ video.views }}播放</span>
+              <span class="score" v-if="video.score && video.score !== '0'">
+                <i class="el-icon-star-on"></i> {{ video.score }}
+              </span>
             </div>
           </div>
         </div>
@@ -905,6 +958,7 @@ onMounted(async () => {
   aspect-ratio: 16 / 9;
   border-radius: 4px;
   overflow: hidden;
+  position: relative;
 }
 
 .thumbnail {
@@ -927,12 +981,52 @@ onMounted(async () => {
   overflow: hidden;
 }
 
+.recommendation-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.recommendation-tag {
+  font-size: 10px;
+  padding: 1px 4px;
+  background-color: #f3f4f6;
+  border-radius: 2px;
+  color: #6b7280;
+}
+
 .recommendation-stats {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
   color: #6b7280;
-  margin-top: 8px;
+  margin-top: 4px;
+}
+
+.recommendation-stats .views {
+  color: #6b7280;
+}
+
+.recommendation-stats .score {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.episode-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.no-recommendations {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
 }
 
 .no-episodes {
