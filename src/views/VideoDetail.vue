@@ -586,7 +586,59 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 内容区域 - 添加足够的上边距 -->
+    <!-- 剧集列表 - 移至内容区域外，放在内容区域上方 -->
+    <div class="episodes-section">
+      <div class="episodes-header">
+        <h3 class="section-title">剧集</h3>
+        <div class="episode-count">
+          共{{ episodes.length }}集，{{ videoInfo.episode }}
+          <el-icon>
+            <ArrowDown/>
+          </el-icon>
+        </div>
+      </div>
+
+      <!-- 线路选择 -->
+      <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
+        <div
+            v-for="source in videoInfo.sources"
+            :key="source.id"
+            class="source-tab"
+            :class="{'active-source': currentSource === source.id}"
+            @click="switchSource(source.id)"
+        >
+          {{ source.name }} ({{ source.count }}集)
+        </div>
+      </div>
+
+      <div v-if="episodes.length === 0" class="no-episodes">
+        加载剧集中...
+      </div>
+
+      <div v-else class="episodes-grid">
+        <div
+            v-for="episode in episodes"
+            :key="episode.id"
+            class="episode-item"
+            :class="{
+            'current-episode': currentEpisode && episode.id === currentEpisode.id,
+            'watched-episode': episode.watched
+          }"
+            @click="playVideo(episode.id)"
+        >
+          <div class="episode-title">{{ episode.title }}</div>
+          <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
+          <div
+              v-if="episode.watched"
+              class="progress-bar"
+          >
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 内容区域 -->
     <div class="content-container">
       <!-- 标签页 -->
       <div class="tabs">
@@ -599,58 +651,6 @@ onMounted(async () => {
         >
           {{ tab.name }}
           <div v-if="activeTab === tab.name" class="tab-indicator"></div>
-        </div>
-      </div>
-
-      <!-- 剧集列表 -->
-      <div class="episodes-section" v-if="activeTab === '简介'">
-        <div class="episodes-header">
-          <h3 class="section-title">剧集</h3>
-          <div class="episode-count">
-            共{{ episodes.length }}集，{{ videoInfo.episode }}
-            <el-icon>
-              <ArrowDown/>
-            </el-icon>
-          </div>
-        </div>
-
-        <!-- 线路选择 -->
-        <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
-          <div
-              v-for="source in videoInfo.sources"
-              :key="source.id"
-              class="source-tab"
-              :class="{'active-source': currentSource === source.id}"
-              @click="switchSource(source.id)"
-          >
-            {{ source.name }} ({{ source.count }}集)
-          </div>
-        </div>
-
-        <div v-if="episodes.length === 0" class="no-episodes">
-          加载剧集中...
-        </div>
-
-        <div v-else class="episodes-grid">
-          <div
-              v-for="episode in episodes"
-              :key="episode.id"
-              class="episode-item"
-              :class="{
-            'current-episode': currentEpisode && episode.id === currentEpisode.id,
-            'watched-episode': episode.watched
-          }"
-              @click="playVideo(episode.id)"
-          >
-            <div class="episode-title">{{ episode.title }}</div>
-            <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
-            <div
-                v-if="episode.watched"
-                class="progress-bar"
-            >
-              <div class="progress-fill"></div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -914,15 +914,15 @@ onMounted(async () => {
   transform: translateZ(0);
   will-change: transform;
   z-index: 1;
-  /* 添加上边距，避免与播放器重叠 */
-  margin-top: 16px;
+  /* 修改上边距，与剧集列表保持距离 */
+  margin-top: 8px;
+  border-radius: 4px;
 }
 
 /* 标签页 */
 .tabs {
   display: flex;
   border-bottom: 1px solid #eee;
-  margin-top: 8px;
   padding: 0 16px; /* 添加左右间距，与内容区域保持一致 */
 }
 
@@ -1197,6 +1197,7 @@ onMounted(async () => {
   background-color: white;
   margin-top: 8px;
   padding: 16px;
+  border-radius: 4px;
 }
 
 .episodes-header {
@@ -1267,13 +1268,6 @@ onMounted(async () => {
   z-index: 100;
 }
 
-/* 移除recommendations-section相关样式，已迁移到组件中 */
-.no-episodes {
-  text-align: center;
-  padding: 20px;
-  color: #6b7280;
-}
-
 /* 评论区域响应式样式 */
 @media (min-width: 768px) {
   .comment-container {
@@ -1285,6 +1279,20 @@ onMounted(async () => {
 @media (max-width: 767px) {
   .comment-container {
     padding: 12px 16px;
+  }
+}
+
+/* 平板和桌面设备上优化网格显示 */
+@media (min-width: 768px) {
+  .episodes-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* 大屏设备上优化网格显示 */
+@media (min-width: 1024px) {
+  .episodes-grid {
+    grid-template-columns: repeat(8, 1fr);
   }
 }
 </style>
