@@ -73,6 +73,16 @@ const initPlayer = (url, title) => {
   try {
     console.log('初始化播放器，URL:', url)
 
+    // // 检测URL类型
+    // let customType = null;
+    // if (url.includes('.m3u8') || url.includes('validate?link=')) {
+    //   customType = 'm3u8';
+    //   console.log('检测到HLS流媒体');
+    // } else if (url.includes('.mp4')) {
+    //   customType = null; // 原生支持MP4
+    //   console.log('检测到MP4视频');
+    // }
+
     // 播放器配置
     const options = {
       container: artRef.value,
@@ -114,10 +124,50 @@ const initPlayer = (url, title) => {
               debug: false,
               enableWorker: true,
               lowLatencyMode: false,
-              maxBufferLength: 30,
-              maxBufferSize: 10 * 1000 * 1000, // 10MB
-              maxRetryCount: 3
+              maxBufferLength: 60,
+              maxMaxBufferLength: 120,
+              maxBufferSize: 20 * 1000 * 1000, // 20MB
+              maxRetryCount: 5,
+              // 设置XHR请求配置
+              xhrSetup: function(xhr, url) {
+                // 不发送凭证，避免CORS预检请求
+                xhr.withCredentials = false;
+                // 设置请求头
+                xhr.setRequestHeader('Accept', '*/*');
+                xhr.setRequestHeader('Origin', window.location.origin);
+                console.log('HLS请求:', url);
+              }
             });
+
+            // 添加错误处理
+            hls.on(Hls.Events.ERROR, function(event, data) {
+              console.error('HLS错误:', data);
+              if (data.fatal) {
+                switch(data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    console.log('HLS网络错误，尝试恢复');
+                    hls.startLoad();
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    console.log('HLS媒体错误，尝试恢复');
+                    hls.recoverMediaError();
+                    break;
+                  default:
+                    console.error('无法恢复的HLS错误:', data);
+                    ElMessage.error('视频加载失败，请尝试其他线路');
+                    break;
+                }
+              }
+            });
+
+            // 添加成功事件
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+              console.log('HLS清单解析完成，开始播放');
+              video.play().catch(e => {
+                console.error('自动播放失败:', e);
+              });
+            });
+
             hls.loadSource(url);
             hls.attachMedia(video);
 
@@ -126,12 +176,24 @@ const initPlayer = (url, title) => {
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             // 对于Safari等原生支持HLS的浏览器
             video.src = url;
+            video.addEventListener('loadedmetadata', function() {
+              video.play().catch(e => {
+                console.error('自动播放失败:', e);
+              });
+            });
           } else {
             console.warn('当前浏览器不支持HLS播放');
+            ElMessage.error('您的浏览器不支持此视频格式，请使用Chrome或Edge浏览器');
           }
         }
       }
     };
+
+    // // 如果检测到特定类型，设置自定义类型
+    // if (customType === 'm3u8') {
+    //   console.log('使用HLS播放器播放:', url);
+    //   options.type = 'm3u8';
+    // }
 
     // 创建播放器实例
     artInstance.value = new Artplayer(options);
@@ -227,60 +289,38 @@ const playVideo = async (episodeId) => {
 
       console.log('提取到的原始视频地址:', videoUrl)
 
-      // 处理视频URL，解决CORS问题
-      let proxyUrl = ''
-
-      // 判断是否是外部URL
-      if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
-        // 将外部URL转换为代理URL
-        const urlObj = new URL(videoUrl)
-
-        // 如果是xmoe.video域名，使用video-proxy代理
-        if (urlObj.hostname === 'xmoe.video') {
-          proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
-          console.log('使用代理URL:', proxyUrl)
-        } else {
-          // 其他域名使用原始URL
-          proxyUrl = videoUrl
-        }
-      } else {
-        // 如果已经是本地URL，直接使用
-        proxyUrl = videoUrl
-      }
-
       // 显示加载中提示
       ElMessage.info('视频解析中...')
 
+      // 处理跨域问题，使用代理URL
+      let proxyUrl = videoUrl
+
+      // 判断是否是外部URL
+      if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
+        try {
+          const urlObj = new URL(videoUrl)
+
+          // 如果是xmoe.video域名，使用video-proxy代理
+          if (urlObj.hostname === 'xmoe.video') {
+            proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
+            console.log('使用代理URL:', proxyUrl)
+          }
+        } catch (e) {
+          console.error('解析URL失败:', e)
+        }
+      }
+
       try {
-        // 使用fetch下载文件
-        console.log('视频解析中:', proxyUrl)
-        const response = await fetch(proxyUrl)
+        // 初始化播放器使用代理URL
+        initPlayer(proxyUrl, episode.title)
 
-        if (!response.ok) {
-          throw new Error(`下载失败: ${response.status} ${response.statusText}`)
-        }
-
-        // 获取文件内容为Blob
-        const videoBlob = await response.blob()
-        console.log('获取到视频Blob:', videoBlob.type, videoBlob.size)
-
-        // 创建一个新的Blob，指定正确的MIME类型
-        const mp4Blob = new Blob([videoBlob], { type: 'video/mp4' })
-
-        // 创建BlobURL
-        const blobUrl = URL.createObjectURL(mp4Blob)
-        console.log('创建的BlobURL:', blobUrl)
-
-        // 初始化播放器使用BlobURL
-        initPlayer(blobUrl, episode.title)
-
-        // 注册组件卸载时释放BlobURL
+        // 注册组件卸载时释放videoUrl
         const revokeUrl = () => {
-          URL.revokeObjectURL(blobUrl)
-          console.log('释放BlobURL:', blobUrl)
+          URL.revokeObjectURL(videoUrl)
+          console.log('释放videoUrl:', videoUrl)
         }
 
-        // 在组件卸载或播放器销毁时释放BlobURL
+        // 在组件卸载或播放器销毁时释放videoUrl
         if (artInstance.value) {
           const originalDestroy = artInstance.value.destroy
           artInstance.value.destroy = function() {
@@ -290,19 +330,17 @@ const playVideo = async (episodeId) => {
         }
 
         ElMessage.success(`开始播放: ${episode.title}`)
-        return blobUrl
+        return videoUrl
       } catch (error) {
-        console.error('下载视频文件失败:', error)
+        console.error('播放失败:', error)
         return
       }
     } else {
       ElMessage.error(res.message || '获取视频地址失败')
     }
   } catch (error) {
-    console.error('获取视频地址失败:', error)
     ElMessage.error('获取视频地址失败: ' + (error.message || '未知错误'))
   }
-
   return null
 }
 
@@ -477,9 +515,6 @@ onMounted(() => {
       <!-- 操作栏 -->
       <div class="action-bar">
         <div class="action-btn" @click="toggleLike">
-          <el-icon size="22">
-            <ThumbUp/>
-          </el-icon>
           <span class="action-text">{{ videoInfo.likes }}</span>
         </div>
         <div class="action-btn" @click="toggleCollect">
