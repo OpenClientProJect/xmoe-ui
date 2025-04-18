@@ -94,22 +94,22 @@ const initPlayer = (url) => {
       autoplay: props.autoplay,
       pip: true,
       autoSize: false,
-      autoMini: true,
-      screenshot: false, // 禁用截图功能以提高性能
+      autoMini: false, // 禁用小窗口功能
+      screenshot: true,
       setting: true,
       loop: false,
-      flip: false, // 禁用翻转功能以提高性能
+      flip: true,
       playbackRate: true,
-      aspectRatio: false, // 禁用宽高比调整以提高性能
+      aspectRatio: true,
       fullscreen: true,
       fullscreenWeb: true,
-      subtitleOffset: false, // 禁用字幕偏移以提高性能
+      subtitleOffset: true,
       miniProgressBar: true,
       mutex: true,
-      backdrop: false, // 禁用背景模糊以提高性能
+      backdrop: true,
       playsInline: true,
       autoPlayback: true,
-      airplay: false, // 禁用需要额外资源的功能
+      airplay: true,
       theme: '#dc2626',
       lang: 'zh-cn',
       moreVideoAttr: {
@@ -140,7 +140,7 @@ const initPlayer = (url) => {
                 console.log('HLS请求:', url)
               }
             })
-            
+
             // 添加错误处理
             hls.on(window.Hls.Events.ERROR, function(event, data) {
               console.error('HLS错误:', data)
@@ -161,7 +161,7 @@ const initPlayer = (url) => {
                 }
               }
             })
-            
+
             // 添加成功事件
             hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
               console.log('HLS清单解析完成，开始播放')
@@ -169,7 +169,7 @@ const initPlayer = (url) => {
                 console.error('自动播放失败:', e)
               })
             })
-            
+
             hls.loadSource(url)
             hls.attachMedia(video)
 
@@ -214,7 +214,7 @@ const initPlayer = (url) => {
     artInstance.value.on('ended', () => {
       emit('ended')
     })
-    
+
     // 添加缓存控制，使用节流函数减少回调频率
     artInstance.value.on('video:timeupdate', throttle(() => {
       // 保存播放进度
@@ -262,7 +262,7 @@ onMounted(() => {
   if (props.url) {
     initPlayer(props.url)
   }
-  
+
   // 初始化ResizeObserver来处理缩放事件
   if (window.ResizeObserver) {
     resizeObserver = new ResizeObserver(throttle(entries => {
@@ -276,7 +276,7 @@ onMounted(() => {
         }
       }, 200)
     }, 200))
-    
+
     // 监听播放器容器的大小变化
     if (artRef.value) {
       resizeObserver.observe(artRef.value)
@@ -291,13 +291,13 @@ onUnmounted(() => {
     artInstance.value.destroy()
     artInstance.value = null
   }
-  
+
   // 清理ResizeObserver
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
   }
-  
+
   // 清理定时器
   if (resizeTimeout) {
     clearTimeout(resizeTimeout)

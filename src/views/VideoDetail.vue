@@ -270,16 +270,6 @@ const getVideoDetail = async () => {
       // 打印原始数据便于调试
       console.log('原始视频数据:', data)
 
-      // 打印原始数据中的typeId
-      // console.log('原始数据中的typeId:', data.type_id,
-      //             '类型:', typeof data.type_id,
-      //             '其他可能的typeId字段:',
-      //             'type_id_1:', data.type_id_1,
-      //             'vod_type_id:', data.vod_type_id)
-      //
-      // // 确保有效的typeId
-      // const typeId = data.type_id || data.vod_type_id || '1'
-      // console.log('最终使用的typeId:', typeId)
 
       // 更新视频信息
       videoInfo.value = {
