@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 // 导入样式
 import 'swiper/css'
 import 'swiper/css/pagination'
+import HeaderNav from "@/components/home/common/HeaderNav.vue";
 // 导入番剧列表组件
 import AnimeList from '@/components/home/DramaList.vue'
 
@@ -13,10 +14,6 @@ const activeTab = ref('推荐')
 // 轮播图状态
 const swiperCurrentIndex = ref(1)
 
-const tabs = ['推荐', '番剧', '剧场版', '4K', '待添加']
-const userInfo = {
-  avatar: 'https://avatars.githubusercontent.com/u/156616301?v=4'
-}
 
 // 添加番剧数据
 const animeList = [
@@ -69,7 +66,7 @@ const animeList = [
     cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg'
   },
   {
-    id: 209, 
+    id: 209,
     title: '直至魔女消逝',
     episodes: '更新至第02集',
     cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg'
@@ -150,7 +147,7 @@ const swiperImages = [
   },
   {
     id: 102,
-    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg', 
+    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg',
     title: '第三张轮播图'
   },
   {
@@ -214,10 +211,10 @@ const touchMove = (e) => {
 const touchEnd = () => {
   if (!isDragging.value || !carouselRef.value) return
   isDragging.value = false
-  
+
   const threshold = window.innerWidth * 0.2 // 20%的屏幕宽度作为阈值
   const slideWidth = carouselRef.value.clientWidth
-  
+
   // 根据拖动距离决定是否切换幻灯片
   if (currentTranslate.value < prevTranslate.value - threshold) {
     // 向左拖动，显示下一张
@@ -226,22 +223,22 @@ const touchEnd = () => {
     // 向右拖动，显示上一张
     swiperCurrentIndex.value -= 1
   }
-  
+
   // 更新位置
   prevTranslate.value = -swiperCurrentIndex.value * slideWidth
   currentTranslate.value = prevTranslate.value
-  
+
   // 添加过渡效果并更新位置
   carouselRef.value.style.transition = 'transform 0.3s ease-out'
   setCarouselPosition()
-  
+
   // 处理循环逻辑
   isTransitioning.value = true
-  
+
   // 等待过渡结束后检查是否需要重置位置
   setTimeout(() => {
     isTransitioning.value = false
-    
+
     // 如果滑动到了复制的第一张（也就是最后一个位置）
     if (swiperCurrentIndex.value >= loopSwiperImages.value.length - 1) {
       carouselRef.value.style.transition = 'none'
@@ -250,7 +247,7 @@ const touchEnd = () => {
       currentTranslate.value = prevTranslate.value
       setCarouselPosition()
     }
-    
+
     // 如果滑动到了复制的最后一张（也就是第一个位置）
     if (swiperCurrentIndex.value <= 0) {
       carouselRef.value.style.transition = 'none'
@@ -260,7 +257,7 @@ const touchEnd = () => {
       setCarouselPosition()
     }
   }, 300)
-  
+
   // 恢复自动播放
   startAutoplay()
 }
@@ -281,17 +278,17 @@ const setCarouselPosition = () => {
 const slideTo = (index) => {
   if (!carouselRef.value || isTransitioning.value) return
   stopAutoplay()
-  
+
   // 将实际索引转换为循环数组索引（加1，因为第0项是克隆的最后一项）
   swiperCurrentIndex.value = index + 1
-  
+
   const slideWidth = carouselRef.value.clientWidth
   prevTranslate.value = -swiperCurrentIndex.value * slideWidth
   currentTranslate.value = prevTranslate.value
-  
+
   carouselRef.value.style.transition = 'transform 0.3s ease-out'
   setCarouselPosition()
-  
+
   startAutoplay()
 }
 
@@ -300,23 +297,23 @@ const startAutoplay = () => {
   stopAutoplay()
   autoplayTimer.value = setInterval(() => {
     if (!carouselRef.value || isTransitioning.value) return
-    
+
     swiperCurrentIndex.value += 1
-    
+
     const slideWidth = carouselRef.value.clientWidth
     prevTranslate.value = -swiperCurrentIndex.value * slideWidth
     currentTranslate.value = prevTranslate.value
-    
+
     carouselRef.value.style.transition = 'transform 0.3s ease-out'
     setCarouselPosition()
-    
+
     // 处理循环逻辑
     isTransitioning.value = true
-    
+
     // 等待过渡结束后检查是否需要重置位置
     setTimeout(() => {
       isTransitioning.value = false
-      
+
       if (swiperCurrentIndex.value >= loopSwiperImages.value.length - 1) {
         carouselRef.value.style.transition = 'none'
         swiperCurrentIndex.value = 1
@@ -339,11 +336,11 @@ const stopAutoplay = () => {
 // 窗口大小变化时重置轮播图位置
 const handleResize = () => {
   if (!carouselRef.value) return
-  
+
   const slideWidth = carouselRef.value.clientWidth
   prevTranslate.value = -swiperCurrentIndex.value * slideWidth
   currentTranslate.value = prevTranslate.value
-  
+
   setCarouselPosition()
 }
 
@@ -370,13 +367,10 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-const goToSearch = () => {
-  router.push('/search')
-}
-
-// 跳转到详情页
-const goToAnimeDetail = (id) => {
-  router.push(`/video-detail?id=${id}`)
+// 处理标签切换事件
+const handleTabChange = (tab) => {
+  activeTab.value = tab
+  console.log('切换到标签:', tab)
 }
 </script>
 
@@ -384,31 +378,12 @@ const goToAnimeDetail = (id) => {
   <div class="home-container">
     <!-- 顶部导航容器 - 使用fixed定位 -->
     <div class="page-header">
-      <!-- 顶部搜索栏 -->
-      <div class="search-bar">
-        <div class="avatar-container">
-          <img :src="userInfo.avatar" class="avatar-img" alt="avatar" />
-        </div>
-        
-        <div class="search-input" @click="goToSearch">
-          <img src="@/assets/icon/search.svg" class="search-icon" alt="search" />
-          <span class="placeholder-text">搜索</span>
-        </div>
-        <img src="@/assets/icon/Recording.svg" class="action-icon recording-icon" alt="recording" />
-      </div>
-      
-      <!-- 分类导航栏 -->
-      <div class="tab-container">
-        <div 
-          v-for="tab in tabs" 
-          :key="tab" 
-          class="tab-item"
-          :class="{'active-tab': activeTab === tab}"
-          @click="activeTab = tab"
-        >
-          {{ tab }}
-        </div>
-      </div>
+      <!-- 顶部搜索栏和导航栏 -->
+      <HeaderNav
+        :tabs="['推荐', '番剧', '剧场版', '4K', '待添加']"
+        :active-tab="activeTab"
+        @tab-change="handleTabChange"
+      />
     </div>
 
     <!-- 内容区域 - 添加足够的上边距避免被顶部遮挡 -->
@@ -418,7 +393,7 @@ const goToAnimeDetail = (id) => {
         <!-- 自定义轮播图 -->
         <div class="carousel-container px-4 py-3">
           <div class="carousel-overflow">
-            <div 
+            <div
               ref="carouselRef"
               class="carousel-track"
               @mousedown="touchStart"
@@ -430,8 +405,8 @@ const goToAnimeDetail = (id) => {
               @touchend="touchEnd"
               @touchcancel="touchEnd"
             >
-              <div 
-                v-for="(item, index) in loopSwiperImages" 
+              <div
+                v-for="(item, index) in loopSwiperImages"
                 :key="`${item.id}-${index}`"
                 class="carousel-slide"
               >
@@ -442,11 +417,11 @@ const goToAnimeDetail = (id) => {
               </div>
             </div>
           </div>
-          
+
           <!-- 指示器 -->
           <div class="carousel-indicators">
-            <span 
-              v-for="(item, index) in swiperImages" 
+            <span
+              v-for="(item, index) in swiperImages"
               :key="item.id"
               class="indicator"
               :class="{ 'active': index === currentRealIndex }"
@@ -528,7 +503,7 @@ const goToAnimeDetail = (id) => {
       </div>
 
       <!-- 番剧标签页内容 - 使用组件 -->
-      <AnimeList 
+      <AnimeList
         v-else-if="activeTab === '番剧'"
         :anime-list="animeList"
       />
@@ -557,88 +532,6 @@ const goToAnimeDetail = (id) => {
   left: 0;
   width: 100%;
   z-index: 100;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* 搜索栏样式 */
-.search-bar {
-  display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  /* 粉色到白色的上下渐变 */
-  background-image: linear-gradient(to bottom, rgba(255, 107, 139, 0.48), rgba(255, 255, 255, 1));
-}
-
-.avatar-container {
-  width: 32px;
-  height: 32px;
-  margin-right: 8px;
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.search-input {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 999px;
-  padding: 6px 16px;
-  cursor: pointer;
-}
-
-.search-icon {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
-}
-
-.placeholder-text {
-  color: #9ca3af;
-}
-
-.action-icon {
-  margin-left: 12px;
-  color: white;
-}
-
-.recording-icon {
-  width: 24px;
-  height: 24px;
-  margin-left: 12px;
-  cursor: pointer;
-  filter: brightness(0) invert(1); /* 将图标改为白色 */
-}
-
-/* 标签栏样式 */
-.tab-container {
-  display: flex;
-  overflow-x: auto;
-  background-color: #fff;
-  border-bottom: 1px solid #eee;
-  padding: 0;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.tab-item {
-  padding: 12px 16px;
-  font-size: 14px;
-  white-space: nowrap;
-  position: relative;
-  color: #333;
-}
-
-.active-tab {
-  color: #dc2626;
-  font-weight: 600;
-  border-bottom: 2px solid #dc2626;
 }
 
 /* 内容区域样式 */
@@ -792,4 +685,4 @@ const goToAnimeDetail = (id) => {
   color: #999;
   font-size: 16px;
 }
-</style> 
+</style>
