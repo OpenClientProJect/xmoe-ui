@@ -109,15 +109,18 @@ const initPlayer = (url, title) => {
     //   console.log('检测到MP4视频');
     // }
 
-    // 创建内容容器
-    const playerContent = document.createElement('div');
-    playerContent.className = 'video-player-content';
+    // 清空容器
     artRef.value.innerHTML = '';
-    artRef.value.appendChild(playerContent);
+
+    // 添加调试信息
+    console.log('创建播放器容器:', {
+      artRefWidth: artRef.value.offsetWidth,
+      artRefHeight: artRef.value.offsetHeight
+    });
 
     // 播放器配置 - 优化性能
     const options = {
-      container: playerContent,
+      container: artRef.value,
       url: url,
       poster: videoInfo.value.cover,
       title: title || videoInfo.value.title,
@@ -464,7 +467,11 @@ onMounted(() => {
     </div>
     <!-- 视频播放器区域 -->
     <div class="player-container">
-      <div ref="artRef" class="video-player"></div>
+      <!-- 播放器容器使用固定比例布局 -->
+      <div class="video-player">
+        <!-- 播放器内容容器 -->
+        <div ref="artRef" class="video-player-content"></div>
+      </div>
 
       <!-- 视频信息 -->
       <div class="video-info">
@@ -717,6 +724,7 @@ onMounted(() => {
   position: relative;
   width: 100%;
   /* 使用固定高度比例而不是 aspect-ratio 以减少重排 */
+  height: 0;
   padding-top: 56.25%; /* 16:9 的高度比例 */
   background-color: #000;
   /* 添加硬件加速 */
@@ -732,6 +740,7 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
 }
 
 .video-cover {
@@ -796,6 +805,12 @@ onMounted(() => {
 /* 内容区域 */
 .content-container {
   background-color: white;
+  /* 添加硬件加速 */
+  transform: translateZ(0);
+  will-change: transform;
+  z-index: 1;
+  /* 添加上边距，避免与播放器重叠 */
+  margin-top: 16px;
 }
 
 /* 标签页 */
