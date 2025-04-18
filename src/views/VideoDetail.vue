@@ -3,42 +3,22 @@ import {ref, onMounted, onUnmounted} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import {getDramaDetailService, getVideoUrlService} from '@/api/Drama.js'
 import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-plus/icons-vue"
-import Artplayer from 'artplayer'
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
 // 导入顶部导航栏组件
 import HeaderNav from '@/components/home/common/HeaderNav.vue'
+// 导入播放器组件
+import VideoPlayer from '@/components/player/VideoPlayer.vue'
 const router = useRouter()
 const route = useRoute()
 
 // 顶部导航栏选中的标签
 const headerActiveTab = ref('番剧') // 默认选中番剧标签
 
-// 处理顶部导航栏标签切换
-const handleHeaderTabChange = (tab) => {
-  headerActiveTab.value = tab
 
-  // 根据标签跳转到相应页面
-  switch (tab) {
-    case '推荐':
-      router.push('/')
-      break
-    case '番剧':
-      // 当前已经在番剧页面，不需要跳转
-      break
-    case '剧场版':
-      router.push('/movie')
-      break
-    case '4K':
-      router.push('/4k')
-      break
-    default:
-      break
-  }
-}
 const videoId = route.params.id
-const artRef = ref(null)
-const artInstance = ref(null)
+const playerRef = ref(null) // 播放器组件引用
+const currentVideoUrl = ref('') // 当前播放的视频URL
 const currentEpisode = ref(null)
 const currentSource = ref(0) // 当前线路，默认为第一个
 const episodes = ref([]) // 当前线路的剧集列表
@@ -83,111 +63,50 @@ const toggleSubscribe = () => {
   videoInfo.value.isSubscribed = !videoInfo.value.isSubscribed
 }
 
-// 初始化播放器
-const initPlayer = (url, title) => {
-  if (!url) {
-    console.error('播放URL为空')
-    ElMessage.error('播放地址无效')
-    return
+// 处理顶部导航栏标签切换
+const handleHeaderTabChange = (tab) => {
+  headerActiveTab.value = tab
+
+  // 根据标签跳转到相应页面
+  switch (tab) {
+    case '推荐':
+      router.push('/')
+      break
+    case '番剧':
+      // 当前已经在番剧页面，不需要跳转
+      break
+    case '剧场版':
+      router.push('/movie')
+      break
+    case '4K':
+      router.push('/4k')
+      break
+    default:
+      break
   }
+}
 
-  // 如果已经有播放器实例，先销毁
-  if (artInstance.value) {
-    artInstance.value.destroy()
-  }
+// 处理播放器事件
+const handlePlayerError = (error) => {
+  console.error('播放器错误:', error)
+  ElMessage.error('视频播放失败，请尝试其他线路')
+}
 
-  try {
-    console.log('初始化播放器，URL:', url)
+const handlePlayerPlay = () => {
+  console.log('开始播放')
+}
 
-    // // 检测URL类型
-    // let customType = null;
-    // if (url.includes('.m3u8') || url.includes('validate?link=')) {
-    //   customType = 'm3u8';
-    //   console.log('检测到HLS流媒体');
-    // } else if (url.includes('.mp4')) {
-    //   customType = null; // 原生支持MP4
-    //   console.log('检测到MP4视频');
-    // }
+const handlePlayerPause = () => {
+  console.log('暂停播放')
+}
 
-    // 清空容器
-    artRef.value.innerHTML = '';
+const handlePlayerEnded = () => {
+  console.log('播放结束')
+  // 可以在这里添加自动播放下一集的逻辑
+}
 
-    // 添加调试信息
-    console.log('创建播放器容器:', {
-      artRefWidth: artRef.value.offsetWidth,
-      artRefHeight: artRef.value.offsetHeight
-    });
-
-    // 播放器配置 - 优化性能
-    const options = {
-      container: artRef.value,
-      url: url,
-      poster: videoInfo.value.cover,
-      title: title || videoInfo.value.title,
-      volume: 0.7,
-      isLive: false,
-      muted: false,
-      autoplay: true,
-      pip: true,
-      autoSize: false,
-      autoMini: true,
-      screenshot: false, // 禁用截图功能以提高性能
-      setting: true,
-      loop: false,
-      flip: false, // 禁用翻转功能以提高性能
-      playbackRate: true,
-      aspectRatio: false, // 禁用宽高比调整以提高性能
-      fullscreen: true,
-      fullscreenWeb: true,
-      subtitleOffset: false, // 禁用字幕偏移以提高性能
-      miniProgressBar: true,
-      mutex: true,
-      backdrop: false, // 禁用背景模糊以提高性能
-      playsInline: true,
-      autoPlayback: true,
-      airplay: false, // 禁用需要额外资源的功能
-      theme: '#dc2626',
-      lang: 'zh-cn',
-      moreVideoAttr: {
-        crossOrigin: 'anonymous',
-        preload: 'metadata', // 只预加载元数据以提高性能
-        'webkit-playsinline': true,
-        playsinline: true,
-      },
-    };
-
-    // // 如果检测到特定类型，设置自定义类型
-    // if (customType === 'm3u8') {
-    //   console.log('使用HLS播放器播放:', url);
-    //   options.type = 'm3u8';
-    // }
-
-    // 创建播放器实例
-    artInstance.value = new Artplayer(options);
-
-    // 播放器事件监听
-    artInstance.value.on('ready', () => {
-      console.log('播放器准备就绪');
-    });
-
-    artInstance.value.on('play', () => {
-      console.log('开始播放');
-    });
-
-    artInstance.value.on('pause', () => {
-      console.log('暂停播放');
-    });
-
-    artInstance.value.on('error', (error) => {
-      console.error('播放器错误:', error);
-    });
-
-    artInstance.value.on('destroy', () => {
-      console.log('播放器销毁');
-    });
-  } catch (error) {
-    console.error('初始化播放器失败:', error);
-  }
+const handlePlayerTimeUpdate = (currentTime) => {
+  // 可以在这里处理播放进度更新
 }
 
 // 播放视频
@@ -213,7 +132,6 @@ const playVideo = async (episodeId) => {
   episode.watched = true
 
   try {
-
     // 调用API获取视频地址
     const res = await getVideoUrlService(videoInfo.value.id, episode.sourceId)
 
@@ -248,6 +166,7 @@ const playVideo = async (episodeId) => {
       }
 
       console.log('提取到的原始视频地址:', videoUrl)
+
       // 处理跨域问题，使用代理URL
       let proxyUrl = videoUrl
 
@@ -266,29 +185,10 @@ const playVideo = async (episodeId) => {
         }
       }
 
-      try {
-        // 初始化播放器使用代理URL
-        initPlayer(proxyUrl, episode.title)
+      // 更新当前播放的视频URL
+      currentVideoUrl.value = proxyUrl
 
-        // 注册组件卸载时释放videoUrl
-        const revokeUrl = () => {
-          URL.revokeObjectURL(videoUrl)
-          console.log('释放videoUrl:', videoUrl)
-        }
-
-        // 在组件卸载或播放器销毁时释放videoUrl
-        if (artInstance.value) {
-          const originalDestroy = artInstance.value.destroy
-          artInstance.value.destroy = function() {
-            originalDestroy.call(this)
-            revokeUrl()
-          }
-        }
-        return videoUrl
-      } catch (error) {
-        console.error('播放失败:', error)
-        return
-      }
+      return proxyUrl
     } else {
       ElMessage.error(res.message || '获取视频地址失败')
     }
@@ -308,13 +208,6 @@ const switchSource = (sourceId) => {
     episodes.value = allEpisodes.value[sourceId]
     console.log('切换到线路', sourceId, '剧集数:', episodes.value.length)
 
-    // 如果当前线路有剧集，自动选中第一集
-    if (episodes.value.length > 0) {
-      // 仅选中不播放，防止自动播放带来的困扰
-      currentEpisode.value = episodes.value[0]
-    } else {
-      ElMessage.warning('该线路暂无可播放剧集')
-    }
   } else {
     ElMessage.warning('该线路暂无剧集数据')
     episodes.value = []
@@ -326,11 +219,10 @@ const setActiveTab = (tab) => {
   activeTab.value = tab
 }
 
-// 组件卸载时销毁播放器
+// 组件卸载时清理资源
 onUnmounted(() => {
-  if (artInstance.value) {
-    artInstance.value.destroy()
-  }
+  // 播放器组件会自动处理资源清理
+  console.log('组件卸载，清理资源')
 })
 
 // 获取视频详情
@@ -442,16 +334,12 @@ const getVideoDetail = async () => {
     }
   } catch (error) {
     console.error('获取视频详情失败:', error)
-    ElMessage.error('获取视频详情失败，请稍后再试')
   }
 }
 
 onMounted(() => {
   // 获取视频详情
   getVideoDetail()
-
-  // 设置顶部导航栏的选中标签
-  // 根据路由或其他条件决定选中哪个标签
 })
 </script>
 
@@ -467,11 +355,19 @@ onMounted(() => {
     </div>
     <!-- 视频播放器区域 -->
     <div class="player-container">
-      <!-- 播放器容器使用固定比例布局 -->
-      <div class="video-player">
-        <!-- 播放器内容容器 -->
-        <div ref="artRef" class="video-player-content"></div>
-      </div>
+      <!-- 使用新的播放器组件 -->
+      <VideoPlayer
+        ref="playerRef"
+        :url="currentVideoUrl"
+        :title="currentEpisode?.title || videoInfo.title"
+        :poster="videoInfo.cover"
+        :video-id="videoId"
+        @error="handlePlayerError"
+        @play="handlePlayerPlay"
+        @pause="handlePlayerPause"
+        @ended="handlePlayerEnded"
+        @timeupdate="handlePlayerTimeUpdate"
+      />
 
       <!-- 视频信息 -->
       <div class="video-info">
@@ -741,24 +637,6 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   z-index: 1;
-}
-
-.video-cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.play-button {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 16px;
-  border-radius: 50%;
-  cursor: pointer;
 }
 
 .video-info {
