@@ -1,7 +1,7 @@
 <script setup>
 import {ref, onMounted, onUnmounted} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
-import {getDramaDetailService, getVideoUrlService} from '@/api/Drama.js'
+import {getDramaDetailService, getRelatedDramaService, getVideoUrlService} from '@/api/Drama.js'
 import {StarFilled, Collection, Share, ChatDotRound, ArrowDown} from "@element-plus/icons-vue"
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
@@ -23,11 +23,12 @@ const currentEpisode = ref(null)
 const currentSource = ref(0) // 当前线路，默认为第一个
 const episodes = ref([]) // 当前线路的剧集列表
 const allEpisodes = ref({}) // 存储所有线路的剧集数据
-
+const relatedVideos = ref([])// 相关视频列表
 // 视频信息
 const videoInfo = ref({
   id: videoId,
   title: '',
+  typeId: '',
   cover: '',
   episode: '',
   views: '',
@@ -41,8 +42,7 @@ const videoInfo = ref({
   isSubscribed: true
 })
 
-const relatedVideos = ref([
-])
+
 
 const activeTab = ref('简介')
 const tabs = [
@@ -237,10 +237,22 @@ const getVideoDetail = async () => {
       // 打印原始数据便于调试
       console.log('原始视频数据:', data)
 
+      // 打印原始数据中的typeId
+      // console.log('原始数据中的typeId:', data.type_id,
+      //             '类型:', typeof data.type_id,
+      //             '其他可能的typeId字段:',
+      //             'type_id_1:', data.type_id_1,
+      //             'vod_type_id:', data.vod_type_id)
+      //
+      // // 确保有效的typeId
+      // const typeId = data.type_id || data.vod_type_id || '1'
+      // console.log('最终使用的typeId:', typeId)
+
       // 更新视频信息
       videoInfo.value = {
         id: data.vod_id,
         title: data.vod_name,
+        typeId: data.type_id, // 使用处理后的typeId
         cover: handleImageUrl(data.vod_pic),
         episode: data.vod_remarks,
         views: data.vod_hits || '0',
@@ -256,7 +268,7 @@ const getVideoDetail = async () => {
         isCollected: false,
         isSubscribed: true
       }
-
+      console.log('设置后的videoInfo.typeId:', videoInfo.value.typeId)
       // 存储不同线路的剧集数据
       allEpisodes.value = {}
 
@@ -336,10 +348,17 @@ const getVideoDetail = async () => {
     console.error('获取视频详情失败:', error)
   }
 }
+//相关推荐
+const getRelatedDrama = async () => {
+    const res = await getRelatedDramaService(videoInfo.value.typeId)
 
-onMounted(() => {
-  // 获取视频详情
-  getVideoDetail()
+}
+
+onMounted(async () => {
+    console.log('组件挂载，开始获取数据')
+    await getVideoDetail()
+    console.log('视频详情加载完成，开始获取相关推荐')
+    await getRelatedDrama()
 })
 </script>
 

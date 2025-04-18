@@ -67,13 +67,21 @@ export const getVideoUrlService = (vodId, sourceId) => {
 
 /**
  * 相关推荐
+ * @param {string|number} typeId 视频类型ID
+ * @returns {Promise} 请求Promise
  */
 export const getRelatedDramaService = (typeId) => {
+    // 打印传入的typeId参数
+    console.log('调用getRelatedDramaService，typeId:', typeId, '类型:', typeof typeId)
+
+    // 确保typeId是有效值
+    const finalTypeId = typeId || 1
+
     return request({
-        url: 'vod/list',
+        url: '/vod/list', // 添加前导斜杠
         method: 'get',
         params: {
-            typeId: typeId,
+            typeId: finalTypeId,
             page: '1',
             limit: '10',
             type: 'randomlike'
