@@ -38,6 +38,8 @@ const videoInfo = ref({
   id: videoId,
   title: '',
   typeId: '',
+  vodArea: '',
+  vodClass: '',
   cover: '',
   episode: '',
   views: '',
@@ -368,7 +370,9 @@ const getVideoDetail = async () => {
       videoInfo.value = {
         id: data.vod_id,
         title: data.vod_name,
-        typeId: data.type_id, // 使用处理后的typeId
+        typeId: data.type_id,
+        vodArea: data.vod_area,
+        vodClass: data.vod_class,
         cover: handleImageUrl(data.vod_pic),
         episode: data.vod_remarks,
         views: data.vod_hits || '0',
@@ -505,17 +509,10 @@ const getRelatedDrama = async () => {
  * 获取评论数据
  */
 const getComments = async () => {
-  try {
     const res = await getCommentsService(videoId)
-    if (res.code === 200 && res.data) {
       comments.value = res.data
       // 更新评论数量显示
       tabs[1].name = `评论(${comments.value.count || 0})`
-    }
-  } catch (error) {
-    console.error('获取评论数据失败:', error)
-    ElMessage.error('获取评论数据失败')
-  }
 }
 
 onMounted(async () => {
@@ -559,7 +556,9 @@ onMounted(async () => {
         <h1 class="video-title">{{ videoInfo.title }}</h1>
         <div class="video-stats">
           <span class="stat-item">{{ videoInfo.views }}次观看</span>
-          <span class="stat-item">{{ videoInfo.releaseDate }}</span>
+          <span>{{ videoInfo.vodArea }}/</span>
+          <span>{{ videoInfo.releaseDate }}/</span>
+          <span>{{ videoInfo.vodClass }}</span>
         </div>
       </div>
 
@@ -719,14 +718,14 @@ onMounted(async () => {
               </div>
               <div class="comment-text">{{ comment.comment_content }}</div>
               <div class="comment-actions">
-                <div class="action-btn">
-                  <el-icon size="14"><ArrowUp /></el-icon>
-                  <span>{{ comment.comment_up || 0 }}</span>
-                </div>
-                <div class="action-btn">
-                  <el-icon size="14"><ArrowDown /></el-icon>
-                  <span>{{ comment.comment_down || 0 }}</span>
-                </div>
+<!--                <div class="action-btn">-->
+<!--                  <el-icon size="14"><ArrowUp /></el-icon>-->
+<!--                  <span>{{ comment.comment_up || 0 }}</span>-->
+<!--                </div>-->
+<!--                <div class="action-btn">-->
+<!--                  <el-icon size="14"><ArrowDown /></el-icon>-->
+<!--                  <span>{{ comment.comment_down || 0 }}</span>-->
+<!--                </div>-->
                 <div class="action-btn reply-btn">
                   <el-icon size="14"><ChatDotRound /></el-icon>
                   <span>回复</span>
