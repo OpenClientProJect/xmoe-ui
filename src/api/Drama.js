@@ -64,3 +64,19 @@ export const getVideoUrlService = (vodId, sourceId) => {
         }
     })
 }
+
+/**
+ * 相关推荐
+ */
+export const getRelatedDramaService = (typeId) => {
+    return request({
+        url: 'vod/list',
+        method: 'get',
+        params: {
+            typeId: typeId,
+            page: '1',
+            limit: '10',
+            type: 'randomlike'
+        }
+    })
+}
