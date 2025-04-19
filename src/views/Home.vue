@@ -1,5 +1,5 @@
 <script setup>
-import {ref, onMounted} from 'vue'
+import {ref, onMounted, computed} from 'vue'
 import {useRouter} from 'vue-router'
 // 导入样式
 import 'swiper/css'
@@ -16,106 +16,23 @@ const router = useRouter()
 const activeTab = ref('推荐')
 
 // 添加番剧数据
-const animeList = [
-  {
-    id: 201,
-    title: '香格里拉边境',
-    episodes: '全25集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg'
-  },
-  {
-    id: 202,
-    title: '命运-奇异夜谈',
-    episodes: '全1集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg'
-  },
-  {
-    id: 203,
-    title: '光之美少女',
-    episodes: '全49集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg'
-  },
-  {
-    id: 204,
-    title: '最强王者，无所事事',
-    episodes: '更新至第02集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg'
-  },
-  {
-    id: 205,
-    title: '外星人沐沐',
-    episodes: '更新至第01集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg'
-  },
-  {
-    id: 206,
-    title: '圣女因太过诚实',
-    episodes: '更新至第02集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg'
-  },
-  {
-    id: 207,
-    title: '记忆缝线',
-    episodes: '更新至第02集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg'
-  },
-  {
-    id: 208,
-    title: '鹰峰同学请睁开衣领',
-    episodes: '更新至第02集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg'
-  },
-  {
-    id: 209,
-    title: '直至魔女消逝',
-    episodes: '更新至第02集',
-    cover: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg'
-  }
-]
+const animeList = []
 
 // 模拟追番日历数据
-const calendarAnimes = [
-  {
-    id: 1,
-    title: '夏日口袋',
-    updateTime: '（每周一）22:30更新',
-    cover: 'https://placeholder.pics/svg/80x120/DEDEDE/555555/封面'
-  },
-  {
-    id: 2,
-    title: '东旅-ThatJourney-',
-    updateTime: '（每周一）22:30更新',
-    cover: 'https://placeholder.pics/svg/80x120/DEDEDE/555555/封面'
-  },
-  {
-    id: 3,
-    title: '测不准的阿波连同学 第二季',
-    updateTime: '（每周一）21:30更新',
-    cover: 'https://placeholder.pics/svg/80x120/DEDEDE/555555/封面'
-  },
-  {
-    id: 4,
-    title: '快藏起来！玛琪娜同学！',
-    updateTime: '（每周一）01:00更新',
-    cover: 'https://placeholder.pics/svg/80x120/DEDEDE/555555/封面'
-  }
-]
+const activeDay = ref(3) // 默认选中周四
 
-// 右侧日历数据
-const rightCalendarAnimes = [
-  {
-    id: 5,
-    title: '记忆链接',
-    updateTime: '（每周二）23:45更新',
-    cover: 'https://placeholder.pics/svg/80x120/DEDEDE/555555/封面'
-  },
-  {
-    id: 6,
-    title: '鹰峰同学请睁上衣领',
-    updateTime: '（每周二）23:00更新',
-    cover: 'https://placeholder.pics/svg/80x120/DEDEDE/555555/封面'
-  }
-]
+// 按周几分类的动漫数据
+const calendarByDay = {}
+
+// 获取当前选中日期的动漫列表
+const currentDayAnimes = computed(() => {
+  return calendarByDay[activeDay.value] || []
+})
+
+// 切换选中的日期
+const switchDay = (dayIndex) => {
+  activeDay.value = dayIndex
+}
 
 // 模拟四月新番数据
 const newAnimes = ref([])
@@ -209,42 +126,58 @@ const goToVideoDetail = (id) => {
         </div>
 
         <!-- 追番日历 -->
-        <div class="px-4 mt-4">
-          <div class="flex justify-between items-center mb-2">
+        <div class="px-4 mt-5">
+          <div class="flex justify-between items-center mb-4">
             <div class="flex items-center">
-              <el-icon class="mr-1">
-                <el-icon-calendar/>
-              </el-icon>
-              <span class="font-medium">追番日历</span>
+              <h2 class="text-xl font-bold mr-4">排期表</h2>
+              <!-- 周一至周日标签栏 -->
+              <div class="flex overflow-x-auto no-scrollbar bg-gray-100 rounded-full py-2">
+                <div
+                    v-for="(day, index) in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']"
+                    :key="index"
+                    class="mx-2 first:ml-3 last:mr-3 text-sm font-medium whitespace-nowrap cursor-pointer"
+                    :class="{'text-pink-500 font-bold': index === activeDay.value, 'text-gray-700': index !== activeDay.value}"
+                    @click="switchDay(index)"
+                >
+                  {{ day }}
+                </div>
+              </div>
             </div>
-            <span class="text-gray-400 text-sm">更多</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <!-- 左侧日历 -->
-            <div class="bg-cover bg-center rounded-lg p-2"
-                 style="background-image: url('https://placeholder.pics/svg/180x300/333333/FFFFFF/背景');">
-              <div v-for="anime in calendarAnimes" :key="anime.id"
-                   class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-                <img :src="anime.cover" class="w-12 h-16 object-cover rounded"/>
-                <div class="ml-2 text-white">
-                  <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
-                  <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
+          <!-- 动漫卡片轮播 - 横向滑动 -->
+          <div class="relative">
+            <div class="flex overflow-x-auto no-scrollbar pb-4">
+              <div 
+                v-for="(anime, index) in currentDayAnimes" 
+                :key="anime.id"
+                class="flex-shrink-0 relative mr-3 w-64 rounded-lg overflow-hidden"
+                @click="goToVideoDetail(anime.id)"
+              >
+                <img :src="anime.cover" class="w-full h-56 object-cover rounded-lg" alt="动漫封面"/>
+                <div class="absolute top-2 left-2 px-2 py-1 text-xs text-white rounded-md"
+                     :class="{'bg-green-500': index === 0, 'bg-pink-500': index === 1, 'bg-red-500': index >= 2}">
+                  2025年4月
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                  <h3 class="text-white font-medium mb-1 line-clamp-1">{{ anime.title }}</h3>
+                  <div class="text-gray-300 text-sm">{{ anime.updateTime }}</div>
                 </div>
               </div>
+              
+              <!-- 当没有数据时显示提示 -->
+              <div v-if="currentDayAnimes.length === 0" class="w-full flex justify-center items-center py-8 text-gray-400">
+                当天暂无更新的番剧
+              </div>
+              
+              <div v-else class="flex-shrink-0 w-10"></div> <!-- 用于在最后添加间距 -->
             </div>
-
-            <!-- 右侧日历 -->
-            <div class="bg-cover bg-center rounded-lg p-2"
-                 style="background-image: url('https://placeholder.pics/svg/180x300/666666/FFFFFF/背景');">
-              <div v-for="anime in rightCalendarAnimes" :key="anime.id"
-                   class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-                <img :src="anime.cover" class="w-12 h-16 object-cover rounded"/>
-                <div class="ml-2 text-white">
-                  <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
-                  <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
-                </div>
-              </div>
+            
+            <!-- 右侧滚动箭头，仅在有数据时显示 -->
+            <div v-if="currentDayAnimes.length > 0" class="absolute right-0 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center cursor-pointer z-10">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
             </div>
           </div>
         </div>
@@ -410,5 +343,15 @@ const goToVideoDetail = (id) => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 隐藏滚动条但保留滚动功能 */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 </style>
