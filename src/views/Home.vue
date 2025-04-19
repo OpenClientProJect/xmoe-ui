@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import {ref, onMounted} from 'vue'
+import {useRouter} from 'vue-router'
 // 导入样式
 import 'swiper/css'
 import 'swiper/css/pagination'
@@ -8,8 +9,10 @@ import HeaderNav from "@/components/home/common/HeaderNav.vue";
 import AnimeList from '@/components/home/DramaList.vue'
 // 导入轮播图组件
 import BannerCarousel from '@/components/home/BannerCarousel.vue'
-import { getBannerListService } from "@/api/recommend.js";
+import {getBannerListService} from "@/api/recommend.js";
+import {getDramaListService} from "@/api/anime.js";
 
+const router = useRouter()
 const activeTab = ref('推荐')
 
 // 添加番剧数据
@@ -115,48 +118,45 @@ const rightCalendarAnimes = [
 ]
 
 // 模拟四月新番数据
-const newAnimes = [
-  {
-    id: 7,
-    title: '某新番剧1',
-    episode: '更新至01集',
-    cover: 'https://placeholder.pics/svg/160x90/DEDEDE/555555/封面1'
-  },
-  {
-    id: 8,
-    title: '某新番剧2',
-    episode: '更新至01集',
-    cover: 'https://placeholder.pics/svg/160x90/DEDEDE/555555/封面2'
-  }
-]
+const newAnimes = ref([])
 
 // 轮播图数据
 const swiperImages = ref([])
 
 //获取轮播图数据
 const getSwiperImages = async () => {
-  try {
-    const res = await getBannerListService()
-    console.log('获取轮播图数据:', res)
-    
-    if (res.code === 200 && res.data && Array.isArray(res.data)) {
-      // 转换API返回的数据到我们需要的格式
-      swiperImages.value = res.data.map((item, index) => ({
-        id: item.vod_id,
-        url: item.vod_pic_slide || item.vod_pic_thumb || item.vod_pic || 'https://placeholder.pics/svg/800x450/DEDEDE/555555/暂无图片',
-        title: item.vod_name,
-        subtitle: item.vod_remarks || '暂无更新信息'
-      }))
-      
-      console.log('处理后的轮播图数据:', swiperImages.value)
-    }
-  } catch (error) {
-    console.error('获取轮播图数据失败:', error)
-  }
+  const res = await getBannerListService()
+  console.log('获取轮播图数据:', res)
+
+  // 转换API返回的数据到我们需要的格式
+  swiperImages.value = res.data.map((item, index) => ({
+    id: item.vod_id,
+    url: item.vod_pic_slide || item.vod_pic_thumb || item.vod_pic,
+    title: item.vod_name,
+    subtitle: item.vod_remarks || '暂无更新信息'
+  }))
+}
+
+//新番列表
+const getNewAnimes = async () => {
+  const res = await getDramaListService()
+
+  // 转换API返回的数据到我们需要的格式
+  newAnimes.value = res.data.map((item) => ({
+    id: item.vod_id,
+    title: item.vod_name,
+    episode: item.vod_remarks || '暂无更新信息',
+    cover: item.vod_pic_thumb || item.vod_pic,
+    updateTime: item.vod_weekday || '',
+    actors: item.vod_actor ? item.vod_actor.split(' / ').slice(0, 3).join('、') : '暂无演员信息',
+    categories: item.vod_class ? item.vod_class.split(',').join('、') : '暂无分类'
+  }))
 }
 
 onMounted(() => {
   getSwiperImages()
+
+  getNewAnimes()
 })
 
 // 处理标签切换事件
@@ -167,7 +167,7 @@ const handleTabChange = (tab) => {
 
 // 在轮播图中点击跳转到详情页
 const goToVideoDetail = (id) => {
-  if(id) {
+  if (id) {
     router.push(`/video/${id}`)
   }
 }
@@ -179,9 +179,9 @@ const goToVideoDetail = (id) => {
     <div class="page-header">
       <!-- 顶部搜索栏和导航栏 -->
       <HeaderNav
-        :tabs="['推荐', '番剧', '剧场版', '4K', '待添加']"
-        :active-tab="activeTab"
-        @tab-change="handleTabChange"
+          :tabs="['推荐', '番剧', '剧场版', '4K', '待添加']"
+          :active-tab="activeTab"
+          @tab-change="handleTabChange"
       />
     </div>
 
@@ -190,7 +190,7 @@ const goToVideoDetail = (id) => {
       <!-- 推荐标签页内容 -->
       <div v-if="activeTab === '推荐'">
         <!-- 轮播图组件 -->
-        <BannerCarousel :banners="swiperImages" />
+        <BannerCarousel :banners="swiperImages"/>
 
         <!-- 快捷分类 -->
         <div class="category-buttons mx-4 my-4">
@@ -212,7 +212,9 @@ const goToVideoDetail = (id) => {
         <div class="px-4 mt-4">
           <div class="flex justify-between items-center mb-2">
             <div class="flex items-center">
-              <el-icon class="mr-1"><el-icon-calendar /></el-icon>
+              <el-icon class="mr-1">
+                <el-icon-calendar/>
+              </el-icon>
               <span class="font-medium">追番日历</span>
             </div>
             <span class="text-gray-400 text-sm">更多</span>
@@ -220,9 +222,11 @@ const goToVideoDetail = (id) => {
 
           <div class="grid grid-cols-2 gap-3">
             <!-- 左侧日历 -->
-            <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/333333/FFFFFF/背景');">
-              <div v-for="anime in calendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-                <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
+            <div class="bg-cover bg-center rounded-lg p-2"
+                 style="background-image: url('https://placeholder.pics/svg/180x300/333333/FFFFFF/背景');">
+              <div v-for="anime in calendarAnimes" :key="anime.id"
+                   class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
+                <img :src="anime.cover" class="w-12 h-16 object-cover rounded"/>
                 <div class="ml-2 text-white">
                   <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
                   <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
@@ -231,9 +235,11 @@ const goToVideoDetail = (id) => {
             </div>
 
             <!-- 右侧日历 -->
-            <div class="bg-cover bg-center rounded-lg p-2" style="background-image: url('https://placeholder.pics/svg/180x300/666666/FFFFFF/背景');">
-              <div v-for="anime in rightCalendarAnimes" :key="anime.id" class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
-                <img :src="anime.cover" class="w-12 h-16 object-cover rounded" />
+            <div class="bg-cover bg-center rounded-lg p-2"
+                 style="background-image: url('https://placeholder.pics/svg/180x300/666666/FFFFFF/背景');">
+              <div v-for="anime in rightCalendarAnimes" :key="anime.id"
+                   class="flex items-center mb-3 bg-black/30 rounded-lg p-2">
+                <img :src="anime.cover" class="w-12 h-16 object-cover rounded"/>
                 <div class="ml-2 text-white">
                   <p class="text-xs font-medium line-clamp-1">{{ anime.title }}</p>
                   <p class="text-xs opacity-70 mt-1">{{ anime.updateTime }}</p>
@@ -250,14 +256,35 @@ const goToVideoDetail = (id) => {
               <span class="text-amber-400 mr-1">🔥</span>
               <span class="font-medium">四月新番</span>
             </div>
-            <span class="text-green-500 text-sm">颜北女角太多了！</span>
+            <span class="text-xs text-gray-500" v-if="newAnimes.length > 0">共{{ newAnimes.length }}部作品</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div v-for="anime in newAnimes" :key="anime.id" class="rounded-lg overflow-hidden">
+          <!-- 新番加载占位 -->
+          <div v-if="newAnimes.length === 0" class="py-8 flex justify-center items-center">
+            <div class="text-center">
+              <div class="loading-spinner mb-2"></div>
+              <p class="text-sm text-gray-500">加载中...</p>
+            </div>
+          </div>
+
+          <!-- 新番列表 -->
+          <div v-else class="grid grid-cols-2 gap-3">
+            <div
+                v-for="anime in newAnimes"
+                :key="anime.id"
+                class="rounded-lg overflow-hidden bg-white shadow-sm"
+                @click="goToVideoDetail(anime.id)"
+            >
               <div class="relative">
-                <img :src="anime.cover" class="w-full h-auto" />
-                <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">{{ anime.episode }}</span>
+                <img :src="anime.cover" class="w-full aspect-video object-cover" alt="封面"/>
+                <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">{{
+                    anime.episode
+                  }}</span>
+              </div>
+              <div class="p-2">
+                <h3 class="text-sm font-medium line-clamp-1 mb-1">{{ anime.title }}</h3>
+                <p class="text-xs text-gray-500 line-clamp-1">{{ anime.categories }}</p>
+                <p class="text-xs text-gray-400 mt-1" v-if="anime.updateTime">{{ anime.updateTime }}</p>
               </div>
             </div>
           </div>
@@ -266,8 +293,8 @@ const goToVideoDetail = (id) => {
 
       <!-- 番剧标签页内容 - 使用组件 -->
       <AnimeList
-        v-else-if="activeTab === '番剧'"
-        :anime-list="animeList"
+          v-else-if="activeTab === '番剧'"
+          :anime-list="animeList"
       />
 
       <!-- 其他标签页内容 -->
@@ -366,5 +393,22 @@ const goToVideoDetail = (id) => {
 .empty-text {
   color: #999;
   font-size: 16px;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #3498db;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
