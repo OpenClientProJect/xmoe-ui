@@ -12,3 +12,15 @@ export const getDramaListService = () => {
         }
     })
 }
+//排期表
+export const getDramaScheduleService = () => {
+    return request({
+        url: '/vod/list',
+        method: 'get',
+        params: {
+            page: '1',
+            limit: '18',
+            type: 'RiliDetail',
+        }
+    })
+}

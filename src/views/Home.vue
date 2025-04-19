@@ -10,7 +10,7 @@ import AnimeList from '@/components/home/DramaList.vue'
 // 导入轮播图组件
 import BannerCarousel from '@/components/home/BannerCarousel.vue'
 import {getBannerListService} from "@/api/recommend.js";
-import {getDramaListService} from "@/api/anime.js";
+import {getDramaListService, getDramaScheduleService} from "@/api/anime.js";
 
 const router = useRouter()
 const activeTab = ref('推荐')
@@ -19,14 +19,25 @@ const activeTab = ref('推荐')
 const animeList = []
 
 // 模拟追番日历数据
-const activeDay = ref(3) // 默认选中周四
+const activeDay = ref(1) // 默认选中周二
 
 // 按周几分类的动漫数据
-const calendarByDay = {}
+const calendarByDay = ref({
+  0: [], // 周一
+  1: [], // 周二
+  2: [], // 周三
+  3: [], // 周四
+  4: [], // 周五
+  5: [], // 周六
+  6: [], // 周日
+})
 
 // 获取当前选中日期的动漫列表
 const currentDayAnimes = computed(() => {
-  return calendarByDay[activeDay.value] || []
+  if (!calendarByDay.value || !calendarByDay.value[activeDay.value]) {
+    return []
+  }
+  return calendarByDay.value[activeDay.value]
 })
 
 // 切换选中的日期
@@ -70,9 +81,77 @@ const getNewAnimes = async () => {
   }))
 }
 
-onMounted(() => {
-  getSwiperImages()
+//排期表
+const getDramaSchedule = async () => {
+  try {
+    const res = await getDramaScheduleService()
+    console.log('获取排期表数据:', res)
+    
+      // 确保每个日期的数组都被初始化
+      for (let i = 0; i < 7; i++) {
+        if (!calendarByDay.value[i]) {
+          calendarByDay.value[i] = []
+        } else {
+          calendarByDay.value[i] = [] // 清空现有数据，避免重复
+        }
+      }
+      
+      // 解析周几数据
+      res.data.forEach(item => {
+        const weekday = item.vod_weekday || ''
+        
+        // 处理周几信息
+        let dayIndex = -1
+        if (weekday.includes('周一') || weekday.includes('每周一')) {
+          dayIndex = 0
+        } else if (weekday.includes('周二') || weekday.includes('每周二')) {
+          dayIndex = 1
+        } else if (weekday.includes('周三') || weekday.includes('每周三')) {
+          dayIndex = 2
+        } else if (weekday.includes('周四') || weekday.includes('每周四')) {
+          dayIndex = 3
+        } else if (weekday.includes('周五') || weekday.includes('每周五')) {
+          dayIndex = 4
+        } else if (weekday.includes('周六') || weekday.includes('每周六')) {
+          dayIndex = 5
+        } else if (weekday.includes('周日') || weekday.includes('每周日')) {
+          dayIndex = 6
+        }
+        
+        if (dayIndex >= 0) {
+          // 格式化动漫数据
+          calendarByDay.value[dayIndex].push({
+            id: item.vod_id,
+            title: item.vod_name,
+            updateTime: item.vod_weekday,
+            episode: item.vod_remarks,
+            cover: item.vod_pic_thumb || item.vod_pic_slide || item.vod_pic,
+            year: item.vod_year || '2025',
+            categories: item.vod_class ? item.vod_class.split(',').join('、') : ''
+          })
+        }
+      })
+      
+      // 如果当前选择的日期没有数据但其他日期有，自动跳转到有数据的日期
+      if (calendarByDay.value[activeDay.value].length === 0) {
+        for (let i = 0; i < 7; i++) {
+          if (calendarByDay.value[i].length > 0) {
+            activeDay.value = i
+            break
+          }
+        }
+      }
+  } catch (error) {
+    console.error('获取排期表数据失败:', error)
+  }
+}
 
+onMounted(() => {
+  //轮播图
+  getSwiperImages()
+  //排期表
+  getDramaSchedule()
+  // 新番列表
   getNewAnimes()
 })
 
@@ -131,15 +210,20 @@ const goToVideoDetail = (id) => {
             <div class="flex items-center">
               <h2 class="text-xl font-bold mr-4">排期表</h2>
               <!-- 周一至周日标签栏 -->
-              <div class="flex overflow-x-auto no-scrollbar bg-gray-100 rounded-full py-2">
+              <div class="flex overflow-x-auto no-scrollbar py-2">
                 <div
                     v-for="(day, index) in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']"
                     :key="index"
-                    class="mx-2 first:ml-3 last:mr-3 text-sm font-medium whitespace-nowrap cursor-pointer"
-                    :class="{'text-pink-500 font-bold': index === activeDay.value, 'text-gray-700': index !== activeDay.value}"
+                    class="mx-2 first:ml-3 last:mr-3 text-sm font-medium whitespace-nowrap cursor-pointer px-3 py-1 rounded-full"
+                    :class="index === activeDay.value ? 
+                      'bg-pink-500 text-white' : 
+                      'text-gray-700 hover:bg-gray-100'"
                     @click="switchDay(index)"
                 >
                   {{ day }}
+                  <span v-if="calendarByDay && calendarByDay.value && calendarByDay.value[index] && calendarByDay.value[index].length > 0" class="ml-1 text-xs">
+                    ({{ calendarByDay.value[index].length }})
+                  </span>
                 </div>
               </div>
             </div>
@@ -150,24 +234,24 @@ const goToVideoDetail = (id) => {
             <div class="flex overflow-x-auto no-scrollbar pb-4">
               <div 
                 v-for="(anime, index) in currentDayAnimes" 
-                :key="anime.id"
+                :key="anime.id || index"
                 class="flex-shrink-0 relative mr-3 w-64 rounded-lg overflow-hidden"
                 @click="goToVideoDetail(anime.id)"
               >
-                <img :src="anime.cover" class="w-full h-56 object-cover rounded-lg" alt="动漫封面"/>
+                <img :src="anime.cover || ''" class="w-full h-56 object-cover rounded-lg" alt="动漫封面"/>
                 <div class="absolute top-2 left-2 px-2 py-1 text-xs text-white rounded-md"
-                     :class="{'bg-green-500': index === 0, 'bg-pink-500': index === 1, 'bg-red-500': index >= 2}">
-                  2025年4月
+                     :class="{'bg-green-500': index % 3 === 0, 'bg-pink-500': index % 3 === 1, 'bg-red-500': index % 3 === 2}">
+                  {{ anime.year || '2025' }}
                 </div>
                 <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                  <h3 class="text-white font-medium mb-1 line-clamp-1">{{ anime.title }}</h3>
-                  <div class="text-gray-300 text-sm">{{ anime.updateTime }}</div>
+                  <h3 class="text-white font-medium mb-1 line-clamp-1">{{ anime.title || '未知标题' }}</h3>
+                  <div class="text-gray-300 text-sm">{{ anime.episode || '暂无更新' }}</div>
                 </div>
               </div>
               
               <!-- 当没有数据时显示提示 -->
               <div v-if="currentDayAnimes.length === 0" class="w-full flex justify-center items-center py-8 text-gray-400">
-                当天暂无更新的番剧
+                当天暂无更新的番剧，请查看其他日期
               </div>
               
               <div v-else class="flex-shrink-0 w-10"></div> <!-- 用于在最后添加间距 -->
