@@ -36,12 +36,17 @@ const startX = ref(0)
 const currentTranslate = ref(0)
 const prevTranslate = ref(0)
 const isTransitioning = ref(false)
+// 添加一个变量用于跟踪是否有显著的滑动行为
+const hasMoved = ref(false)
+const clickStartTime = ref(0)
 
 // 轮播图触摸开始
 const touchStart = (e) => {
   if (!carouselRef.value) return
   stopAutoplay()
   isDragging.value = true
+  hasMoved.value = false
+  clickStartTime.value = Date.now()
   startX.value = getPositionX(e)
   carouselRef.value.style.transition = 'none'
   // 阻止事件冒泡和默认行为，防止页面滚动
@@ -59,6 +64,10 @@ const touchMove = (e) => {
   }
   const currentX = getPositionX(e)
   const diff = currentX - startX.value
+  // 如果移动距离超过5像素，标记为已移动
+  if (Math.abs(diff) > 5) {
+    hasMoved.value = true
+  }
   currentTranslate.value = prevTranslate.value + diff
   setCarouselPosition()
 }
@@ -112,6 +121,11 @@ const touchEnd = () => {
       currentTranslate.value = prevTranslate.value
       setCarouselPosition()
     }
+    
+    // 500ms后重置hasMoved状态，防止干扰下一次点击
+    setTimeout(() => {
+      hasMoved.value = false
+    }, 500)
   }, 300)
 
   // 恢复自动播放
@@ -234,7 +248,14 @@ const initCarousel = () => {
 }
 
 // 在轮播图中点击跳转到详情页
-const goToVideoDetail = (id) => {
+const goToVideoDetail = (id, event) => {
+  // 如果是拖动操作或有显著移动，不触发跳转
+  const clickDuration = Date.now() - clickStartTime.value
+  // 如果有明显的滑动或点击时长超过300ms(表示可能是长按或拖动)，不触发点击
+  if (hasMoved.value || clickDuration > 300) {
+    return
+  }
+  
   if(id) {
     router.push(`/video/${id}`)
   }
@@ -289,7 +310,7 @@ watch(
           v-for="(item, index) in loopSwiperImages"
           :key="`${item.id}-${index}`"
           class="carousel-slide"
-          @click="goToVideoDetail(item.id)"
+          @click="goToVideoDetail(item.id, $event)"
         >
           <img :src="item.url" class="carousel-image" alt="carousel" draggable="false" />
           <div class="carousel-caption">
