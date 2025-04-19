@@ -7,6 +7,7 @@ import 'swiper/css/pagination'
 import HeaderNav from "@/components/home/common/HeaderNav.vue";
 // 导入番剧列表组件
 import AnimeList from '@/components/home/DramaList.vue'
+import {getBannerListService} from "@/api/recommend.js";
 
 const router = useRouter()
 const activeTab = ref('推荐')
@@ -134,41 +135,18 @@ const newAnimes = [
 ]
 
 // 模拟轮播图数据
-const swiperImages = [
-  {
-    id: 100,
-    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg',
-    title: '第一张轮播图'
-  },
-  {
-    id: 101,
-    url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg',
-    title: '第二张轮播图'
-  },
-  {
-    id: 102,
-    url: 'https://img.cycimg.me/r/800/pic/cover/l/23/ce/363957_pgptl.jpg',
-    title: '第三张轮播图'
-  },
-  {
-    id: 103,
-    url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/b3/486347_jKVqi.jpg',
-    title: '第四张轮播图'
-  },
-  {
-    id: 104,
-    url: 'https://img.cycimg.me/r/800/pic/cover/l/9e/fa/509297_Cnz9B.jpg',
-    title: '第五张轮播图'
-  },
-]
+const swiperImages = ref([])
 
 // 创建一个包含首尾额外项的轮播图数据，用于无缝循环
 const loopSwiperImages = computed(() => {
+  if (!swiperImages.value || swiperImages.value.length === 0) {
+    return []
+  }
   // 在数组开始添加最后一项，在数组结束添加第一项
   return [
-    { ...swiperImages[swiperImages.length - 1] },
-    ...swiperImages,
-    { ...swiperImages[0] }
+    { ...swiperImages.value[swiperImages.value.length - 1] },
+    ...swiperImages.value,
+    { ...swiperImages.value[0] }
   ]
 })
 
@@ -350,15 +328,54 @@ const currentRealIndex = computed(() => {
   let index = swiperCurrentIndex.value - 1
   // 处理边界情况
   if (index < 0) {
-    index = swiperImages.length - 1
-  } else if (index >= swiperImages.length) {
+    index = swiperImages.value.length - 1
+  } else if (index >= swiperImages.value.length) {
     index = 0
   }
   return index
 })
 
+//获取轮播图数据
+const getSwiperImages = async () => {
+  try {
+    const res = await getBannerListService()
+    console.log('获取轮播图数据:', res)
+    
+    if (res.code === 200 && res.data && Array.isArray(res.data)) {
+      // 转换API返回的数据到我们需要的格式
+      swiperImages.value = res.data.map((item, index) => ({
+        id: item.vod_id,
+        url: item.vod_pic_slide || item.vod_pic_thumb || item.vod_pic || 'https://placeholder.pics/svg/800x450/DEDEDE/555555/暂无图片',
+        title: item.vod_name,
+        subtitle: item.vod_remarks || '暂无更新信息'
+      }))
+      
+      console.log('处理后的轮播图数据:', swiperImages.value)
+      
+      // 数据加载后重置轮播图位置
+      setTimeout(() => {
+        // 重置轮播索引到第一张图片(因为loopSwiperImages在第0位是克隆的最后一张)
+        swiperCurrentIndex.value = 1
+        // 更新位置
+        if (carouselRef.value) {
+          const slideWidth = carouselRef.value.clientWidth
+          prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+          currentTranslate.value = prevTranslate.value
+          carouselRef.value.style.transition = 'none'
+          setCarouselPosition()
+        }
+        // 重启自动播放
+        startAutoplay()
+      }, 100)
+    }
+  } catch (error) {
+    console.error('获取轮播图数据失败:', error)
+  }
+}
+
 onMounted(() => {
   startAutoplay()
+  getSwiperImages()
   window.addEventListener('resize', handleResize)
 })
 
@@ -371,6 +388,13 @@ onUnmounted(() => {
 const handleTabChange = (tab) => {
   activeTab.value = tab
   console.log('切换到标签:', tab)
+}
+
+// 在轮播图中点击跳转到详情页
+const goToVideoDetail = (id) => {
+  if(id) {
+    router.push(`/video/${id}`)
+  }
 }
 </script>
 
@@ -393,7 +417,16 @@ const handleTabChange = (tab) => {
         <!-- 自定义轮播图 -->
         <div class="carousel-container px-4 py-3">
           <div class="carousel-overflow">
+            <!-- 无数据或加载中显示占位图 -->
+            <div v-if="!loopSwiperImages.length" class="carousel-placeholder">
+              <div class="carousel-loading">
+                <el-icon class="loading-icon"><svg class="circular" viewBox="25 25 50 50"><circle class="path" cx="50" cy="50" r="20" fill="none"/></svg></el-icon>
+                <span>轮播图加载中...</span>
+              </div>
+            </div>
+            <!-- 有数据时显示轮播图 -->
             <div
+              v-else
               ref="carouselRef"
               class="carousel-track"
               @mousedown="touchStart"
@@ -409,17 +442,19 @@ const handleTabChange = (tab) => {
                 v-for="(item, index) in loopSwiperImages"
                 :key="`${item.id}-${index}`"
                 class="carousel-slide"
+                @click="goToVideoDetail(item.id)"
               >
                 <img :src="item.url" class="carousel-image" alt="carousel" draggable="false" />
                 <div class="carousel-caption">
                   <p class="carousel-title">{{ item.title }}</p>
+                  <p v-if="item.subtitle" class="carousel-subtitle">{{ item.subtitle }}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 指示器 -->
-          <div class="carousel-indicators">
+          <!-- 指示器 - 只有在有图片时才显示 -->
+          <div v-if="swiperImages.length > 0" class="carousel-indicators">
             <span
               v-for="(item, index) in swiperImages"
               :key="item.id"
@@ -556,6 +591,69 @@ const handleTabChange = (tab) => {
   position: relative;
 }
 
+/* 轮播图加载占位符 */
+.carousel-placeholder {
+  width: 100%;
+  height: 180px;
+  background-color: #f3f4f6;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.carousel-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.loading-icon {
+  font-size: 24px;
+  animation: rotating 2s linear infinite;
+}
+
+@keyframes rotating {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.circular {
+  height: 24px;
+  width: 24px;
+  animation: rotating 2s linear infinite;
+}
+
+.path {
+  stroke: #d1d5db;
+  stroke-width: 3;
+  stroke-dasharray: 90, 150;
+  stroke-dashoffset: 0;
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes dash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
+}
+
 .carousel-track {
   display: flex;
   width: 100%;
@@ -597,6 +695,13 @@ const handleTabChange = (tab) => {
   color: white;
   font-size: 16px;
   font-weight: 500;
+  margin: 0;
+}
+
+.carousel-subtitle {
+  color: white;
+  font-size: 12px;
+  font-weight: 400;
   margin: 0;
 }
 

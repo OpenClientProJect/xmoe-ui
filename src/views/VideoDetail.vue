@@ -465,6 +465,12 @@ const getVideoDetail = async () => {
           currentSource.value = 0;
           episodes.value = allEpisodes.value[0] || [];
           console.log('当前线路剧集:', episodes.value);
+          
+          // 自动播放第一集视频
+          if (episodes.value && episodes.value.length > 0) {
+            console.log('自动播放第一集视频')
+            playVideo(episodes.value[0].id)
+          }
         }
       }
     } else {
@@ -525,6 +531,7 @@ onMounted(async () => {
   console.log('组件挂载，开始获取数据')
   await getVideoDetail()
   console.log('视频详情加载完成，开始获取相关推荐')
+  
   await getRelatedDrama()
   console.log('开始获取评论数据')
   await getComments()
