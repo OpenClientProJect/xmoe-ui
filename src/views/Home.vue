@@ -214,21 +214,19 @@ const scrollSchedule = (direction) => {
 
         <!-- 追番日历 -->
         <div class="px-4 mt-5">
-          <div class="flex justify-between items-center mb-4">
-            <div class="flex items-center">
-              <h2 class="text-xl font-bold mr-4">排期表</h2>
-              <!-- 周一至周日标签栏 -->
-              <div class="flex overflow-x-auto no-scrollbar">
-                <div
-                    v-for="(day, index) in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']"
-                    :key="index"
-                    class="day-tab mx-2 first:ml-3 last:mr-3 text-sm font-medium whitespace-nowrap cursor-pointer px-3 py-1 rounded-full transition-colors duration-300"
-                    :class="{ active: Number(activeDay) === index }"
-                    @click="switchDay(index)"
-                >
-                  {{ day }}
-                </div>
-              </div>
+          <!-- 排期表标题 -->
+          <h2 class="text-xl font-bold mb-3">排期表</h2>
+          
+          <!-- 周一至周日标签栏 -->
+          <div class="flex overflow-x-auto no-scrollbar mb-4 schedule-tabs-container">
+            <div
+                v-for="(day, index) in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']"
+                :key="index"
+                class="day-tab text-center text-xs sm:text-sm font-medium whitespace-nowrap cursor-pointer px-2 py-1 sm:px-3 sm:py-1 rounded-full transition-colors duration-300 mx-1"
+                :class="{ active: Number(activeDay) === index }"
+                @click="switchDay(index)"
+            >
+              {{ day }}
             </div>
           </div>
 
@@ -462,10 +460,20 @@ const scrollSchedule = (direction) => {
   display: none; /* Chrome, Safari and Opera */
 }
 
+/* 排期表标签容器 */
+.schedule-tabs-container {
+  display: flex;
+  background-color: #f3f4f6;
+  border-radius: 9999px;
+  padding: 4px;
+  justify-content: flex-start;
+}
+
 /* 日期标签样式 */
 .day-tab {
-  background-color: #f3f4f6;
   color: #4b5563;
+  min-width: 50px;
+  flex: 0 0 auto;
 }
 
 .day-tab:hover {
@@ -477,5 +485,18 @@ const scrollSchedule = (direction) => {
   color: white;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transform: scale(1.05);
+}
+
+/* 手机端日期标签优化 */
+@media (max-width: 480px) {
+  .day-tab {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 42px;
+  }
+  
+  .day-tab.active {
+    transform: scale(1.03);
+  }
 }
 </style>
