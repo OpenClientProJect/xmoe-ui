@@ -306,7 +306,7 @@ const scrollSchedule = (direction) => {
           </div>
 
           <!-- 新番列表 -->
-          <div v-else class="grid grid-cols-2 gap-3">
+          <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
             <div
                 v-for="anime in newAnimes"
                 :key="anime.id"
