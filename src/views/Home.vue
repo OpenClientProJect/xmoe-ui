@@ -158,6 +158,23 @@ const goToVideoDetail = (id) => {
     router.push(`/video/${id}`)
   }
 }
+
+// 排期表滚动控制
+const scheduleContainerRef = ref(null)
+
+// 滚动排期表内容
+const scrollSchedule = (direction) => {
+  if (!scheduleContainerRef.value) return
+  
+  const container = scheduleContainerRef.value
+  const scrollAmount = container.clientWidth * 0.8 // 滚动80%的容器宽度
+  
+  if (direction === 'left') {
+    container.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
+  } else {
+    container.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+  }
+}
 </script>
 
 <template>
@@ -217,14 +234,41 @@ const goToVideoDetail = (id) => {
 
           <!-- 动漫卡片轮播 - 横向滑动 -->
           <div class="relative">
-            <div class="flex overflow-x-auto no-scrollbar pb-4">
+            <!-- 左侧切换按钮 -->
+            <div 
+              class="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 ml-1"
+              @click="scrollSchedule('left')"
+            >
+              <div class="w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center cursor-pointer transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- 右侧切换按钮 -->
+            <div 
+              class="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 mr-1"
+              @click="scrollSchedule('right')"
+            >
+              <div class="w-8 h-8 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center cursor-pointer transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+
+            <div 
+              ref="scheduleContainerRef"
+              class="flex overflow-x-auto no-scrollbar pb-4 scroll-smooth"
+            >
               <div 
                 v-for="(anime, index) in currentDayAnimes" 
                 :key="anime.id || index"
-                class="flex-shrink-0 relative mr-3 w-64 rounded-lg overflow-hidden"
+                class="flex-shrink-0 relative mr-3 w-64 rounded-lg overflow-hidden transform transition-transform hover:translate-y-[-5px]"
                 @click="goToVideoDetail(anime.id)"
               >
-                <img :src="anime.cover || ''" class="w-full h-56 object-cover rounded-lg" alt="动漫封面"/>
+                <img :src="anime.cover || ''" class="w-full h-56 object-cover rounded-lg" alt="动漫封面" draggable="false"/>
                 <div class="absolute top-2 left-2 px-2 py-1 text-xs text-white rounded-md"
                      :class="{'bg-green-500': index % 3 === 0, 'bg-pink-500': index % 3 === 1, 'bg-red-500': index % 3 === 2}">
                   {{ anime.year || '2025' }}
