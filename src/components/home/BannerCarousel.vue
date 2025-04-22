@@ -360,6 +360,31 @@ watch(
   align-items: center;
 }
 
+/* 添加媒体查询，在大屏幕上增加高度 */
+@media (min-width: 768px) {
+  .carousel-placeholder {
+    height: 320px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .carousel-placeholder {
+    height: 440px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .carousel-placeholder {
+    height: 560px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .carousel-placeholder {
+    height: 700px;
+  }
+}
+
 .carousel-loading {
   display: flex;
   flex-direction: column;
@@ -420,6 +445,31 @@ watch(
   transform: translateX(-100%); /* 初始显示真实的第一张图片，也就是loopSwiperImages中的第二个元素 */
 }
 
+/* 添加媒体查询，在大屏幕上增加高度 */
+@media (min-width: 768px) {
+  .carousel-track {
+    height: 320px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .carousel-track {
+    height: 440px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .carousel-track {
+    height: 560px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .carousel-track {
+    height: 700px;
+  }
+}
+
 .carousel-slide {
   flex: 0 0 100%;
   min-width: 100%;
@@ -447,6 +497,35 @@ watch(
   width: 100%;
   padding: 16px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+}
+
+/* 添加媒体查询，在大屏幕上增加文字大小和内边距 */
+@media (min-width: 1024px) {
+  .carousel-caption {
+    padding: 24px;
+  }
+  
+  .carousel-title {
+    font-size: 20px !important;
+  }
+  
+  .carousel-subtitle {
+    font-size: 16px !important;
+  }
+}
+
+@media (min-width: 1440px) {
+  .carousel-caption {
+    padding: 32px;
+  }
+  
+  .carousel-title {
+    font-size: 24px !important;
+  }
+  
+  .carousel-subtitle {
+    font-size: 18px !important;
+  }
 }
 
 .carousel-title {
