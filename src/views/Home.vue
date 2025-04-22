@@ -19,7 +19,7 @@ const activeTab = ref('推荐')
 const animeList = []
 
 // 模拟追番日历数据
-const activeDay = ref(1) // 默认选中周二
+const activeDay = ref(0) // 默认选中周一
 
 // 按周几分类的动漫数据
 const calendarByDay = ref({
@@ -54,7 +54,6 @@ const swiperImages = ref([])
 //获取轮播图数据
 const getSwiperImages = async () => {
   const res = await getBannerListService()
-  console.log('获取轮播图数据:', res)
 
   // 转换API返回的数据到我们需要的格式
   swiperImages.value = res.data.map((item, index) => ({
@@ -85,8 +84,8 @@ const getNewAnimes = async () => {
 const getDramaSchedule = async () => {
   try {
     const res = await getDramaScheduleService()
-    console.log('获取排期表数据:', res)
-    
+
+    if (res && res.code === 200 && res.data && res.data.length > 0) {
       // 确保每个日期的数组都被初始化
       for (let i = 0; i < 7; i++) {
         if (!calendarByDay.value[i]) {
@@ -132,15 +131,7 @@ const getDramaSchedule = async () => {
         }
       })
       
-      // 如果当前选择的日期没有数据但其他日期有，自动跳转到有数据的日期
-      if (calendarByDay.value[activeDay.value].length === 0) {
-        for (let i = 0; i < 7; i++) {
-          if (calendarByDay.value[i].length > 0) {
-            activeDay.value = i
-            break
-          }
-        }
-      }
+    }
   } catch (error) {
     console.error('获取排期表数据失败:', error)
   }
@@ -175,9 +166,9 @@ const goToVideoDetail = (id) => {
     <div class="page-header">
       <!-- 顶部搜索栏和导航栏 -->
       <HeaderNav
-          :tabs="['推荐', '番剧', '剧场版', '4K', '待添加']"
-          :active-tab="activeTab"
-          @tab-change="handleTabChange"
+        :tabs="['推荐', '番剧', '剧场版', '4K', '待添加']"
+        :active-tab="activeTab"
+        @tab-change="handleTabChange"
       />
     </div>
 
@@ -210,20 +201,15 @@ const goToVideoDetail = (id) => {
             <div class="flex items-center">
               <h2 class="text-xl font-bold mr-4">排期表</h2>
               <!-- 周一至周日标签栏 -->
-              <div class="flex overflow-x-auto no-scrollbar py-2">
+              <div class="flex overflow-x-auto no-scrollbar">
                 <div
                     v-for="(day, index) in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']"
                     :key="index"
-                    class="mx-2 first:ml-3 last:mr-3 text-sm font-medium whitespace-nowrap cursor-pointer px-3 py-1 rounded-full"
-                    :class="index === activeDay.value ? 
-                      'bg-pink-500 text-white' : 
-                      'text-gray-700 hover:bg-gray-100'"
+                    class="day-tab mx-2 first:ml-3 last:mr-3 text-sm font-medium whitespace-nowrap cursor-pointer px-3 py-1 rounded-full transition-colors duration-300"
+                    :class="{ active: Number(activeDay) === index }"
                     @click="switchDay(index)"
                 >
                   {{ day }}
-                  <span v-if="calendarByDay && calendarByDay.value && calendarByDay.value[index] && calendarByDay.value[index].length > 0" class="ml-1 text-xs">
-                    ({{ calendarByDay.value[index].length }})
-                  </span>
                 </div>
               </div>
             </div>
@@ -255,13 +241,6 @@ const goToVideoDetail = (id) => {
               </div>
               
               <div v-else class="flex-shrink-0 w-10"></div> <!-- 用于在最后添加间距 -->
-            </div>
-            
-            <!-- 右侧滚动箭头，仅在有数据时显示 -->
-            <div v-if="currentDayAnimes.length > 0" class="absolute right-0 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center cursor-pointer z-10">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
             </div>
           </div>
         </div>
@@ -310,8 +289,8 @@ const goToVideoDetail = (id) => {
 
       <!-- 番剧标签页内容 - 使用组件 -->
       <AnimeList
-          v-else-if="activeTab === '番剧'"
-          :anime-list="animeList"
+        v-else-if="activeTab === '番剧'"
+        :anime-list="animeList"
       />
 
       <!-- 其他标签页内容 -->
@@ -437,5 +416,22 @@ const goToVideoDetail = (id) => {
 
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
+}
+
+/* 日期标签样式 */
+.day-tab {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.day-tab:hover {
+  background-color: #e5e7eb;
+}
+
+.day-tab.active {
+  background-color: #ec4899;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: scale(1.05);
 }
 </style>

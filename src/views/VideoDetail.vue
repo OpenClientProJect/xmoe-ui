@@ -431,7 +431,7 @@ const getVideoDetail = async () => {
             let id = '';
             if (parts.length > 2) {
               id = parts.slice(1).join('$');
-            } else {
+          } else {
               id = parts[1] || '';
             }
 
@@ -656,30 +656,30 @@ onMounted(async () => {
     <div class="content-container">
       <!-- 标签页 -->
       <div class="tabs">
-        <div
-            v-for="tab in tabs"
-            :key="tab.name"
-            class="tab"
-            :class="{'active-tab': activeTab === tab.name}"
-            @click="setActiveTab(tab.name)"
+        <div 
+          v-for="tab in tabs" 
+          :key="tab.name"
+          class="tab"
+          :class="{'active-tab': activeTab === tab.name}"
+          @click="setActiveTab(tab.name)"
         >
           {{ tab.name }}
           <div v-if="activeTab === tab.name" class="tab-indicator"></div>
         </div>
       </div>
-
+      
       <!-- 简介内容 -->
       <div v-if="activeTab === '简介'" class="tab-content">
         <div class="tag-list">
-          <span
-              v-for="tag in videoInfo.tags"
-              :key="tag"
-              class="tag"
+          <span 
+            v-for="tag in videoInfo.tags" 
+            :key="tag"
+            class="tag"
           >
             {{ tag }}
           </span>
         </div>
-
+        
         <!-- 视频信息 -->
         <div class="video-meta">
           <div class="meta-item" v-if="videoInfo.area">
@@ -711,11 +711,11 @@ onMounted(async () => {
               <el-icon v-else>
                 <ArrowDown/>
               </el-icon>
-            </div>
+          </div>
           </div>
         </div>
       </div>
-
+      
       <!-- 评论内容 -->
       <div v-else class="comment-container">
         <!-- 评论列表 -->
@@ -725,12 +725,12 @@ onMounted(async () => {
                class="comment-item">
             <div class="comment-avatar">
               <img :src="comment.user_pic" alt="用户头像">
-            </div>
+      </div>
             <div class="comment-content">
               <div class="comment-header">
                 <div class="comment-author">{{ comment.comment_name }}</div>
                 <div class="comment-date">{{ formatDate(comment.comment_time) }}</div>
-              </div>
+    </div>
               <div class="comment-text">{{ comment.comment_content }}</div>
               <div class="comment-actions">
 <!--                <div class="action-btn">-->
@@ -744,9 +744,9 @@ onMounted(async () => {
                 <div class="action-btn reply-btn">
                   <el-icon size="14"><ChatDotRound /></el-icon>
                   <span>回复</span>
-                </div>
-              </div>
-              
+        </div>
+      </div>
+      
               <!-- 回复列表 -->
               <div v-if="comment.rp_lists && comment.rp_lists.length > 0" class="reply-list">
                 <div v-for="reply in comment.rp_lists" 
@@ -754,19 +754,19 @@ onMounted(async () => {
                      class="reply-item">
                   <div class="reply-avatar">
                     <img :src="reply.user_pic" alt="用户头像">
-                  </div>
+      </div>
                   <div class="reply-content">
                     <div class="reply-header">
                       <div class="reply-author">{{ reply.comment_name }}</div>
                       <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
-                    </div>
+          </div>
                     <div class="reply-text">
                       <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
                       {{ reply.comment_content }}
-                    </div>
-                  </div>
-                </div>
-              </div>
+        </div>
+      </div>
+    </div>
+          </div>
             </div>
           </div>
         </div>
@@ -777,8 +777,8 @@ onMounted(async () => {
             <ChatDotRound/>
           </el-icon>
           <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
-        </div>
       </div>
+    </div>
     </div>
 
     <!-- 相关推荐组件 -->
