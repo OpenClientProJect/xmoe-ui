@@ -9,8 +9,7 @@ import HeaderNav from "@/components/home/common/HeaderNav.vue";
 import AnimeList from '@/components/home/DramaList.vue'
 // 导入轮播图组件
 import BannerCarousel from '@/components/home/BannerCarousel.vue'
-import {getBannerListService} from "@/api/recommend.js";
-import {getDramaListService, getDramaScheduleService} from "@/api/anime.js";
+import {getBannerListService, getDramaListService, getDramaScheduleService} from "@/api/home/anime.js";
 
 const router = useRouter()
 const activeTab = ref('推荐')
@@ -183,7 +182,6 @@ const scrollSchedule = (direction) => {
     <div class="page-header">
       <!-- 顶部搜索栏和导航栏 -->
       <HeaderNav
-        :tabs="['推荐', '番剧', '剧场版', '4K', '待添加']"
         :active-tab="activeTab"
         @tab-change="handleTabChange"
       />

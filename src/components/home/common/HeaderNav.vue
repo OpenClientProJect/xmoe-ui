@@ -1,12 +1,9 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import {onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {getMenuListService} from "@/api/home/anime.js";
 
 const props = defineProps({
-  tabs: {
-    type: Array,
-    default: () => ['推荐', '番剧', '剧场版', '4K', '待添加']
-  },
   activeTab: {
     type: String,
     default: '推荐'
@@ -20,6 +17,8 @@ const props = defineProps({
 const emit = defineEmits(['tab-change'])
 
 const router = useRouter()
+const menuList = ref([])
+const isLoading = ref(false)
 
 // 切换标签
 const changeTab = (tab) => {
@@ -30,6 +29,22 @@ const changeTab = (tab) => {
 const goToSearch = () => {
   router.push('/search')
 }
+
+// 获取菜单列表
+const getMenuList = async () => {
+  try {
+    isLoading.value = true
+    const res = await getMenuListService()
+    menuList.value = res.data
+    console.error('获取菜单列表失败:', error)
+  } finally {
+    isLoading.value = false // 结束加载
+  }
+}
+
+onMounted(() => {
+  getMenuList()
+})
 </script>
 
 <template>
@@ -37,26 +52,41 @@ const goToSearch = () => {
     <!-- 顶部搜索栏 -->
     <div class="search-bar">
       <div class="avatar-container">
-        <img :src="userAvatar" class="avatar-img" alt="avatar" />
+        <img :src="userAvatar" class="avatar-img" alt="avatar"/>
       </div>
 
       <div class="search-input" @click="goToSearch">
-        <img src="../../../assets/icon/search.svg" class="search-icon" alt="search" />
+        <img src="../../../assets/icon/search.svg" class="search-icon" alt="search"/>
         <span class="placeholder-text">搜索</span>
       </div>
-      <img src="../../../assets/icon/Recording.svg" class="action-icon recording-icon" alt="recording" />
+      <img src="../../../assets/icon/Recording.svg" class="action-icon recording-icon" alt="recording"/>
     </div>
 
     <!-- 分类导航栏 -->
     <div class="tab-container">
+      <!-- 固定的"推荐"选项 -->
       <div
-        v-for="tab in tabs"
-        :key="tab"
-        class="tab-item"
-        :class="{'active-tab': activeTab === tab}"
-        @click="changeTab(tab)"
+          class="tab-item"
+          :class="{'active-tab': activeTab === '推荐'}"
+          @click="changeTab('推荐')"
       >
-        {{ tab }}
+        推荐
+      </div>
+
+      <!-- 动态加载的菜单项 -->
+      <div
+          v-for="item in menuList"
+          :key="item.type_id"
+          class="tab-item"
+          :class="{'active-tab': activeTab === item.type_name}"
+          @click="changeTab(item.type_name)"
+      >
+        {{ item.type_name }}
+      </div>
+
+      <!-- 加载中提示 -->
+      <div v-if="isLoading" class="tab-item loading-tab">
+        加载中...
       </div>
     </div>
   </div>
@@ -229,5 +259,8 @@ const goToSearch = () => {
   border-bottom: 2px solid #dc2626;
 }
 
-
+.loading-tab {
+  color: #9ca3af;
+  font-style: italic;
+}
 </style>
