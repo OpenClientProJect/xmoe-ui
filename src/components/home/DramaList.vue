@@ -265,6 +265,30 @@ onMounted(() => {
   padding: 0 12px;
 }
 
+@media screen and (min-width: 640px) {
+  .anime-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .anime-list {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .anime-list {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media screen and (min-width: 1280px) {
+  .anime-list {
+    grid-template-columns: repeat(7, 1fr);
+  }
+}
+
 .anime-card {
   display: flex;
   flex-direction: column;
