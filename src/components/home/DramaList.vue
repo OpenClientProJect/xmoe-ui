@@ -1,8 +1,8 @@
 <script setup>
-import {onMounted, ref, computed} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {getDramaListService, getMenuListService} from "@/api/Drama.js";
-import { handleImageUrl } from '@/utils/imageUtils';
+import {handleImageUrl} from '@/utils/imageUtils';
 
 const router = useRouter()
 
@@ -36,17 +36,18 @@ const tagRows = computed(() => [
     title: '类型',
     tags: tagData.value.class ? ['全部', ...tagData.value.class.split(',')] : ['全部']
   },
-  { 
-    id: 1, 
-    type: 'lang', 
-    title: '季度',
-    tags: tagData.value.lang ? ['全部', ...tagData.value.lang.split(',')] : ['全部']
-  },
+
   { 
     id: 2, 
     type: 'year', 
     title: '年份',
     tags: tagData.value.year ? ['全部', ...tagData.value.year.split(',')] : ['全部']
+  },
+  {
+    id: 1,
+    type: 'lang',
+    title: '季度',
+    tags: tagData.value.lang ? ['全部', ...tagData.value.lang.split(',')] : ['全部']
   }
 ])
 
@@ -198,8 +199,7 @@ async function decryptData(encryptedData) {
     
     // 解析JSON
     try {
-      const jsonData = JSON.parse(decryptedText);
-      return jsonData;
+      return JSON.parse(decryptedText);
     } catch (jsonError) {
       console.error('JSON解析失败:', jsonError);
       return null;
@@ -313,7 +313,7 @@ onMounted(() => {
 
 /* 标签行 */
 .tag-row {
-  padding: 8px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
@@ -324,26 +324,54 @@ onMounted(() => {
 /* 标签滚动容器 */
 .tag-scroll-container {
   display: flex;
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding: 0 12px;
-}
-
-.tag-scroll-container::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  overflow: visible;
 }
 
 /* 标签项 */
 .tag-item {
   padding: 4px 16px;
-  margin-right: 12px;
   font-size: 14px;
   color: var(--el-text-color-regular);
   border-radius: 20px;
   transition: all 0.2s ease;
   cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* 针对窄屏设备优化标签 */
+@media screen and (max-width: 360px) {
+  .tag-item {
+    padding: 4px 12px;
+    font-size: 13px;
+  }
+  
+  .tag-scroll-container {
+    gap: 6px;
+    padding: 6px 10px;
+  }
+}
+
+/* 针对宽屏设备优化标签布局 */
+@media screen and (min-width: 768px) {
+  .tag-scroll-container {
+    padding: 8px 24px;
+    gap: 12px;
+  }
+  
+  .tag-item {
+    padding: 4px 20px;
+  }
+}
+
+/* 确保标签名称过长时能够正确显示 */
+.tag-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
 }
 
 .tag-item:hover {
