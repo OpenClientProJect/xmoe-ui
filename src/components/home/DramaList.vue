@@ -80,11 +80,6 @@ const getDramaList = async (params = {}) => {
     // 调用接口获取数据
     const res = await getDramaListService(params)
     
-    // 检查接口返回状态
-    if (res.code !== 200) {
-      throw new Error(res.message || '服务器返回错误')
-    }
-    
     // 处理不同类型的数据响应
     if (typeof res.data === 'string') {
       // 如果是字符串，尝试解密
@@ -103,9 +98,6 @@ const getDramaList = async (params = {}) => {
       originalDramaList.value = res.data
       DramaList.value = res.data
       console.log('获取到番剧数据', DramaList.value.length, '条');
-    } else {
-      // 其他情况
-      throw new Error('返回的数据格式不正确');
     }
   } catch (error) {
     console.error('获取番剧列表失败:', error)
