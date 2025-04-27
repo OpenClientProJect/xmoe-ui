@@ -324,10 +324,19 @@ onMounted(() => {
 /* 标签滚动容器 */
 .tag-scroll-container {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   padding: 8px 12px;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* 隐藏滚动条 */
+.tag-scroll-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 /* 标签项 */
@@ -358,8 +367,10 @@ onMounted(() => {
 /* 针对宽屏设备优化标签布局 */
 @media screen and (min-width: 768px) {
   .tag-scroll-container {
+    flex-wrap: wrap;
     padding: 8px 24px;
     gap: 12px;
+    overflow-x: visible;
   }
   
   .tag-item {
