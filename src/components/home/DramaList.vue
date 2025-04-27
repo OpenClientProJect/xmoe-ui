@@ -19,8 +19,6 @@ const errorMessage = ref('')
 // 分类标签数据
 const tagData = ref({})
 
-// 当前激活的分类行
-const activeRow = ref(0)
 // 当前选中的标签值（每行一个）
 const selectedTags = ref({
   0: '全部', // 类型
