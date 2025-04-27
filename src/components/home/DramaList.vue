@@ -1,33 +1,157 @@
 <script setup>
-import {onMounted, ref} from 'vue'
+import {onMounted, ref, computed} from 'vue'
 import {useRouter} from 'vue-router'
-import {getDramaListService} from "@/api/Drama.js";
+import {getDramaListService, getMenuListService} from "@/api/Drama.js";
 import { handleImageUrl } from '@/utils/imageUtils';
 
 const router = useRouter()
 
 // 番剧列表
 const DramaList = ref([])
+// 原始番剧列表数据（用于本地筛选）
+const originalDramaList = ref([])
 
-// 筛选分类
-const animeFilters = [
-  { name: '最新', active: true },
-  { name: '类型', active: false },
-  { name: '地区', active: false },
-  { name: '语言', active: false },
-  { name: '年份', active: false }
-]
+// 加载状态
+const isLoading = ref(false)
+const hasError = ref(false)
+const errorMessage = ref('')
 
-const activeFilter = ref('最新')
-const isLoading = ref(false) // 添加加载状态
-const hasError = ref(false) // 添加错误状态
-const errorMessage = ref('') // 错误信息
+// 分类标签数据
+const tagData = ref({})
 
-// 切换筛选分类
-const changeFilter = (filter) => {
-  activeFilter.value = filter
-  // 可以根据筛选条件重新获取数据
-  getDramaList()
+// 当前激活的分类行
+const activeRow = ref(0)
+// 当前选中的标签值（每行一个）
+const selectedTags = ref({
+  0: '全部', // 类型
+  1: '全部', // 季度
+  2: '全部'  // 年份
+})
+
+// 标签行配置
+const tagRows = computed(() => [
+  { 
+    id: 0, 
+    type: 'class', 
+    title: '类型',
+    tags: tagData.value.class ? ['全部', ...tagData.value.class.split(',')] : ['全部']
+  },
+  { 
+    id: 1, 
+    type: 'lang', 
+    title: '季度',
+    tags: tagData.value.lang ? ['全部', ...tagData.value.lang.split(',')] : ['全部']
+  },
+  { 
+    id: 2, 
+    type: 'year', 
+    title: '年份',
+    tags: tagData.value.year ? ['全部', ...tagData.value.year.split(',')] : ['全部']
+  }
+])
+
+// 获取标签
+const animeTags = async () => {
+  try {
+    isLoading.value = true
+    const res = await getMenuListService()
+    
+      // 只保存需要的字段数据
+      tagData.value = {
+        class: res.data.class || '',
+        lang: res.data.lang || '',
+        year: res.data.year || ''
+      }
+  } catch (error) {
+    console.error('获取分类标签出错:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 获取番剧列表
+const getDramaList = async (params = {}) => {
+  try {
+    isLoading.value = true
+    hasError.value = false
+    errorMessage.value = ''
+    
+    // 调用接口获取数据
+    const res = await getDramaListService(params)
+    
+    // 检查接口返回状态
+    if (res.code !== 200) {
+      throw new Error(res.message || '服务器返回错误')
+    }
+    
+    // 处理不同类型的数据响应
+    if (typeof res.data === 'string') {
+      // 如果是字符串，尝试解密
+      console.log('检测到加密数据，尝试解密');
+      
+        const decryptedData = await decryptData(res.data);
+        
+        if (decryptedData && decryptedData.data && Array.isArray(decryptedData.data)) {
+          // 解密成功，使用解密后的数据
+          originalDramaList.value = decryptedData.data;
+          DramaList.value = decryptedData.data;
+          console.log('解密成功，获取到番剧数据', DramaList.value.length, '条');
+      }
+    } else if (Array.isArray(res.data)) {
+      // 如果是数组，直接使用
+      originalDramaList.value = res.data
+      DramaList.value = res.data
+      console.log('获取到番剧数据', DramaList.value.length, '条');
+    } else {
+      // 其他情况
+      throw new Error('返回的数据格式不正确');
+    }
+  } catch (error) {
+    console.error('获取番剧列表失败:', error)
+    hasError.value = true
+    errorMessage.value = error.message || '获取番剧列表失败'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 选择标签
+const selectTag = (rowId, tag) => {
+  selectedTags.value[rowId] = tag
+  
+  // 构建查询参数
+  const params = {}
+  
+  // 类型筛选
+  if (rowId === 0) {
+    if (tag === '全部') {
+      // 重置为原始列表
+      DramaList.value = [...originalDramaList.value]
+    } else {
+      // 本地筛选vod_class包含所选标签的番剧
+      DramaList.value = originalDramaList.value.filter(drama => {
+        if (!drama.vod_class) return false
+        const classes = drama.vod_class.split(',')
+        return classes.includes(tag)
+      })
+    }
+    return
+  }
+  
+  // 季度筛选
+  if (rowId === 1 && tag !== '全部') {
+    params.lang = tag
+  }
+  
+  // 年份筛选
+  if (rowId === 2 && tag !== '全部') {
+    params.year = tag
+  }
+  
+  // 如果有筛选参数，则调用API重新获取数据
+  if (Object.keys(params).length > 0) {
+    getDramaList(params)
+  }
 }
 
 // 直接在组件中实现AES解密功能
@@ -98,57 +222,6 @@ function hexStringToByteArray(hexString) {
   return bytes;
 }
 
-// 获取番剧列表
-const getDramaList = async () => {
-  try {
-    isLoading.value = true
-    hasError.value = false
-    errorMessage.value = ''
-    
-    // 调用接口获取数据
-    const res = await getDramaListService()
-    
-    // 检查接口返回状态
-    if (res.code !== 200) {
-      throw new Error(res.message || '服务器返回错误')
-    }
-    
-    // 处理不同类型的数据响应
-    if (typeof res.data === 'string') {
-      // 如果是字符串，尝试解密
-      console.log('检测到加密数据，尝试解密');
-      
-      try {
-        const decryptedData = await decryptData(res.data);
-        
-        if (decryptedData && decryptedData.data && Array.isArray(decryptedData.data)) {
-          // 解密成功，使用解密后的数据
-          DramaList.value = decryptedData.data;
-          console.log('解密成功，获取到番剧数据', DramaList.value.length, '条');
-        } else {
-          throw new Error('解密后的数据格式不正确');
-        }
-      } catch (decryptError) {
-        console.error('解密过程出错:', decryptError);
-        throw new Error('解密数据失败: ' + res.data.substring(0, 50) + '...');
-      }
-    } else if (Array.isArray(res.data)) {
-      // 如果是数组，直接使用
-      DramaList.value = res.data
-      console.log('获取到番剧数据', DramaList.value.length, '条');
-    } else {
-      // 其他情况
-      throw new Error('返回的数据格式不正确');
-    }
-  } catch (error) {
-    console.error('获取番剧列表失败:', error)
-    hasError.value = true
-    errorMessage.value = error.message || '获取番剧列表失败'
-  } finally {
-    isLoading.value = false
-  }
-}
-
 // 跳转到详情页
 const goToAnimeDetail = (id) => {
   if (!id) {
@@ -161,23 +234,31 @@ const goToAnimeDetail = (id) => {
 
 // 挂载函数
 onMounted(() => {
+  animeTags()
   getDramaList()
 })
 </script>
 
 <template>
   <div class="anime-content">
-    <!-- 筛选条件 -->
-    <div class="filter-container">
+    <!-- 分类标签行 -->
+    <div class="category-container bg-black text-white">
       <div 
-        v-for="filter in animeFilters" 
-        :key="filter.name"
-        class="filter-item"
-        :class="{'filter-active': activeFilter === filter.name}"
-        @click="changeFilter(filter.name)"
+        v-for="row in tagRows" 
+        :key="row.id" 
+        class="tag-row"
       >
-        {{ filter.name }}
-        <span v-if="filter.name !== '最新'" class="filter-arrow">▼</span>
+        <div class="tag-scroll-container">
+          <div 
+            v-for="tag in row.tags" 
+            :key="tag"
+            class="tag-item"
+            :class="{'tag-active': selectedTags[row.id] === tag}"
+            @click="selectTag(row.id, tag)"
+          >
+            {{ tag }}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -190,7 +271,7 @@ onMounted(() => {
     <!-- 错误提示 -->
     <div v-else-if="hasError" class="error-container">
       <p>{{ errorMessage || '加载失败，请重试' }}</p>
-      <button @click="getDramaList" class="retry-button">重新加载</button>
+      <button @click="getDramaList()" class="retry-button">重新加载</button>
     </div>
 
     <!-- 空数据提示 -->
@@ -223,38 +304,62 @@ onMounted(() => {
   padding: 0 0 80px;
 }
 
-/* 筛选条件 */
-.filter-container {
-  display: flex;
-  overflow-x: auto;
-  background: #fff;
-  padding: 10px 15px;
-  margin-bottom: 10px;
-  scrollbar-width: none;
+/* 分类标签容器 */
+.category-container {
+  padding: 0 0 8px;
+  background-color: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
 }
 
-.filter-container::-webkit-scrollbar {
+/* 标签行 */
+.tag-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.tag-row:last-child {
+  border-bottom: none;
+}
+
+/* 标签滚动容器 */
+.tag-scroll-container {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 12px;
+}
+
+.tag-scroll-container::-webkit-scrollbar {
   display: none;
 }
 
-.filter-item {
-  padding: 5px 12px;
-  margin-right: 15px;
+/* 标签项 */
+.tag-item {
+  padding: 4px 16px;
+  margin-right: 12px;
   font-size: 14px;
-  color: #666;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
+  color: var(--el-text-color-regular);
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-.filter-arrow {
-  font-size: 10px;
-  margin-left: 4px;
+.tag-item:hover {
+  color: var(--el-text-color-primary);
+  opacity: 0.9;
 }
 
-.filter-active {
-  color: #dc2626;
+.tag-active {
+  color: var(--el-color-white);
+  background-color: var(--el-color-primary);
   font-weight: 500;
+}
+
+.tag-active:hover {
+  opacity: 1;
+  background-color: var(--el-color-primary-dark-2);
 }
 
 /* 番剧列表 */
@@ -262,7 +367,8 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  padding: 0 12px;
+  padding: 12px;
+  background: #f5f5f5;
 }
 
 @media screen and (min-width: 640px) {
@@ -358,7 +464,7 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #dc2626;
+  border-top: 3px solid #076AFF;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 10px;
@@ -383,7 +489,7 @@ onMounted(() => {
 .retry-button {
   margin-top: 10px;
   padding: 8px 16px;
-  background-color: #dc2626;
+  background-color: #076AFF;
   color: white;
   border: none;
   border-radius: 4px;
@@ -391,6 +497,6 @@ onMounted(() => {
 }
 
 .retry-button:hover {
-  background-color: #b91c1c;
+  background-color: #0055cc;
 }
 </style> 

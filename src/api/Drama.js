@@ -88,3 +88,16 @@ export const getRelatedDramaService = (typeId) => {
         }
     })
 }
+
+/**
+ * 番剧页面分类表
+ */
+export const getMenuListService = () => {
+    return request({
+        url: '/type/alltypeextend',
+        method: 'get',
+        params: {
+            typeId: 1
+        }
+    })
+}
