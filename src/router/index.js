@@ -25,6 +25,12 @@ const routes = [
     component: () => import('../views/Search.vue'),
     meta: { showTabBar: false }
   },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { showTabBar: false }
+  }
 ]
 
 const router = createRouter({
