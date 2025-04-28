@@ -21,3 +21,14 @@ export const registerService = (params) => {
     data: params,
   });
 };
+
+/**
+ * 登录
+ */
+export const loginService = (params) => {
+  return request({
+    url: "/sk-api/user/login",
+    method: "post",
+    data: params,
+  });
+};

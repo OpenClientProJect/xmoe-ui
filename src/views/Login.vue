@@ -2,9 +2,11 @@
 import {ref, reactive, onUnmounted} from 'vue'
 import {useRouter} from 'vue-router'
 import localLoginImg from '../assets/image/login.jpg'
-import {registerService, sendCodeService} from "@/api/login.js";
+import {registerService, sendCodeService, loginService} from "@/api/login.js";
 import {ElMessage} from 'element-plus'
+import useUserInfoStore from '@/stores/userstores.js'
 
+const userStore = useUserInfoStore()
 const router = useRouter()
 const isLogin = ref(true) // true为登录页面，false为注册页面
 const showPassword = ref(false)
@@ -73,40 +75,65 @@ onUnmounted(() => {
 })
 
 // 提交表单
-const submitForm = () => {
+const submitForm = async () => {
   if (!formData.email) {
-    alert('请输入邮箱')
+    ElMessage.warning('请输入邮箱')
     return
   }
   if (!formData.password) {
-    alert('请输入密码')
+    ElMessage.warning('请输入密码')
     return
   }
-
+  
   if (!isLogin.value && formData.password !== formData.confirmPassword) {
-    alert('两次输入的密码不一致')
+    ElMessage.warning('两次输入的密码不一致')
     return
   }
-
+  
   if (!isLogin.value && !formData.code) {
-    alert('请输入验证码')
+    ElMessage.warning('请输入验证码')
     return
   }
-
-  // 注册
-  setTimeout(async () => {
-    await registerService({
-      name: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      code: formData.code,
-      yqm: formData.yqm,
-      type: "email",
-      device: "d67e91813b07e8304ee0c974bc97238e"
-    })
-    await router.push('/login')
-    ElMessage.success('注册成功')
-  }, 1000)
+  
+  try {
+    if (isLogin.value) {
+      // 登录逻辑
+      const res = await loginService({
+        name: formData.email,
+        password: formData.password,
+        device: "d67e91813b07e8304ee0c974bc97238e"
+      })
+      
+      // 保存用户数据到pinia
+      console.log('登录成功，用户数据:', res.data)
+      userStore.setInfo(res.data)
+      
+      ElMessage.success('登录成功')
+      // 导航放在最后，避免组件卸载过早
+      await router.push('/profile')
+    } else {
+      // 注册逻辑
+      await registerService({
+        name: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        code: formData.code,
+        yqm: formData.yqm,
+        type: "email",
+        device: "d67e91813b07e8304ee0c974bc97238e"
+      })
+      
+      // 清空表单，切换到登录页面
+      formData.password = ''
+      formData.confirmPassword = ''
+      formData.code = ''
+      isLogin.value = true
+      
+      ElMessage.success('注册成功，请登录')
+    }
+  } catch (error) {
+    console.error('操作失败:', error)
+  }
 }
 
 // 返回上一页
