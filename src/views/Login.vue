@@ -1,13 +1,17 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import localLoginImg from '../assets/image/login.jpg'
 import {sendCodeService} from "@/api/login.js";
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const isLogin = ref(true) // true为登录页面，false为注册页面
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
+const isLoading = ref(false) // 添加loading状态
+const countdown = ref(0) // 倒计时秒数
+let timer = null // 计时器
 
 // 表单数据
 const formData = reactive({
@@ -24,13 +28,49 @@ const toggleMode = () => {
 }
 
 // 发送验证码
-const sendVerifyCode = () => {
+const sendVerifyCode = async () => {
   if (!formData.email) {
-    alert('请输入邮箱')
+    ElMessage.warning('请输入邮箱')
     return
   }
-  sendCodeService({type: 'email',name: formData.email,password:  formData.password,confirmPassword:formData.confirmPassword})
+  
+  // 如果倒计时中，不允许再次发送
+  if (countdown.value > 0) return
+  
+  isLoading.value = true
+  try {
+    await sendCodeService({
+      type: 'email',
+      name: formData.email,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword
+    })
+    // 成功后开始倒计时
+    startCountdown()
+  } catch (error) {
+    // 错误已在拦截器中处理，这里不需要额外处理
+    console.log('验证码处理完成')
+  } finally {
+    isLoading.value = false
+  }
 }
+
+// 开始倒计时
+const startCountdown = () => {
+  countdown.value = 60
+  clearInterval(timer)
+  timer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) {
+      clearInterval(timer)
+    }
+  }, 1000)
+}
+
+// 组件卸载时清除计时器
+onUnmounted(() => {
+  clearInterval(timer)
+})
 
 // 提交表单
 const submitForm = () => {
@@ -174,7 +214,16 @@ const goBack = () => {
           placeholder="验证码" 
           class="form-input" 
         />
-        <button @click="sendVerifyCode" class="verify-btn">发送验证码</button>
+        <button 
+          @click="sendVerifyCode" 
+          class="verify-btn" 
+          :disabled="isLoading || countdown > 0" 
+          :class="{'loading': isLoading, 'counting': countdown > 0}"
+        >
+          <span v-if="countdown > 0">{{ countdown }}s</span>
+          <span v-else-if="isLoading">发送中...</span>
+          <span v-else>发送验证码</span>
+        </button>
       </div>
       
       <!-- 邀请码输入框（注册时才显示） -->
@@ -305,6 +354,23 @@ const goBack = () => {
   padding: 6px 12px;
   font-size: 12px;
   cursor: pointer;
+  transition: all 0.3s;
+  min-width: 80px;
+  text-align: center;
+}
+
+.verify-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.verify-btn.loading {
+  opacity: 0.7;
+}
+
+.verify-btn.counting {
+  background-color: #888;
+  cursor: not-allowed;
 }
 
 .submit-button {

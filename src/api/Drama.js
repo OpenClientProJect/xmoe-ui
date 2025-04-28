@@ -19,7 +19,7 @@ export const getDramaListService = (params = {}) => {
     // 合并默认参数和传入参数
     const finalParams = {...defaultParams, ...params}
 
-    return request.get('/vod/list', {
+    return request.get('/sk-api//vod/list', {
         params: finalParams
     })
 }
@@ -28,7 +28,7 @@ export const getDramaListService = (params = {}) => {
  * 获取番剧详情
  */
 export const getDramaDetailService = (vodId) => {
-    return request.get('/vod/one?vodId=' + vodId)
+    return request.get('/sk-api//vod/one?vodId=' + vodId)
 }
 
 /**
@@ -55,7 +55,7 @@ export const getVideoUrlService = (vodId, sourceId) => {
     }
     // 调用后端接口获取视频地址
     return request({
-        url: '/vod/skjson',
+        url: '/sk-api//vod/skjson',
         method: 'get',
         params: {
             vodId,
@@ -78,7 +78,7 @@ export const getRelatedDramaService = (typeId) => {
     const finalTypeId = typeId || 1
 
     return request({
-        url: '/vod/list', // 添加前导斜杠
+        url: '/sk-api//vod/list', // 添加前导斜杠
         method: 'get',
         params: {
             typeId: finalTypeId,
@@ -94,7 +94,7 @@ export const getRelatedDramaService = (typeId) => {
  */
 export const getMenuListService = () => {
     return request({
-        url: '/type/alltypeextend',
+        url: '/sk-api//type/alltypeextend',
         method: 'get',
         params: {
             typeId: 1
