@@ -1,11 +1,12 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import localLoginImg from '../assets/image/localhlogin.jpg'
 import {getUserInfoService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 import { ElMessage } from 'element-plus'
-
+//图标
+import Collection from '../assets/icon/collection.svg'
 const userStore = useUserInfoStore()
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -24,21 +25,27 @@ const userStats = ref({
   points: 0
 })
 
-// 菜单项设置
-const menuItems = [
-  { id: 1, name: '会员中心', icon: 'Medal', path: '/vip' },
-  { id: 2, name: '我的积分', icon: 'Money', path: '/points' },
-  { id: 3, name: '留言求片', icon: 'Headset', path: '/request' },
-  { id: 4, name: '我的追剧', icon: 'Star', path: '/favorites' },
+// 菜单项设置 - 合并所有菜单项到一个数组
+const allMenuItems = [
+  { id: 1, name: '会员中心', icon: 'Medal', path: '/vip', category: 'feature' },
+  { id: 2, name: '我的积分', icon: 'Money', path: '/points', category: 'feature' },
+  { id: 3, name: '留言求片', icon: 'Headset', path: '/request', category: 'feature' },
+  { id: 4, name: '我的追剧', icon: 'Collection', path: '/favorites', category: 'feature' },
+  { id: 5, name: '个人设置', icon: 'Setting', path: '/settings/profile', category: 'setting' },
+  { id: 6, name: '修改密码', icon: 'Lock', path: '/settings/password', category: 'setting' },
+  { id: 7, name: '消息中心', icon: 'Bell', path: '/settings/messages', category: 'setting' },
+  { id: 8, name: '清除缓存', icon: 'Delete', path: '/settings/clear-cache', category: 'setting' }
 ]
 
-const settingItems = [
-  { id: 1, name: '个人设置', icon: 'Setting', path: '/settings/profile' },
-  { id: 2, name: '修改密码', icon: 'Lock', path: '/settings/password' },
-  { id: 3, name: '消息中心', icon: 'Bell', path: '/settings/messages' },
-  { id: 4, name: '清除缓存', icon: 'Delete', path: '/settings/clear-cache' }
-]
+// 过滤出功能菜单项
+const getFeatureMenuItems = computed(() => {
+  return allMenuItems.filter(item => item.category === 'feature')
+})
 
+// 过滤出设置菜单项
+const getSettingMenuItems = computed(() => {
+  return allMenuItems.filter(item => item.category === 'setting')
+})
 
 // 跳转到登录页面
 const goToLogin = () => {
@@ -193,10 +200,9 @@ onMounted(() => {
         <div @click="handleAvatarClick">
           <img :src="userInfo.avatar" class="w-20 h-20 rounded-full border-4 border-white shadow-sm" alt="avatar" />
         </div>
-        <div class="ml-4">
+        <div @click="handleAvatarClick" class="ml-4">
           <h2 class="text-xl font-bold text-gray-800">{{ userInfo.username }}</h2>
           <p class="text-sm text-gray-500 mt-1" v-if="isLoggedIn">注册时间：{{ formatDate(userInfo.registerTime) }}</p>
-          <p class="text-sm text-gray-500 mt-1" v-else>点击头像登录/注册</p>
         </div>
       </div>
     </div>
@@ -230,42 +236,19 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- 功能菜单区域 -->
-    <div class="bg-white rounded-md mx-3 mt-3 p-3 grid grid-cols-4 gap-4" v-if="isLoggedIn">
-      <div v-for="item in menuItems" :key="item.id" class="flex flex-col items-center" @click="handleMenuClick(item.path)">
-        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-1">
-          <el-icon :size="24" class="text-gray-600">
-            <component :is="item.icon" />
-          </el-icon>
+    <!-- 合并后的菜单区域 -->
+    <div class="bg-white rounded-md mx-3 mt-3 p-3" v-if="isLoggedIn">
+      <div class="grid grid-cols-6 gap-2 flex-wrap sm:grid-cols-5 xs:grid-cols-4">
+        <div v-for="item in allMenuItems" :key="item.id" 
+             class="flex flex-col items-center mb-3" 
+             @click="handleMenuClick(item.path)">
+          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
+            <el-icon :size="20" class="text-gray-600">
+              <component :is="item.icon" />
+            </el-icon>
+          </div>
+          <span class="text-xs text-center">{{ item.name }}</span>
         </div>
-        <span class="text-sm">{{ item.name }}</span>
-      </div>
-    </div>
-    
-    <!-- 设置菜单区域 -->
-    <div class="bg-white rounded-md mx-3 mt-3 p-3 grid grid-cols-4 gap-4" v-if="isLoggedIn">
-      <div v-for="item in settingItems" :key="item.id" 
-           class="flex flex-col items-center" 
-           @click="handleMenuClick(item.path)">
-        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-1">
-          <el-icon :size="24" class="text-gray-600">
-            <component :is="item.icon" />
-          </el-icon>
-        </div>
-        <span class="text-sm">{{ item.name }}</span>
-      </div>
-    </div>
-    
-    <!-- 其他选项区域 -->
-    <div class="bg-white rounded-md mx-3 mt-3">
-      <div v-for="item in extraItems" :key="item.id" 
-           class="flex items-center px-4 py-3 border-b border-gray-100 active:bg-gray-50"
-           @click="handleMenuClick(item.path)">
-        <el-icon :size="20" class="text-gray-500 mr-3">
-          <component :is="item.icon" />
-        </el-icon>
-        <span>{{ item.name }}</span>
-        <el-icon class="ml-auto text-gray-400"><ArrowRight /></el-icon>
       </div>
     </div>
     
@@ -276,12 +259,6 @@ onMounted(() => {
       </button>
     </div>
     
-    <!-- 登录/注册按钮 -->
-    <div class="mx-3 mt-5 flex justify-center" v-else>
-      <button @click="goToLogin" class="bg-red-500 text-white py-3 px-10 rounded-md text-center">
-        登录 / 注册
-      </button>
-    </div>
   </div>
 </template>
 
@@ -293,5 +270,30 @@ onMounted(() => {
 /* 让页面元素有点击效果 */
 .active\:bg-gray-50:active {
   background-color: #f9fafb;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .sm\:grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .xs\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .xs\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 375px) {
+  .xs\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 </style> 
