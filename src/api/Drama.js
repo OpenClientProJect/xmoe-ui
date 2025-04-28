@@ -13,7 +13,7 @@ export const getDramaListService = (params = {}) => {
         typeId: 1,
         page: 1,
         limit: 18,
-        type: 'updateTime'
+        type: 'updateTime' // 默认按更新时间排序
     }
 
     // 合并默认参数和传入参数
@@ -43,10 +43,10 @@ export const getVideoUrlService = (vodId, sourceId) => {
         return Promise.reject(new Error('无效的视频源ID'))
     }
 
-    // 处理视频链接，去除“第X集$”前缀
+    // 处理视频链接，去除"第X集$"前缀
     let processedUrl = sourceId
 
-    // 检查是否有“第X集$”格式的前缀
+    // 检查是否有"第X集$"格式的前缀
     const episodePrefixMatch = processedUrl.match(/^第\d+集\$/)
     if (episodePrefixMatch) {
         const prefix = episodePrefixMatch[0]

@@ -23,8 +23,16 @@ const tagData = ref({})
 const selectedTags = ref({
   0: '全部', // 类型
   1: '全部', // 季度
-  2: '全部'  // 年份
+  2: '全部',  // 年份
+  3: '时间'   // 排序（默认按时间）
 })
+
+// 排序选项
+const sortOptions = [
+  { label: '时间', value: 'updateTime' },
+  { label: '播放', value: 'hot' },
+  { label: '评分', value: 'score' }
+]
 
 // 标签行配置
 const tagRows = computed(() => [
@@ -34,7 +42,6 @@ const tagRows = computed(() => [
     title: '类型',
     tags: tagData.value.class ? ['全部', ...tagData.value.class.split(',')] : ['全部']
   },
-
   { 
     id: 2, 
     type: 'year', 
@@ -46,6 +53,12 @@ const tagRows = computed(() => [
     type: 'lang',
     title: '季度',
     tags: tagData.value.lang ? ['全部', ...tagData.value.lang.split(',')] : ['全部']
+  },
+  {
+    id: 3,
+    type: 'sort',
+    title: '排序',
+    tags: sortOptions.map(option => option.label)
   }
 ])
 
@@ -106,6 +119,12 @@ const getDramaList = async (params = {}) => {
   }
 }
 
+// 获取排序参数值
+const getSortValue = (sortLabel) => {
+  const option = sortOptions.find(opt => opt.label === sortLabel)
+  return option ? option.value : 'updateTime'
+}
+
 // 选择标签
 const selectTag = (rowId, tag) => {
   selectedTags.value[rowId] = tag
@@ -137,6 +156,11 @@ const selectTag = (rowId, tag) => {
   // 年份筛选
   if (rowId === 2 && tag !== '全部') {
     params.year = tag
+  }
+  
+  // 排序选项
+  if (rowId === 3) {
+    params.type = getSortValue(tag)
   }
   
   // 如果有筛选参数，则调用API重新获取数据
