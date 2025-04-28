@@ -15,7 +15,6 @@ const userInfo = ref({
   username: '登录/注册',
   avatar: isLoggedIn.value ? 'https://avatars.githubusercontent.com/u/156616301?v=4' : localLoginImg,
   level: 5,
-  vipLevel: 1,
   coins: 120
 })
 
@@ -91,12 +90,8 @@ const getUserInfo = async () => {
         avatar: res.data.avatar || userStore.info.avatar || localLoginImg,
         // 使用API返回的用户昵称或用户名
         username: res.data.user_nick_name || res.data.user_name || '用户',
-        // 根据用户积分计算等级，每100积分一级，最低1级
-        level: res.data.user_points ? Math.max(1, Math.floor(res.data.user_points / 100)) : 1,
         // 用户积分
         coins: res.data.user_points || 0,
-        // 用户组ID作为VIP等级
-        vipLevel: res.data.group_id || 1,
         // 保存其他可能需要的数据
         userId: res.data.user_id,
         email: res.data.user_email,
@@ -133,8 +128,6 @@ const logout = () => {
   userInfo.value = {
     username: '登录/注册',
     avatar: localLoginImg,
-    level: 5,
-    vipLevel: 1,
     coins: 120
   }
 }
@@ -185,31 +178,13 @@ onMounted(() => {
       <div class="flex items-center">
         <div class="relative" @click="handleAvatarClick">
           <img :src="userInfo.avatar" class="w-16 h-16 rounded-full border-2 border-gray-200" alt="avatar" />
-          <div v-if="isLoggedIn" class="absolute -bottom-1 -right-1 bg-yellow-400 text-xs text-black font-medium px-1 rounded-full">
-            Lv.{{ userInfo.level }}
-          </div>
         </div>
         
         <div class="ml-3">
           <div class="flex items-center">
             <h2 class="text-lg font-medium text-gray-800">{{ userInfo.username }}</h2>
-            <div v-if="isLoggedIn" class="ml-2 px-2 py-0.5 bg-yellow-500 text-xs rounded-full text-black flex items-center">
-              <el-icon class="mr-0.5"><el-icon-crown /></el-icon>
-              <span>会员{{ userInfo.vipLevel }}</span>
-            </div>
           </div>
-          
-          <div v-if="isLoggedIn" class="mt-1 text-sm text-gray-600">ID: {{ userInfo.userId || '未知' }}</div>
-          
-          <div v-if="isLoggedIn" class="mt-2 flex items-center">
-            <div class="px-2 py-1 bg-gray-200 rounded-full flex items-center mr-2">
-              <el-icon class="mr-1 text-gray-700"><el-icon-coin /></el-icon>
-              <span class="text-xs text-gray-700">{{ userInfo.coins }}</span>
-            </div>
-            <div class="px-2 py-1 bg-gray-200 rounded-full text-xs text-gray-700">
-              等级 {{ userInfo.level }}
-            </div>
-          </div>
+
         </div>
       </div>
       
