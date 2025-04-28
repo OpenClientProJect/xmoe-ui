@@ -16,7 +16,7 @@ export const sendCodeService = (params) => {
  */
 export const registerService = (params) => {
   return request({
-    url: "/register",
+    url: "/sk-api/user/add",
     method: "post",
     data: params,
   });

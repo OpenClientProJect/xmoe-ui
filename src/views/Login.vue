@@ -1,9 +1,9 @@
 <script setup>
-import { ref, reactive, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import {ref, reactive, onUnmounted} from 'vue'
+import {useRouter} from 'vue-router'
 import localLoginImg from '../assets/image/login.jpg'
-import {sendCodeService} from "@/api/login.js";
-import { ElMessage } from 'element-plus'
+import {registerService, sendCodeService} from "@/api/login.js";
+import {ElMessage} from 'element-plus'
 
 const router = useRouter()
 const isLogin = ref(true) // true为登录页面，false为注册页面
@@ -18,8 +18,8 @@ const formData = reactive({
   email: '',
   password: '',
   confirmPassword: '',
-  verifyCode: '',
-  inviteCode: ''
+  code: '',
+  yqm: ''
 })
 
 // 切换登录/注册模式
@@ -33,10 +33,10 @@ const sendVerifyCode = async () => {
     ElMessage.warning('请输入邮箱')
     return
   }
-  
+
   // 如果倒计时中，不允许再次发送
   if (countdown.value > 0) return
-  
+
   isLoading.value = true
   try {
     await sendCodeService({
@@ -82,26 +82,30 @@ const submitForm = () => {
     alert('请输入密码')
     return
   }
-  
+
   if (!isLogin.value && formData.password !== formData.confirmPassword) {
     alert('两次输入的密码不一致')
     return
   }
-  
-  if (!isLogin.value && !formData.verifyCode) {
+
+  if (!isLogin.value && !formData.code) {
     alert('请输入验证码')
     return
   }
-  
-  // 模拟登录/注册
-  setTimeout(() => {
-    localStorage.setItem('userToken', 'mock-token')
-    localStorage.setItem('userInfo', JSON.stringify({
-      avatar: localLoginImg,
-      nickname: '测试用户',
-      email: formData.email
-    }))
-    router.push('/profile')
+
+  // 注册
+  setTimeout(async () => {
+    await registerService({
+      name: formData.email,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+      code: formData.code,
+      yqm: formData.yqm,
+      type: "email",
+      device: "d67e91813b07e8304ee0c974bc97238e"
+    })
+    await router.push('/login')
+    ElMessage.success('注册成功')
   }, 1000)
 }
 
@@ -115,56 +119,62 @@ const goBack = () => {
   <div class="login-container">
     <!-- 返回按钮 -->
     <div class="back-button" @click="goBack">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 12H5"></path>
         <path d="M12 19l-7-7 7-7"></path>
       </svg>
     </div>
-    
+
     <!-- 头像区域 -->
     <div class="avatar-container">
-      <img :src="localLoginImg" alt="avatar" class="avatar-img" />
+      <img :src="localLoginImg" alt="avatar" class="avatar-img"/>
     </div>
-    
+
     <!-- 表单区域 -->
     <div class="form-container">
       <!-- 邮箱输入框 -->
       <div class="form-item">
         <div class="input-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
           </svg>
         </div>
-        <input 
-          type="email" 
-          v-model="formData.email" 
-          placeholder="邮箱" 
-          class="form-input" 
+        <input
+            type="email"
+            v-model="formData.email"
+            placeholder="邮箱"
+            class="form-input"
         />
       </div>
-      
+
       <!-- 密码输入框 -->
       <div class="form-item">
         <div class="input-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
         </div>
-        <input 
-          :type="showPassword ? 'text' : 'password'" 
-          v-model="formData.password" 
-          placeholder="密码" 
-          class="form-input" 
+        <input
+            :type="showPassword ? 'text' : 'password'"
+            v-model="formData.password"
+            placeholder="密码"
+            class="form-input"
         />
         <div class="eye-icon" @click="showPassword = !showPassword">
-          <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path
+                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
             <line x1="1" y1="1" x2="23" y2="23"></line>
           </svg>
         </div>
@@ -174,81 +184,87 @@ const goBack = () => {
       <div v-if="isLogin" class="text-right mb-3">
         <span class="forget-link">忘记密码?</span>
       </div>
-      
+
       <!-- 确认密码输入框（注册时才显示） -->
       <div v-if="!isLogin" class="form-item">
         <div class="input-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
         </div>
-        <input 
-          :type="showConfirmPassword ? 'text' : 'password'" 
-          v-model="formData.confirmPassword" 
-          placeholder="确认密码" 
-          class="form-input" 
+        <input
+            :type="showConfirmPassword ? 'text' : 'password'"
+            v-model="formData.confirmPassword"
+            placeholder="确认密码"
+            class="form-input"
         />
         <div class="eye-icon" @click="showConfirmPassword = !showConfirmPassword">
-          <svg v-if="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg v-if="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path
+                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
             <line x1="1" y1="1" x2="23" y2="23"></line>
           </svg>
         </div>
       </div>
-      
+
       <!-- 验证码输入框（注册时才显示） -->
       <div v-if="!isLogin" class="form-item">
         <div class="input-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
           </svg>
         </div>
-        <input 
-          type="text" 
-          v-model="formData.verifyCode" 
-          placeholder="验证码" 
-          class="form-input" 
+        <input
+            type="text"
+            v-model="formData.code"
+            placeholder="验证码"
+            class="form-input"
         />
-        <button 
-          @click="sendVerifyCode" 
-          class="verify-btn" 
-          :disabled="isLoading || countdown > 0" 
-          :class="{'loading': isLoading, 'counting': countdown > 0}"
+        <button
+            @click="sendVerifyCode"
+            class="verify-btn"
+            :disabled="isLoading || countdown > 0"
+            :class="{'loading': isLoading, 'counting': countdown > 0}"
         >
           <span v-if="countdown > 0">{{ countdown }}s</span>
           <span v-else-if="isLoading">发送中...</span>
           <span v-else>发送验证码</span>
         </button>
       </div>
-      
+
       <!-- 邀请码输入框（注册时才显示） -->
       <div v-if="!isLogin" class="form-item">
         <div class="input-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 14l6-6"></path>
             <circle cx="9.5" cy="8.5" r="1.5"></circle>
             <circle cx="14.5" cy="13.5" r="1.5"></circle>
             <path d="M5 21l14-14"></path>
           </svg>
         </div>
-        <input 
-          type="text" 
-          v-model="formData.inviteCode" 
-          placeholder="邀请码（可不填）" 
-          class="form-input" 
+        <input
+            type="text"
+            v-model="formData.yqm"
+            placeholder="邀请码（可不填）"
+            class="form-input"
         />
       </div>
-      
+
       <!-- 登录/注册按钮 -->
       <button @click="submitForm" class="submit-button">
         {{ isLogin ? '登录' : '注册' }}
       </button>
-      
+
       <!-- 切换登录/注册模式 -->
       <div class="text-center mt-4">
         <span class="toggle-mode" @click="toggleMode">
