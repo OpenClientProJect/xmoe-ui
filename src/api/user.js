@@ -3,8 +3,6 @@ import {data} from "autoprefixer";
 
 /**
  * 获取用户信息
- * @param {number} userId - 用户ID
- * @param {string} userName - 用户名
  */
 export const getUserInfoService = (userId, userName) => {
     return request({
@@ -14,5 +12,16 @@ export const getUserInfoService = (userId, userName) => {
             user_id: userId,
             user_name: userName
         }
+    })
+}
+
+/**
+ * 更新用户信息
+ */
+export const updateUserInfoService = (params) => {
+    return request({
+        url: 'sk-api/user/user_settings',
+        method: 'post',
+        data: params
     })
 }

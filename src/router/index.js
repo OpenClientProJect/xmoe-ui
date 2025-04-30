@@ -14,6 +14,12 @@ const routes = [
     meta: { showTabBar: true }
   },
   {
+    path: '/settings/profile',
+    name: 'UserSettings',
+    component: () => import('../views/UserSettings.vue'),
+    meta: { showTabBar: false }
+  },
+  {
     path: '/video/:id',
     name: 'VideoDetail',
     component: () => import('../views/VideoDetail.vue'),

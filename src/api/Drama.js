@@ -1,6 +1,6 @@
 import request from '@/utils/request.js'
 import {decryptHexString} from '@/utils/aesUtils'
-import {parseVideoId, parseRC4D} from '@/utils/rc4Utils'
+import {parseVideoId, parseRC4D, processVideoSourceId} from '@/utils/rc4Utils'
 
 /**
  * 获取番剧列表
@@ -42,26 +42,8 @@ export const getVideoUrlService = (sourceId) =>   {
         return Promise.reject(new Error('无效的视频源ID'))
     }
 
-    // 处理视频链接，去除前缀
-    let processedUrl = sourceId
-
-    // 检查是否有"第X集$id_"格式的前缀
-    if (processedUrl.match(/^第\d+集\$id_/)) {
-        const prefix = processedUrl.match(/^第\d+集\$id_/)[0]
-        processedUrl = processedUrl.substring(prefix.length)
-        console.log('去除第X集$id_前缀后:', processedUrl)
-    } 
-    // 检查是否有"第X集$"格式的前缀
-    else if (processedUrl.match(/^第\d+集\$/)) {
-        const prefix = processedUrl.match(/^第\d+集\$/)[0]
-        processedUrl = processedUrl.substring(prefix.length)
-        console.log('去除第X集$前缀后:', processedUrl)
-    }
-    // 检查是否直接以"id_"开头
-    else if (processedUrl.startsWith('id_')) {
-        processedUrl = processedUrl.substring(3)
-        console.log('去除id_前缀后:', processedUrl)
-    }
+    // 使用工具函数处理视频链接，去除前缀
+    const processedUrl = processVideoSourceId(sourceId)
 
     // 固定的随机MD5值，此处使用示例值，也可通过参数传入
     const randomMD5 = 'd67e91813b07e8304ee0c974bc97238e'
@@ -72,7 +54,7 @@ export const getVideoUrlService = (sourceId) =>   {
     
     // 调用后端接口获取视频地址
     return request({
-        url: '/sk-api//vod/skjson',
+        url: '/sk-api/vod/skjson',
         method: 'get',
         params: {
             url: finalUrl // 传递拼接了随机MD5值的URL
@@ -93,7 +75,7 @@ export const getRelatedDramaService = (typeId) => {
     const finalTypeId = typeId || 1
 
     return request({
-        url: '/sk-api//vod/list', // 添加前导斜杠
+        url: '/sk-api/vod/list', // 添加前导斜杠
         method: 'get',
         params: {
             typeId: finalTypeId,

@@ -243,6 +243,37 @@ export const decryptVodPlayUrl = (vodPlayUrl) => {
 };
 
 /**
+ * 处理视频源ID，去除各种前缀
+ * @param {string} sourceId 原始视频源ID
+ * @returns {string} 处理后的视频ID（去除前缀）
+ */
+export const processVideoSourceId = (sourceId) => {
+  if (!sourceId) return '';
+  
+  let processedUrl = sourceId;
+  
+  // 检查是否有"第X集$id_"格式的前缀
+  if (processedUrl.match(/^第\d+集\$id_/)) {
+    const prefix = processedUrl.match(/^第\d+集\$id_/)[0];
+    processedUrl = processedUrl.substring(prefix.length);
+    console.log('去除第X集$id_前缀后:', processedUrl);
+  } 
+  // 检查是否有"第X集$"格式的前缀
+  else if (processedUrl.match(/^第\d+集\$/)) {
+    const prefix = processedUrl.match(/^第\d+集\$/)[0];
+    processedUrl = processedUrl.substring(prefix.length);
+    console.log('去除第X集$前缀后:', processedUrl);
+  }
+  // 检查是否直接以"id_"开头
+  else if (processedUrl.startsWith('id_')) {
+    processedUrl = processedUrl.substring(3);
+    console.log('去除id_前缀后:', processedUrl);
+  }
+  
+  return processedUrl;
+};
+
+/**
  * 测试函数
  */
 export const testRC4 = () => {

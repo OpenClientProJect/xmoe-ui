@@ -150,11 +150,6 @@ const handlePlayerTimeUpdate = (currentTime) => {
 
 // 播放视频
 const playVideo = async (episodeId) => {
-  // 如果播放器实例存在，立即停止当前播放
-  if (playerRef.value) {
-    playerRef.value.pause();
-    currentVideoUrl.value = ''; // 清空当前URL强制重新加载
-  }
 
   const episode = episodes.value.find(ep => ep.id === episodeId)
   if (!episode) {
@@ -169,6 +164,10 @@ const playVideo = async (episodeId) => {
     return
   }
 
+  // 先重置当前选中的剧集
+  currentEpisode.value = null
+
+  // 然后设置新的当前剧集
   currentEpisode.value = episode
   console.log('当前选择的剧集:', episode)
   console.log('原始视频源ID:', episode.sourceId)
@@ -176,83 +175,88 @@ const playVideo = async (episodeId) => {
   // 标记当前集为已观看
   episode.watched = true
 
-  try {
-    // 调用API获取视频地址 - 不再需要传递videoInfo.value.id参数
-    const res = await getVideoUrlService( episode.sourceId)
+  // 调用API获取视频地址 - 不再需要传递videoInfo.value.id参数
+  const res = await getVideoUrlService(episode.sourceId)
 
-    if (res.code === 200 && res.data) {
-      console.log('获取到视频地址:', res.data)
+  console.log('获取到视频地址:', res.data)
 
-      // 处理视频URL，确保可以正确播放
-      let videoUrl = ''
+  // 处理视频URL，确保可以正确播放
+  let videoUrl = ''
 
-      // 检查res.data的类型并提取URL
-      if (typeof res.data === 'string') {
-        videoUrl = res.data
-      } else if (typeof res.data === 'object') {
-        if (res.data.url) {
-          videoUrl = res.data.url
-        } else {
-          console.log('响应数据对象:', res.data)
-          for (const key in res.data) {
-            if (typeof res.data[key] === 'string' &&
-                (res.data[key].includes('http') ||
-                    res.data[key].includes('.mp4') ||
-                    res.data[key].includes('.m3u8'))) {
-              videoUrl = res.data[key]
-              break
-            }
-          }
-        }
-      }
-
-      if (!videoUrl) {
-        throw new Error('无法从响应中提取视频地址')
-      }
-
-      console.log('提取到的原始视频地址:', videoUrl)
-
-      // 处理跨域问题，使用代理URL
-      let proxyUrl = videoUrl
-
-      // 判断是否是外部URL
-      if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
-        try {
-          const urlObj = new URL(videoUrl)
-
-          // 如果是xmoe.video域名，使用video-proxy代理
-          if (urlObj.hostname === 'xmoe.video') {
-            proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
-            console.log('使用代理URL:', proxyUrl)
-          }
-        } catch (e) {
-          console.error('解析URL失败:', e)
-        }
-      }
-
-      // 更新当前播放的视频URL
-      currentVideoUrl.value = proxyUrl
-
-      return proxyUrl
+  // 检查res.data的类型并提取URL
+  if (typeof res.data === 'string') {
+    videoUrl = res.data
+  } else if (typeof res.data === 'object') {
+    if (res.data.url) {
+      videoUrl = res.data.url
     } else {
-      ElMessage.error(res.message || '获取视频地址失败')
+      console.log('响应数据对象:', res.data)
+      for (const key in res.data) {
+        if (typeof res.data[key] === 'string' &&
+            (res.data[key].includes('http') ||
+                res.data[key].includes('.mp4') ||
+                res.data[key].includes('.m3u8'))) {
+          videoUrl = res.data[key]
+          break
+        }
+      }
     }
-  } catch (error) {
-    ElMessage.error('获取视频地址失败: ' + (error.message || '未知错误'))
   }
-  return null
+
+  if (!videoUrl) {
+    throw new Error('无法从响应中提取视频地址')
+  }
+
+  console.log('提取到的原始视频地址:', videoUrl)
+
+  // 处理跨域问题，使用代理URL
+  let proxyUrl = videoUrl
+
+  // 判断是否是外部URL
+  if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
+    try {
+      const urlObj = new URL(videoUrl)
+
+      // 如果是xmoe.video域名，使用video-proxy代理
+      if (urlObj.hostname === 'xmoe.video') {
+        proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
+        console.log('使用代理URL:', proxyUrl)
+      }
+    } catch (e) {
+      console.error('解析URL失败:', e)
+    }
+  }
+
+  // 更新当前播放的视频URL
+  currentVideoUrl.value = proxyUrl
+
+  return proxyUrl
 }
 
 
 // 切换线路
 const switchSource = (sourceId) => {
+  // 先重置当前选中的剧集
+  currentEpisode.value = null
+  currentVideoUrl.value = ''
+  
+  // 重置所有线路剧集的选中状态
+  Object.values(allEpisodes.value).forEach(episodeList => {
+    episodeList.forEach(episode => {
+      // 保留watched状态，但取消选中状态
+      if (episode === currentEpisode.value) {
+        currentEpisode.value = null
+      }
+    })
+  })
+  
+  // 更新当前线路
   currentSource.value = sourceId
 
   // 加载对应线路的剧集数据
   if (allEpisodes.value[sourceId]) {
     episodes.value = allEpisodes.value[sourceId]
     console.log('切换到线路', sourceId, '剧集数:', episodes.value.length)
-
   } else {
     ElMessage.warning('该线路暂无剧集数据')
     episodes.value = []
@@ -437,7 +441,7 @@ const getVideoDetail = async () => {
             let id = '';
             if (parts.length > 2) {
               id = parts.slice(1).join('$');
-          } else {
+            } else {
               id = parts[1] || '';
             }
 
@@ -446,7 +450,8 @@ const getVideoDetail = async () => {
               title: title,
               sourceId: id, // 保存原始ID用于请求
               watched: false,
-              duration: '24:00'
+              duration: '24:00',
+              sourceIndex: index // 添加线路索引
             };
           }).filter(item => item && item.sourceId); // 过滤掉无效和没有sourceId的项
 
@@ -471,7 +476,7 @@ const getVideoDetail = async () => {
           currentSource.value = 0;
           episodes.value = allEpisodes.value[0] || [];
           console.log('当前线路剧集:', episodes.value);
-          
+
           // 自动播放第一集视频
           if (episodes.value && episodes.value.length > 0) {
             console.log('自动播放第一集视频')
@@ -490,7 +495,7 @@ const getVideoDetail = async () => {
 const getRelatedDrama = async () => {
   try {
     isRelatedLoading.value = true;
-    
+
     const res = await getRelatedDramaService(videoInfo.value.typeId)
 
     // 根据响应数据结构进行适配
@@ -527,17 +532,17 @@ const getRelatedDrama = async () => {
  * 获取评论数据
  */
 const getComments = async () => {
-    const res = await getCommentsService(videoId)
-      comments.value = res.data
-      // 更新评论数量显示
-      tabs[1].name = `评论(${comments.value.count || 0})`
+  const res = await getCommentsService(videoId)
+  comments.value = res.data
+  // 更新评论数量显示
+  tabs[1].name = `评论(${comments.value.count || 0})`
 }
 
 onMounted(async () => {
   console.log('组件挂载，开始获取数据')
   await getVideoDetail()
   console.log('视频详情加载完成，开始获取相关推荐')
-  
+
   await getRelatedDrama()
   console.log('开始获取评论数据')
   await getComments()
@@ -638,11 +643,11 @@ onMounted(async () => {
       <div v-else class="episodes-grid">
         <div
             v-for="episode in episodes"
-            :key="episode.id"
+            :key="`${currentSource}-${episode.id}`"
             class="episode-item"
             :class="{
             'current-episode': currentEpisode && episode.id === currentEpisode.id,
-            'watched-episode': episode.watched
+            'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
           }"
             @click="playVideo(episode.id)"
         >
@@ -662,30 +667,30 @@ onMounted(async () => {
     <div class="content-container">
       <!-- 标签页 -->
       <div class="tabs">
-        <div 
-          v-for="tab in tabs" 
-          :key="tab.name"
-          class="tab"
-          :class="{'active-tab': activeTab === tab.name}"
-          @click="setActiveTab(tab.name)"
+        <div
+            v-for="tab in tabs"
+            :key="tab.name"
+            class="tab"
+            :class="{'active-tab': activeTab === tab.name}"
+            @click="setActiveTab(tab.name)"
         >
           {{ tab.name }}
           <div v-if="activeTab === tab.name" class="tab-indicator"></div>
         </div>
       </div>
-      
+
       <!-- 简介内容 -->
       <div v-if="activeTab === '简介'" class="tab-content">
         <div class="tag-list">
-          <span 
-            v-for="tag in videoInfo.tags" 
-            :key="tag"
-            class="tag"
+          <span
+              v-for="tag in videoInfo.tags"
+              :key="tag"
+              class="tag"
           >
             {{ tag }}
           </span>
         </div>
-        
+
         <!-- 视频信息 -->
         <div class="video-meta">
           <div class="meta-item" v-if="videoInfo.area">
@@ -717,11 +722,11 @@ onMounted(async () => {
               <el-icon v-else>
                 <ArrowDown/>
               </el-icon>
-          </div>
+            </div>
           </div>
         </div>
       </div>
-      
+
       <!-- 评论内容 -->
       <div v-else class="comment-container">
         <!-- 评论列表 -->
@@ -731,68 +736,70 @@ onMounted(async () => {
                class="comment-item">
             <div class="comment-avatar">
               <img :src="comment.user_pic" alt="用户头像">
-      </div>
+            </div>
             <div class="comment-content">
               <div class="comment-header">
                 <div class="comment-author">{{ comment.comment_name }}</div>
                 <div class="comment-date">{{ formatDate(comment.comment_time) }}</div>
-    </div>
+              </div>
               <div class="comment-text">{{ comment.comment_content }}</div>
               <div class="comment-actions">
-<!--                <div class="action-btn">-->
-<!--                  <el-icon size="14"><ArrowUp /></el-icon>-->
-<!--                  <span>{{ comment.comment_up || 0 }}</span>-->
-<!--                </div>-->
-<!--                <div class="action-btn">-->
-<!--                  <el-icon size="14"><ArrowDown /></el-icon>-->
-<!--                  <span>{{ comment.comment_down || 0 }}</span>-->
-<!--                </div>-->
+                <!--                <div class="action-btn">-->
+                <!--                  <el-icon size="14"><ArrowUp /></el-icon>-->
+                <!--                  <span>{{ comment.comment_up || 0 }}</span>-->
+                <!--                </div>-->
+                <!--                <div class="action-btn">-->
+                <!--                  <el-icon size="14"><ArrowDown /></el-icon>-->
+                <!--                  <span>{{ comment.comment_down || 0 }}</span>-->
+                <!--                </div>-->
                 <div class="action-btn reply-btn">
-                  <el-icon size="14"><ChatDotRound /></el-icon>
+                  <el-icon size="14">
+                    <ChatDotRound/>
+                  </el-icon>
                   <span>回复</span>
-        </div>
-      </div>
-      
+                </div>
+              </div>
+
               <!-- 回复列表 -->
               <div v-if="comment.rp_lists && comment.rp_lists.length > 0" class="reply-list">
-                <div v-for="reply in comment.rp_lists" 
+                <div v-for="reply in comment.rp_lists"
                      :key="reply.comment_id"
                      class="reply-item">
                   <div class="reply-avatar">
                     <img :src="reply.user_pic" alt="用户头像">
-      </div>
+                  </div>
                   <div class="reply-content">
                     <div class="reply-header">
                       <div class="reply-author">{{ reply.comment_name }}</div>
                       <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
-          </div>
+                    </div>
                     <div class="reply-text">
                       <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
                       {{ reply.comment_content }}
-        </div>
-      </div>
-    </div>
-          </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        
+
         <!-- 无评论时显示 -->
         <div v-else class="comment-placeholder">
           <el-icon :size="32" class="mb-2">
             <ChatDotRound/>
           </el-icon>
           <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
+        </div>
       </div>
-    </div>
     </div>
 
     <!-- 相关推荐组件 -->
-    <RelatedRecommend 
-      :videos="relatedVideos" 
-      :title="'相关推荐'" 
-      :loading="isRelatedLoading"
-      @itemClick="goToVideoDetail" 
+    <RelatedRecommend
+        :videos="relatedVideos"
+        :title="'相关推荐'"
+        :loading="isRelatedLoading"
+        @itemClick="goToVideoDetail"
     />
   </div>
 </template>
@@ -1082,13 +1089,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 4px;
-}
-
-.comment-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .comment-item {
@@ -1254,6 +1254,7 @@ onMounted(async () => {
 .current-episode {
   border-color: #dc2626;
   color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.05);
 }
 
 .watched-episode {
