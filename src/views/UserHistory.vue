@@ -49,6 +49,21 @@ const getPlayHistory = async () => {
       user_id: userId.value,
       ulog_type: 4 // 播放历史类型为4
     })
+
+    if (res.code === 200 && res.data) {
+      // 适配新的数据格式
+      playHistoryList.value = res.data.map(item => ({
+        id: item.vod_id,
+        title: item.vod_name,
+        cover: item.vod_pic || item.vod_pic_thumb,
+        episode: item.vod_remarks || '全集',
+      }))
+    } else {
+      ElMessage.error(res.message || '获取播放历史失败')
+    }
+  } catch (error) {
+    console.error('获取播放历史失败:', error)
+    ElMessage.error('获取播放历史失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -62,6 +77,22 @@ const getCollectList = async () => {
       user_id: userId.value,
       ulog_type: 2 // 追剧类型为2
     })
+
+    if (res.code === 200 && res.data) {
+      // 适配新的数据格式
+      collectList.value = res.data.map(item => ({
+        id: item.vod_id,
+        title: item.vod_name,
+        cover: item.vod_pic || item.vod_pic_thumb,
+        episode: item.vod_remarks || '全集',
+        updateTime: formatDateTime(new Date()) // 由于返回数据没有更新时间，这里使用当前时间
+      }))
+    } else {
+      ElMessage.error(res.message || '获取追剧列表失败')
+    }
+  } catch (error) {
+    console.error('获取追剧列表失败:', error)
+    ElMessage.error('获取追剧列表失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -69,7 +100,7 @@ const getCollectList = async () => {
 
 // 跳转到详情页
 const goToVideoDetail = (id) => {
-  router.push(`/detail/${id}`)
+  router.push(`/video/${id}`)
 }
 
 // 返回上一页
@@ -77,7 +108,18 @@ const goBack = () => {
   router.back()
 }
 
-// 格式化时间
+// 格式化日期时间
+const formatDateTime = (date) => {
+  if (!date) return '未知'
+  
+  if (typeof date === 'string') {
+    date = new Date(date)
+  }
+  
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+// 格式化时间戳
 const formatTime = (timestamp) => {
   if (!timestamp) return '未知'
   
@@ -143,7 +185,6 @@ const formatTime = (timestamp) => {
           </div>
           <div class="item-info">
             <div class="title">{{item.title}}</div>
-            <div class="update-time">收藏时间：{{item.updateTime}}</div>
           </div>
         </div>
       </div>
