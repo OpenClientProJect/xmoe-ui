@@ -1,5 +1,4 @@
 import request from "@/utils/request.js";
-import {data} from "autoprefixer";
 
 /**
  * 获取用户信息

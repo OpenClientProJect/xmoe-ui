@@ -1,6 +1,5 @@
 import request from '@/utils/request.js'
-import {decryptHexString} from '@/utils/aesUtils'
-import {parseVideoId, parseRC4D, processVideoSourceId} from '@/utils/rc4Utils'
+import { processVideoSourceId} from '@/utils/rc4Utils'
 
 /**
  * 获取番剧列表

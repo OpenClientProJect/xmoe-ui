@@ -280,10 +280,6 @@ const goBack = () => {
   white-space: nowrap;
 }
 
-.update-time {
-  font-size: 12px;
-  color: #999;
-}
 
 .loading-container {
   padding: 20px;

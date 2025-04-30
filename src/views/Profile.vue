@@ -3,7 +3,7 @@ import
 {ref, onMounted, computed} from 'vue'
 import {useRouter} from 'vue-router'
 import localLoginImg from '../assets/image/localhlogin.jpg'
-import {getHistoryService, getUserInfoService, updateUserInfoService} from "@/api/user.js";
+import {getHistoryService, getUserInfoService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 import {ElMessage} from 'element-plus'
 
@@ -318,16 +318,6 @@ onMounted(() => {
   padding-bottom: 60px; /* 为底部导航留出空间 */
 }
 
-/* 抽屉容器 */
-.avatar-drawer-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 40;
-}
-
 /* 动画定义 */
 @keyframes slideUp {
   from {
@@ -345,19 +335,6 @@ onMounted(() => {
   to {
     opacity: 1;
   }
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-/* 让页面元素有点击效果 */
-.active\:bg-gray-50:active {
-  background-color: #f9fafb;
 }
 
 /* 响应式布局 */
@@ -385,7 +362,6 @@ onMounted(() => {
   }
 }
 
-/* 安全区域 - 用于iPhone X及以上机型底部黑条 */
 @supports (padding: max(0px)) {
   .safe-area-bottom {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
