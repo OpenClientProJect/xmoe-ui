@@ -16,10 +16,11 @@ import VideoPlayer from '@/components/player/VideoPlayer.vue'
 import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
 import {getCommentsService} from "@/api/comments.js";
 import {addHistoryService} from "@/api/user.js";
-import * as userStore from "autoprefixer";
+import useUserInfoStore from "@/stores/userstores.js";
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserInfoStore()
 
 // 顶部导航栏选中的标签
 const headerActiveTab = ref('番剧') // 默认选中番剧标签
@@ -174,6 +175,9 @@ const playVideo = async (episodeId) => {
 
   // 标记当前集为已观看
   episode.watched = true
+
+  // 添加到播放记录
+  addPlayHistory()
 
   // 调用API获取视频地址 - 不再需要传递videoInfo.value.id参数
   const res = await getVideoUrlService(episode.sourceId)
@@ -542,21 +546,41 @@ const getComments = async () => {
  * 添加追番
  */
 const toggleCollect = async () => {
-  await addHistoryService({
-    user_id: userStore.info.user_id,
-    ulog_type: 2,
-    ulog_rid: videoId,
-  });
-  ElMessage.success('追番成功')
+  // 检查用户是否登录
+  if (!userStore.info || !userStore.info.user_id) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+
+    await addHistoryService({
+      user_id: userStore.info.user_id,
+      ulog_type: 2,
+      ulog_rid: videoId,
+    });
+    ElMessage.success('追番成功');
+    // 更新状态
+    videoInfo.value.isCollected = true;
+}
+
+/**
+ * 添加播放记录
+ */
+const addPlayHistory = async () => {
+  // 检查用户是否登录
+  if (!userStore.info || !userStore.info.user_id) {
+    console.log('用户未登录，不添加播放记录');
+    return;
+  }
+    await addHistoryService({
+      user_id: userStore.info.user_id,
+      ulog_type: 4,
+      ulog_rid: videoId,
+    });
 }
 
 onMounted(async () => {
-  console.log('组件挂载，开始获取数据')
   await getVideoDetail()
-  console.log('视频详情加载完成，开始获取相关推荐')
-
   await getRelatedDrama()
-  console.log('开始获取评论数据')
   await getComments()
 })
 </script>
