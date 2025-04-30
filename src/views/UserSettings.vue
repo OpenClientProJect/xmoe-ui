@@ -14,6 +14,7 @@ const userForm = reactive({
   username: '', // 用户名
   nickname: '', // 昵称
   email: '',    // 邮箱
+  user_portrait: '',
 })
 
 // 原始用户数据，用于比较是否有修改
@@ -48,9 +49,8 @@ const getUserInfo = async () => {
       userForm.username = res.data.user_name || ''
       userForm.nickname = res.data.user_nick_name || ''
       userForm.email = res.data.user_email || ''
-      userForm.qq = res.data.user_qq || ''
-      userForm.phone = res.data.user_phone || ''
-      
+      userForm.user_portrait = res.data.user_portrait || ''
+
       // 保存原始数据，用于比较是否有修改
       originalUserData.value = {...userForm}
     }
@@ -81,6 +81,7 @@ const submitForm = async () => {
     const params = {
       user_id: userStore.info.user_id,
       user_nick_name: userForm.nickname,
+      user_portrait: userForm.user_portrait
     }
     await updateUserInfoService(params);
     ElMessage.success('个人信息更新成功')
@@ -142,7 +143,7 @@ onMounted(() => {
             </div>
             <div >
               <input 
-                v-model="userForm.nickname" 
+                v-model="userForm.nickname"
                 placeholder="设置昵称" 
                 class="border-none text-black font-bold focus:outline-none bg-transparent flex-1"
               />
