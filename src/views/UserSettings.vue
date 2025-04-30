@@ -80,32 +80,13 @@ const submitForm = async () => {
   try {
     const params = {
       user_id: userStore.info.user_id,
-      user_name: userForm.username,
       user_nick_name: userForm.nickname,
-      user_email: userForm.email,
-      user_qq: userForm.qq,
-      user_phone: userForm.phone
     }
-    
-    const res = await updateUserInfoService(params)
-    
-    if (res && res.code === 200) {
-      ElMessage.success('个人信息更新成功')
-      
-      // 更新Pinia中的用户信息
-      userStore.updateUserInfo({
-        user_name: userForm.username,
-        user_nick_name: userForm.nickname
-      })
-      
-      // 更新原始数据
-      originalUserData.value = {...userForm}
-    } else {
-      ElMessage.error(res?.msg || '更新失败，请稍后重试')
-    }
+    await updateUserInfoService(params);
+    ElMessage.success('个人信息更新成功')
+
   } catch (error) {
     console.error('更新用户信息失败:', error)
-    ElMessage.error('更新失败，请稍后重试')
   } finally {
     submitting.value = false
   }
