@@ -15,7 +15,7 @@ import VideoPlayer from '@/components/player/VideoPlayer.vue'
 // 导入相关推荐组件
 import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
 import {getCommentsService} from "@/api/comments.js";
-import {addHistoryService} from "@/api/user.js";
+import {addHistoryService, isFollowService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 
 const router = useRouter()
@@ -237,7 +237,19 @@ const playVideo = async (episodeId) => {
   return proxyUrl
 }
 
+const isFollowing = ref(false)
+//判断是否已追番
 
+const checkIsFollowing = async () => {
+  const res = await isFollowService({
+    user_id:  userStore.info.user_id,
+    ulog_rid: videoInfo.value.id,
+    ulog_type: 4
+  })
+  if (res.data === 1) {
+    isFollowing.value = true
+  }
+}
 // 切换线路
 const switchSource = (sourceId) => {
   // 先重置当前选中的剧集
@@ -349,22 +361,25 @@ const goToVideoDetail = (id) => {
   }
 
   console.log('跳转到视频详情页,ID:', id)
+  
+  // 停止当前视频播放
+  if (playerRef.value) {
+    try {
+      // 尝试暂停视频播放
+      const videoElement = playerRef.value.$el.querySelector('video')
+      if (videoElement) {
+        videoElement.pause()
+        videoElement.src = ''
+        videoElement.load()
+      }
+    } catch (e) {
+      console.error('停止视频播放失败:', e)
+    }
+  }
 
-  // 清空当前状态
-  currentEpisode.value = null
-  currentVideoUrl.value = ''
-  episodes.value = []
-  allEpisodes.value = {}
-  relatedVideos.value = []
-
-  // 跳转到新的视频详情页，使用正确的路由格式
-  router.push(`/video/${id}`)
-
-  // 重新加载数据
-  setTimeout(() => {
-    getVideoDetail()
-    getRelatedDrama()
-  }, 100)
+  // 强制使用全新的URL并刷新页面，而不是使用路由跳转
+  const newUrl = `/video/${id}`
+  window.location.href = newUrl
 }
 
 // 组件卸载时清理资源
@@ -552,6 +567,7 @@ const toggleCollect = async () => {
     return;
   }
 
+  if (!isFollowing.value) {
     await addHistoryService({
       user_id: userStore.info.user_id,
       ulog_type: 2,
@@ -559,7 +575,10 @@ const toggleCollect = async () => {
     });
     ElMessage.success('追番成功');
     // 更新状态
-    videoInfo.value.isCollected = true;
+    isFollowing.value = true;
+  } else {
+    ElMessage.info('已经追番了');
+  }
 }
 
 /**
@@ -578,8 +597,17 @@ const addPlayHistory = async () => {
     });
 }
 
+// 添加侧边栏显示控制状态
+const showSidebar = ref(true)
+
+// 切换侧边栏显示/隐藏
+const toggleSidebar = () => {
+  showSidebar.value = !showSidebar.value
+}
+
 onMounted(async () => {
   await getVideoDetail()
+  await checkIsFollowing()
   await getRelatedDrama()
   await getComments()
 })
@@ -595,60 +623,123 @@ onMounted(async () => {
           @tab-change="handleHeaderTabChange"
       />
     </div>
-    <!-- 视频播放器区域 -->
-    <div class="player-container">
-      <!-- 使用新的播放器组件 -->
-      <VideoPlayer
-          ref="playerRef"
-          :url="currentVideoUrl"
-          :title="currentEpisode?.title || videoInfo.title"
-          :poster="videoInfo.cover"
-          :video-id="videoId"
-          :show-back-button="true"
-          @error="handlePlayerError"
-          @play="handlePlayerPlay"
-          @pause="handlePlayerPause"
-          @ended="handlePlayerEnded"
-          @timeupdate="handlePlayerTimeUpdate"
-          @back="handlePlayerBack"
-      />
-
-      <!-- 视频信息 -->
-      <div class="video-info">
-        <h1 class="video-title">{{ videoInfo.title }}</h1>
-        <div class="video-stats">
-          <span class="stat-item">{{ videoInfo.views }}次观看</span>
-          <span>{{ videoInfo.vodArea }}/</span>
-          <span>{{ videoInfo.releaseDate }}/</span>
-          <span>{{ videoInfo.vodClass }}</span>
-        </div>
+    
+    <!-- 视频播放区域和信息区域的布局容器 -->
+    <div class="player-info-layout" :class="{'sidebar-hidden': !showSidebar}">
+      <!-- 视频播放器区域 -->
+      <div class="player-wrapper">
+        <VideoPlayer
+            ref="playerRef"
+            :url="currentVideoUrl"
+            :title="currentEpisode?.title || videoInfo.title"
+            :poster="videoInfo.cover"
+            :video-id="videoId"
+            :show-back-button="true"
+            :show-sidebar="showSidebar"
+            @error="handlePlayerError"
+            @play="handlePlayerPlay"
+            @pause="handlePlayerPause"
+            @ended="handlePlayerEnded"
+            @timeupdate="handlePlayerTimeUpdate"
+            @back="handlePlayerBack"
+            @toggle-sidebar="toggleSidebar"
+        />
       </div>
 
-      <!-- 操作栏 -->
-      <div class="action-bar">
-        <div class="action-btn" @click="toggleCollect">
-          <el-icon size="22">
-            <img :src="Collection" alt="">
-          </el-icon>
-          <span class="action-text">追番</span>
+      <!-- 右侧信息区域容器 -->
+      <div class="sidebar-wrapper" v-show="showSidebar">
+        <!-- 视频信息区域 -->
+        <div class="video-info-wrapper">
+          <!-- 视频信息 -->
+          <div class="video-info">
+            <h1 class="video-title">{{ videoInfo.title }}</h1>
+            <div class="video-stats">
+              <span class="stat-item">{{ videoInfo.views }}次观看</span>
+              <span>{{ videoInfo.vodArea }}/</span>
+              <span>{{ videoInfo.releaseDate }}/</span>
+              <span>{{ videoInfo.vodClass }}</span>
+            </div>
+          </div>
+
+          <!-- 操作栏 -->
+          <div class="action-bar">
+            <div class="action-btn" :class="{'following': isFollowing}" @click="toggleCollect">
+              <el-icon size="22">
+                <img :src="Collection" alt="">
+              </el-icon>
+              <span class="action-text">{{ isFollowing ? '已追番' : '追番' }}</span>
+            </div>
+            <div class="action-btn" @click="toggleSubscribe">
+              <el-icon size="22">
+                <img :src="Ringtones" alt="">
+              </el-icon>
+              <span class="action-text">催更</span>
+            </div>
+            <div class="action-btn" @click="copyCurrentUrl">
+              <el-icon size="22">
+                <Share/>
+              </el-icon>
+              <span class="action-text">分享</span>
+            </div>
+          </div>
         </div>
-        <div class="action-btn" @click="toggleSubscribe">
-          <el-icon size="22">
-            <img :src="Ringtones" alt="">
-          </el-icon>
-          <span class="action-text">催更</span>
-        </div>
-        <div class="action-btn" @click="copyCurrentUrl">
-          <el-icon size="22">
-            <Share/>
-          </el-icon>
-          <span class="action-text">分享</span>
+
+        <!-- 剧集列表 - 放在右侧信息区域 -->
+        <div class="episodes-section-sidebar">
+          <div class="episodes-header">
+            <h3 class="section-title">剧集</h3>
+            <div class="episode-count">
+              共{{ episodes.length }}集，{{ videoInfo.episode }}
+              <el-icon>
+                <ArrowDown/>
+              </el-icon>
+            </div>
+          </div>
+
+          <!-- 线路选择 -->
+          <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
+            <div
+                v-for="source in videoInfo.sources"
+                :key="source.id"
+                class="source-tab"
+                :class="{'active-source': currentSource === source.id}"
+                @click="switchSource(source.id)"
+            >
+              {{ source.name }} ({{ source.count }}集)
+            </div>
+          </div>
+
+          <div v-if="episodes.length === 0" class="no-episodes">
+            加载剧集中...
+          </div>
+
+          <div v-else class="episodes-grid-sidebar">
+            <div
+                v-for="episode in episodes"
+                :key="`${currentSource}-${episode.id}`"
+                class="episode-item"
+                :class="{
+                'current-episode': currentEpisode && episode.id === currentEpisode.id,
+                'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
+              }"
+                @click="playVideo(episode.id)"
+            >
+              <div class="episode-title">{{ episode.title }}</div>
+              <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
+              <div
+                  v-if="episode.watched"
+                  class="progress-bar"
+              >
+                <div class="progress-fill"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 剧集列表 - 移至内容区域外，放在内容区域上方 -->
-    <div class="episodes-section">
+    <!-- 在移动端显示的剧集列表 -->
+    <div class="episodes-section mobile-only">
       <div class="episodes-header">
         <h3 class="section-title">剧集</h3>
         <div class="episode-count">
@@ -679,7 +770,7 @@ onMounted(async () => {
       <div v-else class="episodes-grid">
         <div
             v-for="episode in episodes"
-            :key="`${currentSource}-${episode.id}`"
+            :key="`mobile-${currentSource}-${episode.id}`"
             class="episode-item"
             :class="{
             'current-episode': currentEpisode && episode.id === currentEpisode.id,
@@ -780,14 +871,6 @@ onMounted(async () => {
               </div>
               <div class="comment-text">{{ comment.comment_content }}</div>
               <div class="comment-actions">
-                <!--                <div class="action-btn">-->
-                <!--                  <el-icon size="14"><ArrowUp /></el-icon>-->
-                <!--                  <span>{{ comment.comment_up || 0 }}</span>-->
-                <!--                </div>-->
-                <!--                <div class="action-btn">-->
-                <!--                  <el-icon size="14"><ArrowDown /></el-icon>-->
-                <!--                  <span>{{ comment.comment_down || 0 }}</span>-->
-                <!--                </div>-->
                 <div class="action-btn reply-btn">
                   <el-icon size="14">
                     <ChatDotRound/>
@@ -836,6 +919,7 @@ onMounted(async () => {
         :title="'相关推荐'"
         :loading="isRelatedLoading"
         @itemClick="goToVideoDetail"
+        class="related-recommendations"
     />
   </div>
 </template>
@@ -886,19 +970,35 @@ onMounted(async () => {
   padding-bottom: 16px;
 }
 
-/* 视频播放器区域 - 随页面滚动 */
-.player-container {
-  width: 100%;
+/* 视频播放器和信息区域的布局容器 */
+.player-info-layout {
+  display: flex;
+  flex-direction: column;
+  margin-top: 70px; /* 减小顶部间距，避免过多空白，原来是90px */
+  padding-top: 30px; /* 添加顶部内边距，确保内容不被导航栏遮挡 */
   background-color: white;
-  /* 使用更高效的阴影实现 */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  margin-top: 90px; /* 为顶部导航栏留出空间 */
-  /* 添加硬件加速 */
   transform: translateZ(0);
   will-change: transform;
   z-index: 2;
 }
 
+.player-wrapper {
+  width: 100%;
+}
+
+/* 右侧信息区域容器 */
+.sidebar-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-info-wrapper {
+  width: 100%;
+}
+
+/* 视频信息样式 */
 .video-info {
   padding: 12px 16px;
 }
@@ -911,6 +1011,7 @@ onMounted(async () => {
 
 .video-stats {
   display: flex;
+  flex-wrap: wrap;
   margin-top: 8px;
   color: #6b7280;
   font-size: 13px;
@@ -936,6 +1037,10 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
+.action-btn.following {
+  color: #f06292;
+}
+
 .action-btn:active {
   transform: scale(0.95);
   opacity: 0.8;
@@ -945,6 +1050,135 @@ onMounted(async () => {
   font-size: 12px;
   margin-top: 4px;
   color: #374151;
+}
+
+.action-btn.following .action-text {
+  color: #f06292;
+}
+
+/* 侧边栏剧集样式 */
+.episodes-section-sidebar {
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  display: none; /* 默认在移动端隐藏 */
+}
+
+.episodes-grid-sidebar {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.episodes-grid-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.episodes-grid-sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+/* 调整播放器样式，确保它填充其容器 */
+.player-wrapper :deep(.video-player-container) {
+  width: 100%;
+  height: 100%;
+}
+
+.player-wrapper :deep(video) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 移动端显示和桌面端隐藏 */
+.mobile-only {
+  display: block;
+}
+
+/* 桌面端布局优化 */
+@media (min-width: 1024px) {
+  .player-info-layout {
+    flex-direction: row;
+    max-width: 1440px; /* 增加最大宽度 */
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .player-wrapper {
+    width: 75%; /* 增加播放器宽度比例，从65%到75% */
+    flex-shrink: 0;
+    transition: width 0.3s ease;
+  }
+  
+  .sidebar-wrapper {
+    width: 25%; /* 减少侧边栏宽度比例，从35%到25% */
+    border-left: 1px solid #f0f0f0;
+    transition: width 0.3s ease;
+  }
+  
+  /* 当侧边栏隐藏时，播放器占据100%宽度 */
+  .player-info-layout.sidebar-hidden .player-wrapper {
+    width: 100%;
+  }
+  
+  .player-info-layout.sidebar-hidden .sidebar-wrapper {
+    display: none;
+  }
+  
+  .video-info-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .video-info {
+    padding: 16px;
+    flex: 1;
+  }
+  
+  .video-title {
+    font-size: 18px; /* 减小字体大小以适应更窄的侧边栏 */
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  
+  /* 显示侧边栏剧集、隐藏移动端剧集 */
+  .episodes-section-sidebar {
+    display: block;
+  }
+  
+  .mobile-only {
+    display: none;
+  }
+  
+  /* 剧集和内容区域在桌面端的宽度限制 */
+  .episodes-section,
+  .content-container,
+  .related-recommendations {
+    max-width: 1440px; /* 增加最大宽度，保持与播放器区域一致 */
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* 适应大屏幕尺寸 */
+@media (min-width: 1600px) {
+  .player-info-layout,
+  .episodes-section,
+  .content-container,
+  .related-recommendations {
+    max-width: 1600px; /* 在超大屏幕上进一步增加最大宽度 */
+  }
+  
+  .player-wrapper {
+    width: 78%; /* 在大屏幕上进一步增加播放器宽度 */
+  }
+  
+  .sidebar-wrapper {
+    width: 22%; /* 相应减少侧边栏宽度 */
+  }
 }
 
 /* 内容区域 */
@@ -1276,6 +1510,9 @@ onMounted(async () => {
   left: 0;
   width: 100%;
   z-index: 100;
+  background-color: #fff; /* 确保导航栏有背景色 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加阴影效果增强视觉层次 */
+  height: 60px; /* 明确指定高度 */
 }
 
 /* 评论区域响应式样式 */
@@ -1303,6 +1540,111 @@ onMounted(async () => {
 @media (min-width: 1024px) {
   .episodes-grid {
     grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+/* 为相关推荐添加样式 */
+.related-recommendations {
+  margin-top: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* 调整相关视频组件的样式，与播放器区域保持一致 */
+:deep(.recommendations-section) {
+  background-color: white;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+:deep(.recommendations-list) {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 16px;
+}
+
+/* 在平板和桌面设备上改为网格布局 */
+@media (min-width: 768px) {
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 在大屏设备上展示更多列 */
+@media (min-width: 1024px) {
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 在超大屏设备上展示更多列 */
+@media (min-width: 1440px) {
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 适应相关推荐中的项目网格布局 */
+:deep(.recommendation-item) {
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background-color: #f9fafb;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+:deep(.recommendation-item:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  opacity: 1;
+}
+
+:deep(.thumbnail-container) {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px 4px 0 0;
+}
+
+:deep(.recommendation-info) {
+  margin-left: 0;
+  padding: 12px;
+}
+
+:deep(.recommendation-title) {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+:deep(.section-title) {
+  font-size: 18px;
+  font-weight: 500;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+}
+
+/* 适应大屏幕尺寸 */
+@media (min-width: 1600px) {
+  .player-info-layout,
+  .episodes-section,
+  .content-container,
+  .related-recommendations {
+    max-width: 1600px; /* 在超大屏幕上进一步增加最大宽度 */
+  }
+  
+  .player-wrapper {
+    width: 78%; /* 在大屏幕上进一步增加播放器宽度 */
+  }
+  
+  .sidebar-wrapper {
+    width: 22%; /* 相应减少侧边栏宽度 */
+  }
+  
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 </style>

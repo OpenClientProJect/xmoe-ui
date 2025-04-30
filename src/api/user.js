@@ -57,3 +57,14 @@ export const getHistoryListService = (params) => {
         params: params
     })
 }
+
+/**
+ * 判断是否已追番
+ */
+export const isFollowService = (params) => {
+    return request({
+        url: 'sk-api/user/ulog_is_exist',
+        method: 'get',
+        params: params
+    })
+}

@@ -39,11 +39,16 @@ const props = defineProps({
   showBackButton: {
     type: Boolean,
     default: false
+  },
+  // 是否显示侧边栏
+  showSidebar: {
+    type: Boolean,
+    default: true
   }
 })
 
 // 定义事件
-const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back'])
+const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back', 'toggleSidebar'])
 
 // 播放器容器引用
 const artRef = ref(null)
@@ -380,6 +385,11 @@ defineExpose({
     }
   }
 })
+
+// 切换侧边栏显示/隐藏
+const toggleSidebar = () => {
+  emit('toggleSidebar')
+}
 </script>
 
 <template>
@@ -399,6 +409,15 @@ defineExpose({
       :class="{ 'visible': isControlsVisible }"
     >
       <el-icon><ArrowLeft /></el-icon>
+    </div>
+    
+    <!-- 侧边栏切换按钮 - 添加动态显示控制 -->
+    <div 
+      class="sidebar-toggle" 
+      @click="toggleSidebar"
+      :class="{ 'visible': isControlsVisible, 'expanded': showSidebar }"
+    >
+      <div class="toggle-icon">{{ showSidebar ? '>' : '<' }}</div>
     </div>
   </div>
 </template>
@@ -459,5 +478,50 @@ defineExpose({
 
 .back-button:active {
   transform: scale(0.95);
+}
+
+/* 侧边栏切换按钮样式 */
+.sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 4px 0 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  z-index: 10;
+  transition: all 0.3s ease;
+  /* 默认状态 - 隐藏 */
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 可见状态 */
+.sidebar-toggle.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sidebar-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 28px;
+}
+
+.sidebar-toggle.expanded {
+  right: 0;
+}
+
+.toggle-icon {
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
