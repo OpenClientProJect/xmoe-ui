@@ -36,6 +36,12 @@ const routes = [
     name: 'Login',
     component: () => import('../views/Login.vue'),
     meta: { showTabBar: false }
+  },
+  {
+    path: '/history/:userId',
+    name: 'UserHistory',
+    component: () => import('../views/UserHistory.vue'),
+    meta: { showTabBar: false }
   }
 ]
 

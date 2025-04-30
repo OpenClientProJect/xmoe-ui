@@ -54,7 +54,14 @@ const allMenuItems = [
   {id: 1, name: '会员中心', icon: 'Medal', path: '/vip', category: 'feature'},
   {id: 2, name: '我的积分', icon: 'Money', path: '/points', category: 'feature'},
   {id: 3, name: '留言求片', icon: 'Headset', path: '/request', category: 'feature'},
-  {id: 4, name: '我的追剧', icon: 'Collection', path: '/favorites', category: 'feature'},
+  {
+    id: 4, 
+    name: '我的追剧', 
+    icon: 'Collection', 
+    path: '/favorites', 
+    category: 'feature',
+    handler: () => goToUserHistory('collect')
+  },
   {id: 5, name: '个人详情', icon: 'Setting', path: '/settings/profile', category: 'setting'},
   {id: 6, name: '修改密码', icon: 'Lock', path: '/settings/password', category: 'setting'},
   {id: 7, name: '消息中心', icon: 'Bell', path: '/settings/messages', category: 'setting'},
@@ -200,8 +207,30 @@ const formatDate = (timestamp) => {
 }
 
 // 处理菜单点击
-const handleMenuClick = (path) => {
-  router.push(path)
+const handleMenuClick = (item) => {
+  // 如果有自定义处理函数，则调用它
+  if (item.handler) {
+    item.handler()
+    return
+  }
+  
+  // 否则使用path进行导航
+  router.push(item.path)
+}
+
+// 跳转到用户历史记录页面
+const goToUserHistory = (tab) => {
+  // 检查用户是否登录
+  if (!userStore.info || !userStore.info.user_id) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+  
+  // 跳转到用户历史记录页面，并传入用户ID和默认激活的标签
+  router.push({
+    path: `/history/${userStore.info.user_id}`,
+    query: { tab }
+  });
 }
 
 onMounted(() => {
@@ -229,11 +258,11 @@ onMounted(() => {
 
     <!-- 用户统计信息 -->
     <div class="bg-white flex justify-between p-5 text-center">
-      <div class="flex-1">
+      <div class="flex-1 cursor-pointer hover:bg-gray-50" @click="goToUserHistory('playHistory')">
         <div class="text-lg font-bold">{{ historys.history }}</div>
         <div class="text-gray-500 text-sm">播放记录</div>
       </div>
-      <div class="flex-1">
+      <div class="flex-1 cursor-pointer hover:bg-gray-50" @click="goToUserHistory('collect')">
         <div class="text-lg font-bold">{{ historys.favorites }}</div>
         <div class="text-gray-500 text-sm">我的追剧</div>
       </div>
@@ -264,7 +293,7 @@ onMounted(() => {
       <div class="grid grid-cols-6 gap-2 flex-wrap sm:grid-cols-5 xs:grid-cols-4">
         <div v-for="item in allMenuItems" :key="item.id"
              class="flex flex-col items-center mb-3"
-             @click="handleMenuClick(item.path)">
+             @click="handleMenuClick(item)">
           <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
             <el-icon :size="20" class="text-gray-600">
               <component :is="item.icon"/>

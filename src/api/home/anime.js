@@ -3,7 +3,7 @@ import request from "@/utils/request.js";
 //新番列表
 export const getDramaListService = () => {
     return request({
-        url: '/sk-api//vod/list',
+        url: '/sk-api/vod/list',
         method: 'get',
         params: {
             page: '1',
@@ -15,7 +15,7 @@ export const getDramaListService = () => {
 //排期表
 export const getDramaScheduleService = () => {
     return request({
-        url: '/sk-api//vod/list',
+        url: '/sk-api/vod/list',
         method: 'get',
         params: {
             page: '1',
@@ -27,7 +27,7 @@ export const getDramaScheduleService = () => {
 //轮播图
 export const getBannerListService = () => {
     return request({
-        url: '/sk-api//vod/list',
+        url: '/sk-api/vod/list',
         method: 'get',
         params: {
             page: '1',
@@ -40,7 +40,7 @@ export const getBannerListService = () => {
 //首页顶部菜单
 export const getMenuListService = () => {
     return request({
-        url: '/sk-api//type/list',
+        url: '/sk-api/type/list',
         method: 'get',
     })
 }
