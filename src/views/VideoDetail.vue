@@ -8,6 +8,7 @@ import {handleImageUrl} from '@/utils/imageUtils'
 //icon
 import Collection from '@/assets/icon/collection.svg'
 import Ringtones from '@/assets/icon/ringtones.svg'
+import Loading from '@/assets/gif/loading.gif'
 // 导入顶部导航栏组件
 import HeaderNav from '@/components/home/common/HeaderNav.vue'
 // 导入播放器组件
@@ -828,7 +829,7 @@ onMounted(async () => {
                 :key="comment.comment_id"
                 class="comment-item">
             <div class="comment-avatar">
-              <img :src="comment.user_pic" alt="用户头像">
+              <img :src="comment.user_pic || Loading" alt="用户头像">
             </div>
             <div class="comment-content">
               <div class="comment-header">
@@ -851,7 +852,7 @@ onMounted(async () => {
                       :key="reply.comment_id"
                       class="reply-item">
                   <div class="reply-avatar">
-                    <img :src="reply.user_pic" alt="用户头像">
+                    <img :src="reply.user_pic || Loading" alt="用户头像">
                   </div>
                   <div class="reply-content">
                     <div class="reply-header">
