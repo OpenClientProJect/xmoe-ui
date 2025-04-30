@@ -899,29 +899,6 @@ onMounted(async () => {
   z-index: 2;
 }
 
-.video-player {
-  position: relative;
-  width: 100%;
-  /* 使用固定高度比例而不是 aspect-ratio 以减少重排 */
-  height: 0;
-  padding-top: 56.25%; /* 16:9 的高度比例 */
-  background-color: #000;
-  /* 添加硬件加速 */
-  transform: translateZ(0);
-  will-change: transform;
-  overflow: hidden;
-}
-
-/* 添加一个内容容器来定位播放器 */
-.video-player-content {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-
 .video-info {
   padding: 12px 16px;
 }
