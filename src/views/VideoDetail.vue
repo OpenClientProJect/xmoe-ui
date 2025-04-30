@@ -1743,6 +1743,9 @@ onMounted(async () => {
   margin: 0;
   flex: 1;
   padding-right: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .close-btn {
@@ -1805,10 +1808,12 @@ onMounted(async () => {
   font-size: 14px;
   line-height: 1.5;
   margin-bottom: 4px;
-  white-space: normal; /* 允许文本换行 */
-  word-break: break-word; /* 在需要时断词 */
-  overflow: visible; /* 显示所有内容 */
-  display: block; /* 确保占据整行 */
+  max-height: 4.5em; /* 3行的高度 = 行高 × 3 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 限制为3行 */
+  -webkit-box-orient: vertical;
 }
 
 .tag-list {
