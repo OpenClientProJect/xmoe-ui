@@ -33,11 +33,10 @@ export const getDramaDetailService = (vodId) => {
 
 /**
  * 获取视频地址
- * @param {string} vodId 视频ID
  * @param {string} sourceId 加密的视频源ID
  * @returns {Promise} 请求Promise
  */
-export const getVideoUrlService = (vodId, sourceId) => {
+export const getVideoUrlService = (sourceId) => {
     // 检查参数
     if (!sourceId) {
         return Promise.reject(new Error('无效的视频源ID'))
@@ -53,14 +52,20 @@ export const getVideoUrlService = (vodId, sourceId) => {
         processedUrl = processedUrl.substring(prefix.length)
         console.log('去除前缀后:', processedUrl)
     }
+
+    // 固定的随机MD5值，此处使用示例值，也可通过参数传入
+    const randomMD5 = 'd67e91813b07e8304ee0c974bc97238e'
+    
+    // 拼接随机MD5值
+    const finalUrl = `${processedUrl}RANDOM${randomMD5}`
+    console.log('最终请求URL:', finalUrl)
+    
     // 调用后端接口获取视频地址
     return request({
         url: '/sk-api//vod/skjson',
         method: 'get',
         params: {
-            vodId,
-            url: processedUrl, // 传递处理后的URL
-            skjsonindex: '0'
+            url: finalUrl // 传递拼接了随机MD5值的URL
         }
     })
 }

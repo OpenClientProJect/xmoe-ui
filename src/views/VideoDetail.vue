@@ -171,8 +171,8 @@ const playVideo = async (episodeId) => {
   episode.watched = true
 
   try {
-    // 调用API获取视频地址
-    const res = await getVideoUrlService(videoInfo.value.id, episode.sourceId)
+    // 调用API获取视频地址 - 不再需要传递videoInfo.value.id参数
+    const res = await getVideoUrlService( episode.sourceId)
 
     if (res.code === 200 && res.data) {
       console.log('获取到视频地址:', res.data)
