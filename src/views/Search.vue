@@ -1,12 +1,21 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { searchService } from '@/api/video.js'
+import { getMenuListService } from '@/api/home/anime.js'
+import { handleImageUrl } from '@/utils/imageUtils'
+import { ElLoading } from 'element-plus'
 
 const router = useRouter()
 const searchKeyword = ref('')
 const historySearches = ref(['海贼王', '间谍过家家', '名侦探柯南', '鬼灭之刃'])
+const isLoading = ref(false)
 
-// 模拟搜索结果
+// 顶部菜单相关
+const menuList = ref([])
+const activeMenuId = ref(-1) // 默认选择"全部"
+
+// 搜索结果
 const searchResults = ref([])
 const hotSearches = [
   '咒术回战',
@@ -19,34 +28,87 @@ const hotSearches = [
   '鬼灭之刃 刀匠村篇'
 ]
 
+// 获取顶部菜单
+const getMenuList = async () => {
+  try {
+    const res = await getMenuListService()
+    if (res.code === 200 && Array.isArray(res.data)) {
+      // 在最左侧添加"全部"选项
+      const allOption = {
+        type_id: -1,
+        type_name: '全部',
+        type_en: 'all',
+        type_sort: 0,
+        type_pid: 0
+      }
+      menuList.value = [allOption, ...res.data]
+    } else {
+      console.error('获取菜单失败:', res.message || '未知错误')
+    }
+  } catch (error) {
+    console.error('获取菜单错误:', error)
+  }
+}
+
+// 切换菜单
+const handleMenuChange = (menuId) => {
+  activeMenuId.value = menuId
+  if (searchKeyword.value.trim()) {
+    handleSearch() // 如果有搜索关键词，立即重新搜索
+  }
+}
+
 const goBack = () => {
   router.back()
 }
 
-const handleSearch = () => {
-  if (!searchKeyword.value) return
-  // 实际项目中这里应该发起请求获取搜索结果
-  searchResults.value = [
-    {
-      id: 1,
-      title: `搜索"${searchKeyword.value}"的结果1`,
-      episode: '更新至12集',
-      cover: 'https://placeholder.pics/svg/120x80/DEDEDE/555555/封面1'
-    },
-    {
-      id: 2,
-      title: `搜索"${searchKeyword.value}"的结果2`,
-      episode: '更新至24集',
-      cover: 'https://placeholder.pics/svg/120x80/DEDEDE/555555/封面2'
-    }
-  ]
+const handleSearch = async () => {
+  if (!searchKeyword.value.trim()) return
   
-  // 添加到搜索历史
-  if (!historySearches.value.includes(searchKeyword.value)) {
-    historySearches.value.unshift(searchKeyword.value)
-    if (historySearches.value.length > 8) {
-      historySearches.value.pop()
+  try {
+    isLoading.value = true
+    const loadingInstance = ElLoading.service({
+      lock: true,
+      text: '搜索中...',
+      background: 'rgba(255, 255, 255, 0.7)',
+    })
+    
+    // 调用实际的搜索API，传入type_id作为limitlimit参数
+    const res = await searchService({
+      keyword: searchKeyword.value,
+      limitlimit: activeMenuId.value // 使用当前选中的type_id
+    })
+    
+    if (res.code === 200 && res.data) {
+      // 处理API返回的数据
+      searchResults.value = res.data.map(item => ({
+        id: item.vod_id,
+        title: item.vod_name,
+        episode: item.vod_remarks || '更新中',
+        cover: handleImageUrl(item.vod_pic),
+        score: item.vod_score || '0'
+      }))
+    } else {
+      searchResults.value = []
+      console.error('搜索失败:', res.message || '未知错误')
     }
+    
+    // 添加到搜索历史
+    if (!historySearches.value.includes(searchKeyword.value)) {
+      historySearches.value.unshift(searchKeyword.value)
+      if (historySearches.value.length > 8) {
+        historySearches.value.pop()
+      }
+      // 将搜索历史保存到本地存储
+      localStorage.setItem('searchHistory', JSON.stringify(historySearches.value))
+    }
+    
+    loadingInstance.close()
+  } catch (error) {
+    console.error('搜索出错:', error)
+    searchResults.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -57,6 +119,7 @@ const selectHotSearch = (keyword) => {
 
 const clearHistory = () => {
   historySearches.value = []
+  localStorage.removeItem('searchHistory')
 }
 
 const selectHistorySearch = (keyword) => {
@@ -68,6 +131,30 @@ const clearSearchKeyword = () => {
   searchKeyword.value = ''
   searchResults.value = []
 }
+
+// 点击搜索结果项，跳转到详情页
+const goToDetail = (id) => {
+  router.push(`/video/${id}`)
+}
+
+// 从本地存储加载搜索历史
+const loadSearchHistory = () => {
+  const savedHistory = localStorage.getItem('searchHistory')
+  if (savedHistory) {
+    try {
+      historySearches.value = JSON.parse(savedHistory)
+    } catch (e) {
+      console.error('解析搜索历史失败:', e)
+    }
+  }
+}
+
+onMounted(async () => {
+  // 加载搜索历史
+  loadSearchHistory()
+  // 获取顶部菜单
+  await getMenuList()
+})
 </script>
 
 <template>
@@ -87,20 +174,45 @@ const clearSearchKeyword = () => {
           <el-icon-close-bold />
         </el-icon>
       </div>
-      <div @click="handleSearch">搜索</div>
+      <div class="search-button" @click="handleSearch">搜索</div>
+    </div>
+    
+    <!-- 顶部菜单 -->
+    <div class="menu-container">
+      <div class="menu-tabs">
+        <div 
+          v-for="menu in menuList" 
+          :key="menu.type_id"
+          class="menu-tab"
+          :class="{ 'active-menu': activeMenuId === menu.type_id }"
+          @click="handleMenuChange(menu.type_id)"
+        >
+          {{ menu.type_name }}
+        </div>
+      </div>
     </div>
     
     <!-- 搜索内容区域 -->
     <div class="search-content">
       <!-- 搜索结果 -->
       <div v-if="searchResults.length > 0">
-        <h3 class="text-lg font-medium mb-3">搜索结果</h3>
-        <div class="space-y-3">
-          <div v-for="result in searchResults" :key="result.id" class="flex border-b pb-3">
-            <img :src="result.cover" class="w-24 h-16 object-cover rounded" />
-            <div class="ml-3 flex-1">
-              <h4 class="text-sm font-medium line-clamp-1">{{ result.title }}</h4>
-              <p class="text-xs text-gray-500 mt-1">{{ result.episode }}</p>
+        <h3 class="section-title">搜索结果</h3>
+        <div class="search-results-list">
+          <div 
+            v-for="result in searchResults" 
+            :key="result.id" 
+            class="search-result-item"
+            @click="goToDetail(result.id)"
+          >
+            <div class="result-cover">
+              <img :src="result.cover" alt="封面" />
+              <span class="result-episode">{{ result.episode }}</span>
+            </div>
+            <div class="result-info">
+              <h4 class="result-title">{{ result.title }}</h4>
+              <div class="result-score" v-if="result.score">
+                <span class="score-value">{{ result.score }}</span>分
+              </div>
             </div>
           </div>
         </div>
@@ -109,17 +221,17 @@ const clearSearchKeyword = () => {
       <!-- 未搜索时显示历史记录和热搜 -->
       <div v-else>
         <!-- 搜索历史 -->
-        <div v-if="historySearches.length > 0" class="mb-6">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-base font-medium">搜索历史</h3>
-            <el-icon @click="clearHistory"><el-icon-delete /></el-icon>
+        <div v-if="historySearches.length > 0" class="history-section">
+          <div class="section-header">
+            <h3 class="section-title">搜索历史</h3>
+            <el-icon class="clear-history" @click="clearHistory"><el-icon-delete /></el-icon>
           </div>
           
-          <div class="flex flex-wrap gap-2">
+          <div class="history-tags">
             <span 
               v-for="(history, index) in historySearches" 
               :key="index"
-              class="px-3 py-1 bg-gray-100 rounded-full text-sm cursor-pointer"
+              class="history-tag"
               @click="selectHistorySearch(history)"
             >
               {{ history }}
@@ -128,17 +240,17 @@ const clearSearchKeyword = () => {
         </div>
         
         <!-- 热门搜索 -->
-        <div>
-          <h3 class="text-base font-medium mb-3">热门搜索</h3>
-          <div class="grid grid-cols-2 gap-3">
+        <div class="hot-search-section">
+          <h3 class="section-title">热门搜索</h3>
+          <div class="hot-search-grid">
             <div 
               v-for="(hot, index) in hotSearches" 
               :key="index"
-              class="flex items-center cursor-pointer"
+              class="hot-search-item"
               @click="selectHotSearch(hot)"
             >
-              <span class="w-5 h-5 flex items-center justify-center mr-2" :class="{'text-red-500': index < 3, 'text-gray-400': index >= 3}">{{ index + 1 }}</span>
-              <span class="text-sm line-clamp-1">{{ hot }}</span>
+              <span class="hot-rank" :class="{'top-rank': index < 3}">{{ index + 1 }}</span>
+              <span class="hot-title">{{ hot }}</span>
             </div>
           </div>
         </div>
@@ -210,12 +322,214 @@ const clearSearchKeyword = () => {
 }
 
 .search-button {
-  margin-left: 8px;
+  margin-left: 12px;
+  font-size: 14px;
+  color: #dc2626;
+  cursor: pointer;
+}
+
+/* 顶部菜单样式 */
+.menu-container {
+  position: fixed;
+  top: 56px; /* 搜索头部高度 */
+  left: 0;
+  width: 100%;
+  z-index: 99;
+  background-color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
+.menu-tabs {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0 16px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.menu-tabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+.menu-tab {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.active-menu {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.active-menu::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  background-color: #dc2626;
+  border-radius: 2px;
 }
 
 /* 内容区域样式 */
 .search-content {
-  padding-top: 60px; /* 搜索头部高度 + 额外空间 */
-  padding: 60px 16px 16px 16px;
+  padding-top: 110px; /* 搜索头部 + 菜单高度 + 额外空间 */
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 16px;
+}
+
+/* 区域标题样式 */
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: #374151;
+}
+
+/* 搜索历史样式 */
+.history-section {
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.clear-history {
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.history-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-tag {
+  padding: 6px 12px;
+  background-color: #f3f4f6;
+  border-radius: 16px;
+  font-size: 13px;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+/* 热门搜索样式 */
+.hot-search-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.hot-search-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.hot-rank {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.top-rank {
+  color: #dc2626;
+}
+
+.hot-title {
+  font-size: 14px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 搜索结果样式 */
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-result-item {
+  display: flex;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.result-cover {
+  width: 120px;
+  height: 80px;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.result-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.result-episode {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.result-info {
+  margin-left: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.result-title {
+  font-size: 15px;
+  margin: 0 0 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+}
+
+.result-score {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.score-value {
+  color: #dc2626;
+  font-weight: 500;
 }
 </style> 
