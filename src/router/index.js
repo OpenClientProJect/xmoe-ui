@@ -17,31 +17,31 @@ const routes = [
     path: '/settings/profile',
     name: 'UserSettings',
     component: () => import('../views/UserSettings.vue'),
-    meta: { showTabBar: false }
+    meta: { showTabBar: true }
   },
   {
     path: '/video/:id',
     name: 'VideoDetail',
     component: () => import('../views/VideoDetail.vue'),
-    meta: { showTabBar: false }
+    meta: { showTabBar: true }
   },
   {
     path: '/search',
     name: 'Search',
     component: () => import('../views/Search.vue'),
-    meta: { showTabBar: false }
+    meta: { showTabBar: true }
   },
   {
     path: '/login',
     name: 'Login',
     component: () => import('../views/Login.vue'),
-    meta: { showTabBar: false }
+    meta: { showTabBar: true }
   },
   {
     path: '/history/:userId',
     name: 'UserHistory',
     component: () => import('../views/UserHistory.vue'),
-    meta: { showTabBar: false }
+    meta: { showTabBar: true }
   }
 ]
 

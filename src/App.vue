@@ -11,7 +11,9 @@ const showTabBar = computed(() => {
 
 <template>
   <div class="app-container">
-    <router-view />
+    <div class="app-content" :class="{ 'has-tab-bar': showTabBar }">
+      <router-view />
+    </div>
     <TabBar v-if="showTabBar" />
   </div>
 </template>
@@ -29,5 +31,20 @@ html, body {
 .app-container {
   min-height: 100vh;
   position: relative;
+}
+
+.app-content {
+  min-height: 100vh;
+}
+
+.has-tab-bar {
+  padding-bottom: 50px;
+}
+
+/* iOS 底部安全区域适配 */
+@supports (padding: max(0px)) {
+  .has-tab-bar {
+    padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+  }
 }
 </style>

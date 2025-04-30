@@ -76,7 +76,6 @@ const getCollectList = async () => {
     collectList.value = res.data.map(item => ({
       id: item.vod_id,
       title: item.vod_name,
-      // 统一使用gif动画作为封面
       cover: '@/assets/gif/loading.gif',
       episode: item.vod_remarks || '全集',
     }))
@@ -98,8 +97,45 @@ const goBack = () => {
 
 <template>
   <div class="user-history">
+    <!-- 移动端顶部导航栏 -->
+    <div class="mobile-nav">
+      <div class="mobile-back" @click="goBack">
+        <el-icon><ArrowLeft /></el-icon>
+      </div>
+      <div class="mobile-title">
+        用户记录
+      </div>
+      <div class="mobile-placeholder"></div>
+    </div>
+    
+    <!-- 移动端标签切换 -->
+    <div class="mobile-tabs">
+      <div 
+        class="mobile-tab"
+        :class="{ active: activeTab === 'history' }"
+        @click="switchTab('history')"
+      >
+        播放记录
+      </div>
+      <div 
+        class="mobile-tab"
+        :class="{ active: activeTab === 'collect' }"
+        @click="switchTab('collect')"
+      >
+        我的追剧
+      </div>
+    </div>
+    
     <!-- 左侧菜单 -->
     <div class="left-menu">
+      <!-- 返回按钮 -->
+      <div class="back-button" @click="goBack">
+        <el-icon><ArrowLeft /></el-icon>
+        <span>返回</span>
+      </div>
+      
+      <div class="menu-divider"></div>
+      
       <div 
         class="menu-item" 
         :class="{ active: activeTab === 'history' }"
@@ -168,6 +204,42 @@ const goBack = () => {
 </template>
 
 <style scoped>
+/* 移动端顶部导航栏 */
+.mobile-nav {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* 默认隐藏移动端导航 */
+  display: none;
+}
+
+.mobile-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.mobile-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.mobile-placeholder {
+  width: 36px;
+}
+
 .user-history {
   display: flex;
   min-height: calc(100vh - 70px);
@@ -181,6 +253,36 @@ const goBack = () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   margin-right: 15px;
+}
+
+/* 返回按钮样式 */
+.back-button {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  margin: 0 10px 10px;
+  font-size: 15px;
+  color: #666;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.back-button:hover {
+  background-color: #f0f0f0;
+  color: #409eff;
+}
+
+.back-button .el-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* 分割线 */
+.menu-divider {
+  height: 1px;
+  background-color: #eaeaea;
+  margin: 5px 15px 15px;
 }
 
 .menu-item {
@@ -207,6 +309,26 @@ const goBack = () => {
   font-weight: bold;
   background-color: #409eff;
   box-shadow: 0 4px 8px rgba(64, 158, 255, 0.3);
+}
+
+/* 响应式处理 */
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+  }
+  
+  .user-history {
+    flex-direction: column;
+    padding-top: 0;
+  }
+  
+  .left-menu {
+    display: none; /* 在移动端隐藏左侧菜单 */
+  }
+  
+  .content-area {
+    padding: 15px;
+  }
 }
 
 .content-area {
@@ -308,5 +430,50 @@ const goBack = () => {
   align-items: center;
   justify-content: center;
   font-weight: normal;
+}
+
+/* 移动端标签切换 */
+.mobile-tabs {
+  display: none;
+  background-color: #fff;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-tab {
+  padding: 12px 0;
+  text-align: center;
+  font-size: 15px;
+  color: #666;
+  cursor: pointer;
+  position: relative;
+  flex: 1;
+}
+
+.mobile-tabs {
+  display: none;
+  flex-direction: row;
+}
+
+.mobile-tab.active {
+  color: #409eff;
+  font-weight: bold;
+}
+
+.mobile-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: 3px;
+  background-color: #409eff;
+  border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+  .mobile-tabs {
+    display: flex;
+  }
 }
 </style> 

@@ -247,10 +247,20 @@ onMounted(() => {
     <div class="pt-10 pb-6 px-4 relative">
       <div class="flex items-center">
         <div class="relative">
-          <img :src="userInfo.avatar" class="w-20 h-20 rounded-full border-4 border-white shadow-sm" alt="avatar"/>
+          <img 
+            :src="userInfo.avatar" 
+            class="w-20 h-20 rounded-full border-4 border-white shadow-sm cursor-pointer" 
+            alt="avatar"
+            @click="!isLoggedIn && goToLogin()"
+          />
         </div>
         <div class="ml-4">
-          <h2 class="text-xl font-bold text-gray-800">{{ userInfo.username }}</h2>
+          <h2 
+            class="text-xl font-bold text-gray-800 cursor-pointer"
+            @click="!isLoggedIn && goToLogin()"
+          >
+            {{ userInfo.username }}
+          </h2>
           <p class="text-sm text-gray-500 mt-1" v-if="isLoggedIn">注册时间：{{ formatDate(userInfo.registerTime) }}</p>
         </div>
       </div>
@@ -258,11 +268,17 @@ onMounted(() => {
 
     <!-- 用户统计信息 -->
     <div class="bg-white flex justify-between p-5 text-center">
-      <div class="flex-1 cursor-pointer hover:bg-gray-50" @click="goToUserHistory('playHistory')">
+      <div 
+        class="flex-1 cursor-pointer"
+        @click="isLoggedIn ? goToUserHistory('playHistory') : goToLogin()"
+      >
         <div class="text-lg font-bold">{{ historys.history }}</div>
         <div class="text-gray-500 text-sm">播放记录</div>
       </div>
-      <div class="flex-1 cursor-pointer hover:bg-gray-50" @click="goToUserHistory('collect')">
+      <div 
+        class="flex-1 cursor-pointer" 
+        @click="isLoggedIn ? goToUserHistory('collect') : goToLogin()"
+      >
         <div class="text-lg font-bold">{{ historys.favorites }}</div>
         <div class="text-gray-500 text-sm">我的追剧</div>
       </div>
@@ -289,11 +305,14 @@ onMounted(() => {
     </div>
 
     <!-- 合并后的菜单区域 -->
-    <div class="bg-white rounded-md mx-3 mt-3 p-3" v-if="isLoggedIn">
+    <div class="bg-white rounded-md mx-3 mt-3 p-3">
       <div class="grid grid-cols-6 gap-2 flex-wrap sm:grid-cols-5 xs:grid-cols-4">
-        <div v-for="item in allMenuItems" :key="item.id"
-             class="flex flex-col items-center mb-3"
-             @click="handleMenuClick(item)">
+        <div 
+          v-for="item in allMenuItems" 
+          :key="item.id"
+          class="flex flex-col items-center mb-3"
+          @click="isLoggedIn ? handleMenuClick(item) : goToLogin()"
+        >
           <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
             <el-icon :size="20" class="text-gray-600">
               <component :is="item.icon"/>
@@ -366,5 +385,15 @@ onMounted(() => {
   .safe-area-bottom {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
+}
+
+/* 添加点击效果 */
+.cursor-pointer {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.cursor-pointer:hover {
+  opacity: 0.8;
 }
 </style> 
