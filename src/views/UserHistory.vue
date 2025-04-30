@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { getHistoryListService } from "@/api/user.js"
-import { ElMessage } from 'element-plus'
+import {onMounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {getHistoryListService} from "@/api/user.js"
+import {ElMessage} from 'element-plus'
 import useUserInfoStore from "@/stores/userstores.js"
 
 const router = useRouter()
@@ -50,20 +50,14 @@ const getPlayHistory = async () => {
       ulog_type: 4 // 播放历史类型为4
     })
 
-    if (res.code === 200 && res.data) {
-      // 适配新的数据格式
-      playHistoryList.value = res.data.map(item => ({
-        id: item.vod_id,
-        title: item.vod_name,
-        cover: item.vod_pic || item.vod_pic_thumb,
-        episode: item.vod_remarks || '全集',
-      }))
-    } else {
-      ElMessage.error(res.message || '获取播放历史失败')
-    }
-  } catch (error) {
-    console.error('获取播放历史失败:', error)
-    ElMessage.error('获取播放历史失败，请稍后重试')
+    // 适配新的数据格式
+    playHistoryList.value = res.data.map(item => ({
+      id: item.vod_id,
+      title: item.vod_name,
+      // 统一使用gif动画作为封面
+      cover: '@/assets/gif/loading.gif',
+      episode: item.vod_remarks || '全集',
+    }))
   } finally {
     loading.value = false
   }
@@ -78,21 +72,14 @@ const getCollectList = async () => {
       ulog_type: 2 // 追剧类型为2
     })
 
-    if (res.code === 200 && res.data) {
-      // 适配新的数据格式
-      collectList.value = res.data.map(item => ({
-        id: item.vod_id,
-        title: item.vod_name,
-        cover: item.vod_pic || item.vod_pic_thumb,
-        episode: item.vod_remarks || '全集',
-        updateTime: formatDateTime(new Date()) // 由于返回数据没有更新时间，这里使用当前时间
-      }))
-    } else {
-      ElMessage.error(res.message || '获取追剧列表失败')
-    }
-  } catch (error) {
-    console.error('获取追剧列表失败:', error)
-    ElMessage.error('获取追剧列表失败，请稍后重试')
+    // 适配新的数据格式
+    collectList.value = res.data.map(item => ({
+      id: item.vod_id,
+      title: item.vod_name,
+      // 统一使用gif动画作为封面
+      cover: '@/assets/gif/loading.gif',
+      episode: item.vod_remarks || '全集',
+    }))
   } finally {
     loading.value = false
   }
@@ -106,25 +93,6 @@ const goToVideoDetail = (id) => {
 // 返回上一页
 const goBack = () => {
   router.back()
-}
-
-// 格式化日期时间
-const formatDateTime = (date) => {
-  if (!date) return '未知'
-  
-  if (typeof date === 'string') {
-    date = new Date(date)
-  }
-  
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-// 格式化时间戳
-const formatTime = (timestamp) => {
-  if (!timestamp) return '未知'
-  
-  const date = new Date(timestamp * 1000)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 </script>
 
@@ -167,12 +135,15 @@ const formatTime = (timestamp) => {
       <div v-else-if="activeTab === 'history'" class="history-list">
         <div v-for="item in playHistoryList" :key="item.id" class="history-item" @click="goToVideoDetail(item.id)">
           <div class="cover-container">
-            <img :src="item.cover" alt="封面" class="cover-img">
+            <img 
+              src="@/assets/gif/loading.gif" 
+              alt="封面" 
+              class="cover-img animated"
+            >
             <div class="episode-tag">{{item.episode}}</div>
           </div>
           <div class="item-info">
             <div class="title">{{item.title}}</div>
-            <div class="update-time">最近观看：{{item.updateTime}}</div>
           </div>
         </div>
       </div>
@@ -180,7 +151,11 @@ const formatTime = (timestamp) => {
       <div v-else-if="activeTab === 'collect'" class="history-list">
         <div v-for="item in collectList" :key="item.id" class="history-item" @click="goToVideoDetail(item.id)">
           <div class="cover-container">
-            <img :src="item.cover" alt="封面" class="cover-img">
+            <img 
+              src="@/assets/gif/loading.gif" 
+              alt="封面" 
+              class="cover-img animated"
+            >
             <div class="episode-tag">{{item.episode}}</div>
           </div>
           <div class="item-info">
@@ -274,6 +249,11 @@ const formatTime = (timestamp) => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.animated {
+  background-color: #f0f0f0;
+  filter: contrast(1.1);
 }
 
 .episode-tag {
