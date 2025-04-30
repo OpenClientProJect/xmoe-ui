@@ -270,7 +270,7 @@ onMounted(() => {
     <div class="bg-white flex justify-between p-5 text-center">
       <div 
         class="flex-1 cursor-pointer"
-        @click="isLoggedIn ? goToUserHistory('playHistory') : goToLogin()"
+        @click="isLoggedIn ? goToUserHistory('history') : goToLogin()"
       >
         <div class="text-lg font-bold">{{ historys.history }}</div>
         <div class="text-gray-500 text-sm">播放记录</div>
