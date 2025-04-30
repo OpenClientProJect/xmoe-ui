@@ -61,10 +61,9 @@ const comments = ref({
   lists: []
 })
 
-const activeTab = ref('简介')
+const activeTab = ref('评论(0)')
 const tabs = [
-  {name: '简介'},
-  {name: '评论(0)'}
+  {name: '评论(0)'},
 ]
 
 // 格式化时间戳为可读日期
@@ -415,7 +414,7 @@ const getVideoDetail = async () => {
         releaseDate: data.vod_pubdate || data.vod_year || '',
         description: data.vod_content || data.vod_blurb || '',
         tags: data.vod_class ? data.vod_class.split(',') : [],
-        actors: data.vod_actor ? data.vod_actor.split(' / ') : [],
+        actors: data.vod_actor ? data.vod_actor.split() : [],
         area: data.vod_area || '',
         year: data.vod_year || '',
         weekday: data.vod_weekday || '',
@@ -554,7 +553,7 @@ const getComments = async () => {
   const res = await getCommentsService(videoId)
   comments.value = res.data
   // 更新评论数量显示
-  tabs[1].name = `评论(${comments.value.count || 0})`
+  tabs[0].name = `评论(${comments.value.count || 0})`
 }
 
 /**
@@ -603,6 +602,19 @@ const showSidebar = ref(true)
 // 切换侧边栏显示/隐藏
 const toggleSidebar = () => {
   showSidebar.value = !showSidebar.value
+}
+
+// 添加抽屉弹窗控制
+const showDetailDrawer = ref(false)
+
+// 打开详情抽屉
+const openDetailDrawer = () => {
+  showDetailDrawer.value = true
+}
+
+// 关闭详情抽屉
+const closeDetailDrawer = () => {
+  showDetailDrawer.value = false
 }
 
 onMounted(async () => {
@@ -658,6 +670,8 @@ onMounted(async () => {
               <span>{{ videoInfo.vodArea }}/</span>
               <span>{{ videoInfo.releaseDate }}/</span>
               <span>{{ videoInfo.vodClass }}</span>
+              <!-- 添加详情按钮 -->
+              <span class="detail-button" @click="openDetailDrawer">详情</span>
             </div>
           </div>
 
@@ -806,61 +820,13 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- 简介内容 -->
-      <div v-if="activeTab === '简介'" class="tab-content">
-        <div class="tag-list">
-          <span
-              v-for="tag in videoInfo.tags"
-              :key="tag"
-              class="tag"
-          >
-            {{ tag }}
-          </span>
-        </div>
-
-        <!-- 视频信息 -->
-        <div class="video-meta">
-          <div class="meta-item" v-if="videoInfo.area">
-            <span class="meta-label">地区：</span>
-            <span class="meta-value">{{ videoInfo.area }}</span>
-          </div>
-          <div class="meta-item" v-if="videoInfo.year">
-            <span class="meta-label">年份：</span>
-            <span class="meta-value">{{ videoInfo.year }}</span>
-          </div>
-          <div class="meta-item" v-if="videoInfo.weekday">
-            <span class="meta-label">更新时间：</span>
-            <span class="meta-value">{{ videoInfo.weekday }}</span>
-          </div>
-          <div class="meta-item" v-if="videoInfo.actors && videoInfo.actors.length">
-            <span class="meta-label">声优：</span>
-            <span class="meta-value">{{ videoInfo.actors.join(' / ') }}</span>
-          </div>
-
-          <div class="description-container">
-            <p class="description"
-               v-html="videoInfo.description"
-               :class="{'collapsed': !showFullDescription}"></p>
-            <div class="show-more" @click="toggleDescription">
-              {{ showFullDescription ? '收起' : '显示更多' }}
-              <el-icon v-if="showFullDescription">
-                <ArrowUp/>
-              </el-icon>
-              <el-icon v-else>
-                <ArrowDown/>
-              </el-icon>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- 评论内容 -->
-      <div v-else class="comment-container">
+      <div v-if="activeTab === '评论(0)' || activeTab.startsWith('评论(')" class="comment-container">
         <!-- 评论列表 -->
         <div v-if="comments.lists && comments.lists.length > 0" class="comment-list">
           <div v-for="comment in comments.lists"
-               :key="comment.comment_id"
-               class="comment-item">
+                :key="comment.comment_id"
+                class="comment-item">
             <div class="comment-avatar">
               <img :src="comment.user_pic" alt="用户头像">
             </div>
@@ -882,8 +848,8 @@ onMounted(async () => {
               <!-- 回复列表 -->
               <div v-if="comment.rp_lists && comment.rp_lists.length > 0" class="reply-list">
                 <div v-for="reply in comment.rp_lists"
-                     :key="reply.comment_id"
-                     class="reply-item">
+                      :key="reply.comment_id"
+                      class="reply-item">
                   <div class="reply-avatar">
                     <img :src="reply.user_pic" alt="用户头像">
                   </div>
@@ -921,6 +887,67 @@ onMounted(async () => {
         @itemClick="goToVideoDetail"
         class="related-recommendations"
     />
+
+    <!-- 详情抽屉弹窗 -->
+    <div class="detail-drawer-container" v-show="showDetailDrawer" @click.self="closeDetailDrawer">
+      <div class="detail-drawer" :class="{ 'open': showDetailDrawer }">
+        <div class="drawer-header">
+          <h2>{{ videoInfo.title }}</h2>
+          <div class="close-btn" @click="closeDetailDrawer">×</div>
+        </div>
+        
+        <div class="drawer-content">
+          <!-- 顶部信息区域：左侧封面 + 右侧基本信息 -->
+          <div class="drawer-top-info">
+            <!-- 封面图片 -->
+            <div class="cover-image-container">
+              <img :src="videoInfo.cover" alt="视频封面" class="cover-image" />
+            </div>
+            
+            <!-- 右侧基本信息 -->
+            <div class="info-container">
+              <!-- 更新信息 -->
+              <div class="update-info">{{ videoInfo.episode }}</div>
+              
+              <!-- 演员表 -->
+              <div class="actors-list" v-if="videoInfo.actors && videoInfo.actors.length">
+                <div class="actors-line">{{ videoInfo.actors.join(' ') }}</div>
+              </div>
+              
+              <!-- 标签列表 -->
+              <div class="tag-list">
+                <span
+                    v-for="tag in videoInfo.tags"
+                    :key="tag"
+                    class="tag"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+              
+              <!-- 基本元数据 -->
+              <div class="meta-info">
+                <div class="meta-item" v-if="videoInfo.area">
+                  <span class="meta-value">{{ videoInfo.area }}</span>
+                </div>
+                <div class="meta-item" v-if="videoInfo.year">
+                  <span class="meta-value">{{ videoInfo.year }}</span>
+                </div>
+                <div class="meta-item" v-if="videoInfo.weekday">
+                  <span class="meta-value">{{ videoInfo.weekday }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 简介区域 -->
+          <div class="description-section">
+            <h3 class="section-title">影视简介</h3>
+            <p class="description drawer-description" v-html="videoInfo.description"></p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1559,28 +1586,29 @@ onMounted(async () => {
 
 :deep(.recommendations-list) {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(2, 1fr); /* 在手机端默认展示2列 */
+  gap: 12px; /* 减小间距使卡片更紧凑 */
 }
 
 /* 在平板和桌面设备上改为网格布局 */
 @media (min-width: 768px) {
   :deep(.recommendations-list) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
   }
 }
 
 /* 在大屏设备上展示更多列 */
 @media (min-width: 1024px) {
   :deep(.recommendations-list) {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 /* 在超大屏设备上展示更多列 */
 @media (min-width: 1440px) {
   :deep(.recommendations-list) {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
@@ -1616,6 +1644,14 @@ onMounted(async () => {
 :deep(.recommendation-title) {
   font-size: 14px;
   margin-bottom: 8px;
+  /* 确保在小屏幕上标题不会太长，最多显示两行 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  height: 2.6em;
 }
 
 :deep(.section-title) {
@@ -1644,7 +1680,178 @@ onMounted(async () => {
   }
   
   :deep(.recommendations-list) {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
+}
+
+/* 详情按钮样式 */
+.detail-button {
+  margin-left: auto;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 8px;
+  background-color: rgba(220, 38, 38, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 详情抽屉弹窗 */
+.detail-drawer-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.detail-drawer {
+  position: absolute;
+  bottom: -100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border-radius: 16px 16px 0 0;
+  padding: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transition: bottom 0.3s ease;
+  z-index: 1001;
+}
+
+.detail-drawer.open {
+  bottom: 0;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.drawer-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  padding-right: 16px;
+}
+
+.close-btn {
+  font-size: 24px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.drawer-content {
+  padding-bottom: 24px;
+}
+
+/* 顶部信息区域布局 */
+.drawer-top-info {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+/* 封面图片容器 */
+.cover-image-container {
+  width: 120px;
+  height: 160px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 右侧信息容器 */
+.info-container {
+  flex: 1;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.update-info {
+  color: #dc2626;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.actors-list {
+  margin-bottom: 8px;
+}
+
+.actors-line {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+  white-space: normal; /* 允许文本换行 */
+  word-break: break-word; /* 在需要时断词 */
+  overflow: visible; /* 显示所有内容 */
+  display: block; /* 确保占据整行 */
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tag {
+  padding: 2px 6px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.meta-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* 简介区域 */
+.description-section {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+  color: #374151;
+}
+
+.drawer-description {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-line;
 }
 </style>
