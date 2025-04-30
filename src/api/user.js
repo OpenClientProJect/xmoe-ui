@@ -25,3 +25,14 @@ export const updateUserInfoService = (params) => {
         data: params
     })
 }
+
+/**
+ * 添加追番、播放记录
+ */
+export const addHistoryService = (params) => {
+    return request({
+        url: 'sk-api/user/ulog_add',
+        method: 'post',
+        data: params
+    })
+}

@@ -91,6 +91,8 @@ const submitForm = async () => {
     }
     await updateUserInfoService(params)
     ElMessage.success('个人信息更新成功')
+    //跳转个人中心
+    await router.push('/profile')
   } finally {
     submitting.value = false
   }

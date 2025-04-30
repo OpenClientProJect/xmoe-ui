@@ -15,6 +15,8 @@ import VideoPlayer from '@/components/player/VideoPlayer.vue'
 // 导入相关推荐组件
 import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
 import {getCommentsService} from "@/api/comments.js";
+import {addHistoryService} from "@/api/user.js";
+import * as userStore from "autoprefixer";
 
 const router = useRouter()
 const route = useRoute()
@@ -88,9 +90,7 @@ const toggleLike = () => {
   videoInfo.value.isLiked = !videoInfo.value.isLiked
 }
 
-const toggleCollect = () => {
-  videoInfo.value.isCollected = !videoInfo.value.isCollected
-}
+
 
 const toggleSubscribe = () => {
   videoInfo.value.isSubscribed = !videoInfo.value.isSubscribed
@@ -239,7 +239,7 @@ const switchSource = (sourceId) => {
   // 先重置当前选中的剧集
   currentEpisode.value = null
   currentVideoUrl.value = ''
-  
+
   // 重置所有线路剧集的选中状态
   Object.values(allEpisodes.value).forEach(episodeList => {
     episodeList.forEach(episode => {
@@ -249,7 +249,7 @@ const switchSource = (sourceId) => {
       }
     })
   })
-  
+
   // 更新当前线路
   currentSource.value = sourceId
 
@@ -536,6 +536,18 @@ const getComments = async () => {
   comments.value = res.data
   // 更新评论数量显示
   tabs[1].name = `评论(${comments.value.count || 0})`
+}
+
+/**
+ * 添加追番
+ */
+const toggleCollect = async () => {
+  await addHistoryService({
+    user_id: userStore.info.user_id,
+    ulog_type: 2,
+    ulog_rid: videoId,
+  });
+  ElMessage.success('追番成功')
 }
 
 onMounted(async () => {
