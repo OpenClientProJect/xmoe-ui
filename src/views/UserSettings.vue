@@ -211,7 +211,7 @@ onMounted(() => {
               class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 hover:border-red-500 transition-all cursor-pointer animate-fade-in"
               :style="`animation-delay: ${100 + index * 50}ms`"
               @click="selectAvatar(avatar)"
-            />
+             alt=""/>
           </div>
         </div>
         

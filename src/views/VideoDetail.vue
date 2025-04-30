@@ -1065,30 +1065,6 @@ onMounted(async () => {
   color: #374151;
 }
 
-.subscribe-section {
-  margin-top: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.channel-info {
-  display: flex;
-  align-items: center;
-}
-
-.channel-avatar {
-  width: 32px;
-  height: 32px;
-  background-color: #e5e7eb;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-
-.channel-name {
-  font-size: 14px;
-  font-weight: 500;
-}
 
 .comment-container {
   padding: 12px 16px;
