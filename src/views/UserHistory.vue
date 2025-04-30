@@ -1,12 +1,16 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { getHistoryListService } from "@/api/user.js"
 import { ElMessage } from 'element-plus'
+import useUserInfoStore from "@/stores/userstores.js"
 
 const router = useRouter()
+const route = useRoute()
+const userStore = useUserInfoStore()
 
-// 获取用户ID
-const userId = ref('')
+// 获取用户ID，从路由参数中获取或使用当前登录用户的ID
+const userId = ref(route.params.userId || (userStore.info ? userStore.info.user_id : null))
 
 // 数据
 const activeTab = ref('history') // 默认显示播放历史
@@ -16,6 +20,13 @@ const collectList = ref([])
 
 // 初始化用户ID
 onMounted(() => {
+  // 检查是否有用户ID
+  if (!userId.value) {
+    ElMessage.warning('未找到用户信息，请先登录')
+    router.push('/login')
+    return
+  }
+  
   // 初始加载播放历史
   getPlayHistory()
 })
@@ -32,10 +43,28 @@ const switchTab = (tab) => {
 
 // 获取播放历史
 const getPlayHistory = async () => {
+  loading.value = true
+  try {
+    const res = await getHistoryListService({
+      user_id: userId.value,
+      ulog_type: 4 // 播放历史类型为4
+    })
+  } finally {
+    loading.value = false
+  }
 }
 
 // 获取追剧列表
 const getCollectList = async () => {
+  loading.value = true
+  try {
+    const res = await getHistoryListService({
+      user_id: userId.value,
+      ulog_type: 2 // 追剧类型为2
+    })
+  } finally {
+    loading.value = false
+  }
 }
 
 // 跳转到详情页

@@ -47,3 +47,14 @@ export const getHistoryService = (params) => {
         params: params
     })
 }
+
+/**
+ * 获取追番、播放记录列表
+ */
+export const getHistoryListService = (params) => {
+    return request({
+        url: 'sk-api/user/ulog_list',
+        method: 'get',
+        params: params
+    })
+}
