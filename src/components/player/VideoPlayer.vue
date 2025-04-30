@@ -5,6 +5,8 @@ import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 
+import Loading from '@/assets/gif/loading.gif'
+
 // 获取路由实例
 const router = useRouter()
 
@@ -163,6 +165,9 @@ const initPlayer = (url) => {
       airplay: true,
       theme: '#dc2626',
       lang: 'zh-cn',
+      icons: {
+        loading: `<img src="${Loading}" alt="加载中" style="width: 60px; height: 70px;">`,
+      },
       moreVideoAttr: {
         crossOrigin: 'anonymous',
         preload: 'metadata', // 只预加载元数据以提高性能
