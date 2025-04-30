@@ -36,21 +36,31 @@ export const getDramaDetailService = (vodId) => {
  * @param {string} sourceId 加密的视频源ID
  * @returns {Promise} 请求Promise
  */
-export const getVideoUrlService = (sourceId) => {
+export const getVideoUrlService = (sourceId) =>   {
     // 检查参数
     if (!sourceId) {
         return Promise.reject(new Error('无效的视频源ID'))
     }
 
-    // 处理视频链接，去除"第X集$"前缀
+    // 处理视频链接，去除前缀
     let processedUrl = sourceId
 
-    // 检查是否有"第X集$"格式的前缀
-    const episodePrefixMatch = processedUrl.match(/^第\d+集\$/)
-    if (episodePrefixMatch) {
-        const prefix = episodePrefixMatch[0]
+    // 检查是否有"第X集$id_"格式的前缀
+    if (processedUrl.match(/^第\d+集\$id_/)) {
+        const prefix = processedUrl.match(/^第\d+集\$id_/)[0]
         processedUrl = processedUrl.substring(prefix.length)
-        console.log('去除前缀后:', processedUrl)
+        console.log('去除第X集$id_前缀后:', processedUrl)
+    } 
+    // 检查是否有"第X集$"格式的前缀
+    else if (processedUrl.match(/^第\d+集\$/)) {
+        const prefix = processedUrl.match(/^第\d+集\$/)[0]
+        processedUrl = processedUrl.substring(prefix.length)
+        console.log('去除第X集$前缀后:', processedUrl)
+    }
+    // 检查是否直接以"id_"开头
+    else if (processedUrl.startsWith('id_')) {
+        processedUrl = processedUrl.substring(3)
+        console.log('去除id_前缀后:', processedUrl)
     }
 
     // 固定的随机MD5值，此处使用示例值，也可通过参数传入

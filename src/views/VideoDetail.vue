@@ -150,6 +150,12 @@ const handlePlayerTimeUpdate = (currentTime) => {
 
 // 播放视频
 const playVideo = async (episodeId) => {
+  // 如果播放器实例存在，立即停止当前播放
+  if (playerRef.value) {
+    playerRef.value.pause();
+    currentVideoUrl.value = ''; // 清空当前URL强制重新加载
+  }
+
   const episode = episodes.value.find(ep => ep.id === episodeId)
   if (!episode) {
     console.error('找不到剧集信息')
