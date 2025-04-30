@@ -3,22 +3,20 @@ import
 {ref, onMounted, computed} from 'vue'
 import {useRouter} from 'vue-router'
 import localLoginImg from '../assets/image/localhlogin.jpg'
-import {getUserInfoService, updateUserInfoService} from "@/api/user.js";
+import {getHistoryService, getUserInfoService, updateUserInfoService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 import {ElMessage} from 'element-plus'
-//图标
-import Collection from '../assets/icon/collection.svg'
 
 const userStore = useUserInfoStore()
 const router = useRouter()
 const isLoggedIn = ref(false)
-
-// 头像选择相关
-const showAvatarDrawer = ref(false)
-const avatarOptions = [
-  'https://cloud.xmoe.app/227c8c7b-01.webp',
-  'https://cloud.xmoe.app/227c8c7b-02.webp'
-]
+//播放记录、我的追番
+const historys = ref({
+  //播放记录
+  history: 0,
+  //我的追番
+  favorites: 0
+})
 
 // 用户信息
 const userInfo = ref({
@@ -26,6 +24,23 @@ const userInfo = ref({
   avatar: isLoggedIn.value ? 'https://avatars.githubusercontent.com/u/156616301?v=4' : localLoginImg,
   coins: 0
 })
+
+//获取追番
+const getUserFavorites = async () => {
+  const res= await getHistoryService({
+    user_id: userStore.info.user_id,
+    ulog_type: 2
+  })
+  historys.value.favorites  = res.data
+}
+//获取追番
+const getUserHistory = async () => {
+  const res= await getHistoryService({
+    user_id: userStore.info.user_id,
+    ulog_type: 4
+  })
+  historys.value.history  = res.data
+}
 
 // 用户统计数据
 const userStats = ref({
@@ -132,21 +147,6 @@ const getUserInfo = async () => {
   }
 }
 
-// 处理头像点击事件
-const handleAvatarClick = () => {
-  if (!isLoggedIn.value) {
-    goToLogin()
-    return
-  }
-
-  // 已登录状态下，打开头像选择抽屉
-  showAvatarDrawer.value = true
-}
-
-// 关闭头像选择抽屉
-const closeAvatarDrawer = () => {
-  showAvatarDrawer.value = false
-}
 
 // 退出登录
 const logout = () => {
@@ -205,6 +205,8 @@ const handleMenuClick = (path) => {
 }
 
 onMounted(() => {
+  getUserHistory()
+  getUserFavorites()
   checkLoginStatus()
   getUserInfo()
 })
@@ -218,7 +220,7 @@ onMounted(() => {
         <div class="relative">
           <img :src="userInfo.avatar" class="w-20 h-20 rounded-full border-4 border-white shadow-sm" alt="avatar"/>
         </div>
-        <div @click="handleAvatarClick" class="ml-4">
+        <div class="ml-4">
           <h2 class="text-xl font-bold text-gray-800">{{ userInfo.username }}</h2>
           <p class="text-sm text-gray-500 mt-1" v-if="isLoggedIn">注册时间：{{ formatDate(userInfo.registerTime) }}</p>
         </div>
@@ -228,11 +230,11 @@ onMounted(() => {
     <!-- 用户统计信息 -->
     <div class="bg-white flex justify-between p-5 text-center">
       <div class="flex-1">
-        <div class="text-lg font-bold">{{ userStats.playCount }}</div>
+        <div class="text-lg font-bold">{{ historys.history }}</div>
         <div class="text-gray-500 text-sm">播放记录</div>
       </div>
       <div class="flex-1">
-        <div class="text-lg font-bold">{{ userStats.favorites }}</div>
+        <div class="text-lg font-bold">{{ historys.favorites }}</div>
         <div class="text-gray-500 text-sm">我的追剧</div>
       </div>
       <div class="flex-1">

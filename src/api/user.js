@@ -36,3 +36,14 @@ export const addHistoryService = (params) => {
         data: params
     })
 }
+
+/**
+ * 获取追番、播放记录
+ */
+export const getHistoryService = (params) => {
+    return request({
+        url: 'sk-api/user/ulog_count',
+        method: 'get',
+        params: params
+    })
+}
