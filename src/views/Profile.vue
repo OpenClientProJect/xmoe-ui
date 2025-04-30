@@ -40,7 +40,7 @@ const allMenuItems = [
   {id: 2, name: '我的积分', icon: 'Money', path: '/points', category: 'feature'},
   {id: 3, name: '留言求片', icon: 'Headset', path: '/request', category: 'feature'},
   {id: 4, name: '我的追剧', icon: 'Collection', path: '/favorites', category: 'feature'},
-  {id: 5, name: '个人设置', icon: 'Setting', path: '/settings/profile', category: 'setting'},
+  {id: 5, name: '个人详情', icon: 'Setting', path: '/settings/profile', category: 'setting'},
   {id: 6, name: '修改密码', icon: 'Lock', path: '/settings/password', category: 'setting'},
   {id: 7, name: '消息中心', icon: 'Bell', path: '/settings/messages', category: 'setting'},
   {id: 8, name: '清除缓存', icon: 'Delete', path: '/settings/clear-cache', category: 'setting'}
@@ -204,27 +204,6 @@ const handleMenuClick = (path) => {
   router.push(path)
 }
 
-// 添加选择头像方法
-const selectAvatar = async (avatarUrl) => {
-  if (!isLoggedIn.value || !userStore.info.user_id) return;
-
-  // 准备请求参数
-  const params = {
-    user_id: userStore.info.user_id,
-    user_portrait: avatarUrl,
-    user_nick_name: userInfo.value.username
-  };
-
-  // 调用API更新头像
-  await updateUserInfoService(params);
-  ElMessage.success('头像更新成功');
-
-  // 关闭抽屉
-  closeAvatarDrawer();
-  //  重新获取用户信息
-  await getUserInfo()
-};
-
 onMounted(() => {
   checkLoginStatus()
   getUserInfo()
@@ -236,13 +215,8 @@ onMounted(() => {
     <!-- 顶部用户信息区域 -->
     <div class="pt-10 pb-6 px-4 relative">
       <div class="flex items-center">
-        <div @click="handleAvatarClick" class="relative">
+        <div class="relative">
           <img :src="userInfo.avatar" class="w-20 h-20 rounded-full border-4 border-white shadow-sm" alt="avatar"/>
-          <!-- 添加半透明蒙版，覆盖头像下半部分 -->
-          <div
-              class="absolute bottom-0 left-0 w-full h-1/2 bg-black bg-opacity-5 backdrop-blur-[1px] rounded-b-full flex items-center justify-center cursor-pointer">
-            <span class="text-white text-xs">更换头像</span>
-          </div>
         </div>
         <div @click="handleAvatarClick" class="ml-4">
           <h2 class="text-xl font-bold text-gray-800">{{ userInfo.username }}</h2>
@@ -304,40 +278,6 @@ onMounted(() => {
       <button @click="logout" class="bg-red-500 text-white py-3 px-10 rounded-md text-center">
         退出登录
       </button>
-    </div>
-
-    <!-- 头像选择抽屉 - 重新实现，修复动画问题 -->
-    <div class="avatar-drawer-container" v-show="showAvatarDrawer">
-      <!-- 遮罩层 -->
-      <div class="fixed inset-0 bg-black bg-opacity-40 z-40"
-           @click="closeAvatarDrawer"
-           :class="{'animate-fade-in': showAvatarDrawer}"></div>
-
-      <!-- 抽屉内容 -->
-      <div class="fixed bottom-0 left-0 w-full bg-white rounded-t-xl z-50"
-           :class="{'animate-slide-up': showAvatarDrawer}">
-        <!-- 抽屉头部 -->
-        <div class="flex justify-between items-center px-4 py-3 border-b">
-          <h3 class="text-lg font-medium">选择头像</h3>
-          <button @click="closeAvatarDrawer" class="text-gray-500 h-8 w-8 flex items-center justify-center">
-            <span class="text-xl">×</span>
-          </button>
-        </div>
-
-        <!-- 头像列表 -->
-        <div class="p-4 grid grid-cols-3 gap-4">
-          <div v-for="(avatar, index) in avatarOptions" :key="index"
-               class="avatar-item flex justify-center">
-            <img :src="avatar"
-                 class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 hover:border-green-500 transition-all cursor-pointer animate-fade-in"
-                 :style="`animation-delay: ${100 + index * 50}ms`"
-                 @click="selectAvatar(avatar)"/>
-          </div>
-        </div>
-
-        <!-- 底部安全区域，用于iPhone X及以上机型 -->
-        <div class="h-8 bg-white safe-area-bottom"></div>
-      </div>
     </div>
   </div>
 </template>

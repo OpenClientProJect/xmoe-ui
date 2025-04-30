@@ -13,8 +13,7 @@ const userStore = useUserInfoStore()
 const userForm = reactive({
   username: '', // 用户名
   nickname: '', // 昵称
-  email: '',    // 邮箱
-  user_portrait: '',
+  user_portrait: '', // 头像
 })
 
 // 原始用户数据，用于比较是否有修改
@@ -24,6 +23,14 @@ const originalUserData = ref({})
 const loading = ref(false)
 // 提交状态
 const submitting = ref(false)
+// 显示头像选择抽屉
+const showAvatarDrawer = ref(false)
+
+// 头像选项
+const avatarOptions = [
+  'https://cloud.xmoe.app/227c8c7b-01.webp',
+  'https://cloud.xmoe.app/227c8c7b-02.webp'
+]
 
 // 回到个人中心
 const goBack = () => {
@@ -48,7 +55,6 @@ const getUserInfo = async () => {
       // 更新表单数据
       userForm.username = res.data.user_name || ''
       userForm.nickname = res.data.user_nick_name || ''
-      userForm.email = res.data.user_email || ''
       userForm.user_portrait = res.data.user_portrait || ''
 
       // 保存原始数据，用于比较是否有修改
@@ -83,16 +89,28 @@ const submitForm = async () => {
       user_nick_name: userForm.nickname,
       user_portrait: userForm.user_portrait
     }
-    await updateUserInfoService(params);
+    await updateUserInfoService(params)
     ElMessage.success('个人信息更新成功')
-
-  } catch (error) {
-    console.error('更新用户信息失败:', error)
   } finally {
     submitting.value = false
   }
 }
 
+// 打开头像选择抽屉
+const openAvatarDrawer = () => {
+  showAvatarDrawer.value = true
+}
+
+// 关闭头像选择抽屉
+const closeAvatarDrawer = () => {
+  showAvatarDrawer.value = false
+}
+
+// 选择头像
+const selectAvatar = (avatarUrl) => {
+  userForm.user_portrait = avatarUrl
+  closeAvatarDrawer()
+}
 
 onMounted(() => {
   getUserInfo()
@@ -100,20 +118,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="user-settings min-h-screen bg-green-500">
-    <!-- 顶部导航栏 - 微信绿色风格 -->
-    <div class="py-3 px-4 flex items-center sticky top-0 z-10 bg-green-500 text-white">
+  <div class="user-settings min-h-screen bg-white">
+    <!-- 顶部导航栏 -->
+    <div class="py-3 px-4 flex items-center sticky top-0 z-10 bg-white text-black border-b border-gray-100">
       <div @click="goBack" class="flex items-center">
         <el-icon :size="20">
           <ArrowLeft />
         </el-icon>
       </div>
-      <div class="flex-1 text-center text-xl font-normal">个人设置</div>
+      <div class="flex-1 text-center text-lg font-medium">个人详情</div>
       <div class="w-5"></div><!-- 占位，保持标题居中 -->
     </div>
     
     <!-- 主要内容区域 -->
-    <div class="bg-gray-100 min-h-screen pt-2">
+    <div class="bg-white min-h-screen">
       <div v-if="loading" class="text-center py-8">
         <el-icon class="is-loading" :size="24">
           <Loading />
@@ -122,57 +140,82 @@ onMounted(() => {
       </div>
       
       <template v-else>
-        <!-- 表单区域 - 模仿微信的设置项样式 -->
-        <div class="bg-white">
-          <!-- 邮箱 -->
-          <div class="px-4 py-4 flex items-center border-b border-gray-100">
-            <label class="text-gray-800 ">邮箱：</label>
-            <span class="text-gray-500">{{ userForm.email || "" }}</span>
-          </div>
-          
-          <!-- 用户名 -->
-          <div class="px-4 py-4 flex items-center border-b border-gray-100">
-            <label class="text-gray-800 ">用户名：</label>
-            <span class="text-gray-500">{{ userForm.username }}</span>
-          </div>
-          
-          <!-- 昵称 -->
-          <div class="px-4 py-4 border-b border-gray-100">
-            <div class="flex items-center">
-              <label class="text-gray-800 w-20">昵称</label>
-            </div>
-            <div >
-              <input 
-                v-model="userForm.nickname"
-                placeholder="设置昵称" 
-                class="border-none text-black font-bold focus:outline-none bg-transparent flex-1"
-              />
+        <!-- 头像区域 -->
+        <div class="flex flex-col items-center py-10">
+          <div class="relative group cursor-pointer" @click="openAvatarDrawer">
+            <img 
+              :src="userForm.user_portrait" 
+              class="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+              alt="用户头像"
+            />
+            <div class="absolute bottom-0 left-0 w-full h-1/2 bg-black bg-opacity-30 backdrop-blur-[1px] rounded-b-full flex items-center justify-center">
+              <span class="text-white text-xs flex items-center">
+                更换头像
+              </span>
             </div>
           </div>
         </div>
         
-        <!-- QQ号部分 - 独立部分 -->
-        <div class="bg-white mt-2">
-          <div class="px-4 py-4 flex items-center">
-            <label class="text-gray-800 w-20">QQ号</label>
+        <!-- 表单区域 -->
+        <div class="mt-10 flex justify-center mb-6">
+          <div class="relative mb-4 w-4/5">
             <input 
-              v-model="userForm.qq" 
-              placeholder="未设置" 
-              class="border-none text-gray-600 focus:outline-none bg-transparent flex-1"
+              v-model="userForm.nickname"
+              placeholder="输入为空时，不会修改原有昵称"
+              class="w-full p-3 px-5 bg-gray-100 rounded-full focus:outline-none text-[#f75f5f] text-center placeholder:text-gray-400 placeholder:text-sm text-sm"
             />
           </div>
         </div>
-
-        <!-- 确定按钮 - 绿色风格 -->
-        <div class="mt-8 px-4">
+        
+        <!-- 确定按钮 -->
+        <div class="mt-20 flex justify-center">
           <button 
             @click="submitForm" 
             :disabled="!hasChanged() || submitting"
-            class="w-full py-3 rounded-md text-white font-normal text-lg bg-green-500 disabled:bg-green-300">
-            确定
+            class="px-40 py-3 rounded-full text-white font-normal text-lg bg-[#ff6665] disabled:bg-[#ffb4b3]">
+            完成
           </button>
         </div>
       </template>
+    </div>
+    
+    <!-- 头像选择抽屉 -->
+    <div class="avatar-drawer-container" v-if="showAvatarDrawer">
+      <!-- 遮罩层 -->
+      <div 
+        class="fixed inset-0 bg-black bg-opacity-40 z-40 animate-fade-in" 
+        @click="closeAvatarDrawer"
+      ></div>
+      
+      <!-- 抽屉内容 -->
+      <div class="fixed bottom-0 left-0 w-full bg-white rounded-t-xl z-50 animate-slide-up">
+        <!-- 抽屉头部 -->
+        <div class="flex justify-between items-center px-4 py-3 border-b">
+          <h3 class="text-lg font-medium">选择头像</h3>
+          <button @click="closeAvatarDrawer" class="text-gray-500 h-8 w-8 flex items-center justify-center">
+            <span class="text-xl">×</span>
+          </button>
+        </div>
+        
+        <!-- 头像列表 -->
+        <div class="p-4 grid grid-cols-3 gap-4">
+          <div 
+            v-for="(avatar, index) in avatarOptions" 
+            :key="index"
+            class="avatar-item flex justify-center"
+          >
+            <img 
+              :src="avatar"
+              class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 hover:border-red-500 transition-all cursor-pointer animate-fade-in"
+              :style="`animation-delay: ${100 + index * 50}ms`"
+              @click="selectAvatar(avatar)"
+            />
+          </div>
+        </div>
+        
+        <!-- 底部安全区域 -->
+        <div class="h-8 bg-white safe-area-bottom"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -183,5 +226,49 @@ input {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+}
+
+/* 抽屉容器 */
+.avatar-drawer-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 40;
+}
+
+/* 动画定义 */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* 安全区域 - 用于iPhone X及以上机型底部黑条 */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
 }
 </style> 
