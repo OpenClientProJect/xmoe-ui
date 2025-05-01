@@ -46,7 +46,7 @@ const routes = [
   {
     path: '/video/:id',
     name: 'VideoDetail',
-    component: () => import('../views/VideoDetail.vue'),
+    component: () => import('../components/home/VideoDetail.vue'),
     meta: { showTabBar: true }
   },
   {

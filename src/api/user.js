@@ -78,3 +78,13 @@ export const sendCommentService = (params) => {
         data: params
     })
 }
+/**
+ * 催更
+ */
+export const sendRemindService = (params) => {
+    return request({
+        url: 'sk-api/user/leavemsg',
+        method: 'post',
+        data: params
+    })
+}
