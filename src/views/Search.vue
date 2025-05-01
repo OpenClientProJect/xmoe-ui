@@ -1,12 +1,13 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { searchService } from '@/api/video.js'
 import { getMenuListService } from '@/api/home/anime.js'
 import { handleImageUrl } from '@/utils/imageUtils'
 import { ElLoading } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
 const searchKeyword = ref('')
 const historySearches = ref(['海贼王', '间谍过家家', '名侦探柯南', '鬼灭之刃'])
 const isLoading = ref(false)
@@ -27,6 +28,22 @@ const hotSearches = [
   '五等分的花嫁',
   '鬼灭之刃 刀匠村篇'
 ]
+
+// 从路由获取搜索关键词
+const getSearchFromRoute = () => {
+  if (route.query.keyword) {
+    searchKeyword.value = route.query.keyword
+    handleSearch()
+  }
+}
+
+// 监听路由变化
+watch(() => route.query.keyword, (newKeyword) => {
+  if (newKeyword) {
+    searchKeyword.value = newKeyword
+    handleSearch()
+  }
+})
 
 // 获取顶部菜单
 const getMenuList = async () => {
@@ -80,13 +97,34 @@ const handleSearch = async () => {
     
     if (res.code === 200 && res.data) {
       // 处理API返回的数据
-      searchResults.value = res.data.map(item => ({
-        id: item.vod_id,
-        title: item.vod_name,
-        episode: item.vod_remarks || '更新中',
-        cover: handleImageUrl(item.vod_pic),
-        score: item.vod_score || '0'
-      }))
+      searchResults.value = res.data.map(item => {
+        // 提取内容中的纯文本
+        let content = ''
+        if (item.vod_content) {
+          // 移除HTML标签，获取纯文本
+          content = item.vod_content.replace(/<[^>]+>/g, '')
+          // 截取前100个字符
+          content = content.substring(0, 100) + (content.length > 100 ? '...' : '')
+        }
+        
+        return {
+          id: item.vod_id,
+          title: item.vod_name,
+          episode: item.vod_remarks || '更新中',
+          cover: handleImageUrl(item.vod_pic),
+          score: item.vod_score || '0',
+          area: item.vod_area || '',
+          year: item.vod_year || '',
+          tags: item.vod_class ? item.vod_class.split(',') : [],
+          hits: item.vod_hits || 0,
+          content: content
+        }
+      })
+      
+      // 更新URL，不刷新页面
+      router.push({
+        query: { ...route.query, keyword: searchKeyword.value }
+      }, { replace: true })
     } else {
       searchResults.value = []
       console.error('搜索失败:', res.message || '未知错误')
@@ -153,6 +191,8 @@ onMounted(async () => {
   loadSearchHistory()
   // 获取顶部菜单
   await getMenuList()
+  // 从路由获取搜索关键词
+  getSearchFromRoute()
 })
 </script>
 
@@ -163,6 +203,7 @@ onMounted(async () => {
       <el-icon class="back-icon" @click="goBack"><img src="@/assets/icon/return.svg"></el-icon>
       
       <div class="search-input-container">
+        <el-icon class="search-icon"><img src="@/assets/icon/search.svg" alt="search"></el-icon>
         <input
           v-model="searchKeyword"
           class="search-input"
@@ -208,9 +249,22 @@ onMounted(async () => {
               <span class="result-episode">{{ result.episode }}</span>
             </div>
             <div class="result-info">
-              <h4 class="result-title">{{ result.title }}</h4>
-              <div class="result-score" v-if="result.score">
-                <span class="score-value">{{ result.score }}</span>分
+              <div class="result-header">
+                <h4 class="result-title">{{ result.title }}</h4>
+                <div class="result-score" v-if="result.score">
+                  <span class="score-value">{{ result.score }}</span>分
+                </div>
+              </div>
+              <div class="result-meta">
+                <span class="result-year" v-if="result.year">{{ result.year }}</span>
+                <span class="result-area" v-if="result.area">{{ result.area }}</span>
+                <span class="result-hits" v-if="result.hits">{{ result.hits }}次播放</span>
+              </div>
+              <div class="result-tags" v-if="result.tags && result.tags.length">
+                <span class="result-tag" v-for="(tag, idx) in result.tags.slice(0, 3)" :key="idx">{{ tag }}</span>
+              </div>
+              <div class="result-content" v-if="result.content">
+                <p>{{ result.content }}</p>
               </div>
             </div>
           </div>
@@ -218,7 +272,7 @@ onMounted(async () => {
       </div>
       
       <!-- 未搜索时显示历史记录和热搜 -->
-      <div v-else>
+      <div v-else-if="!searchKeyword.trim()">
         <!-- 搜索历史 -->
         <div v-if="historySearches.length > 0" class="history-section">
           <div class="section-header">
@@ -254,6 +308,15 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+      
+      <!-- 搜索无结果时显示 -->
+      <div v-else class="no-result-container">
+        <div class="no-result-icon">
+          <el-icon><img src="@/assets/icon/search.svg" alt="search"></el-icon>
+        </div>
+        <div class="no-result-text">没有找到"{{ searchKeyword }}"相关内容</div>
+        <div class="no-result-tips">换个关键词试试吧</div>
+      </div>
     </div>
   </div>
 </template>
@@ -274,16 +337,15 @@ onMounted(async () => {
   width: 100%;
   z-index: 100;
   background-color: #fff;
-  padding: 8px 16px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   /* 硬件加速，减少抖动 */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   will-change: transform;
   backface-visibility: hidden;
-  border-bottom: 1px solid #f0f0f0;
 }
 
 .back-icon {
@@ -297,14 +359,15 @@ onMounted(async () => {
   align-items: center;
   background-color: #f3f4f6;
   border-radius: 999px;
-  padding: 6px 16px;
+  padding: 8px 16px;
   position: relative;
 }
 
 .search-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   margin-right: 8px;
+  color: #9ca3af;
 }
 
 .search-input {
@@ -313,6 +376,7 @@ onMounted(async () => {
   border: none;
   outline: none;
   font-size: 14px;
+  color: #374151;
 }
 
 .clear-icon {
@@ -324,6 +388,7 @@ onMounted(async () => {
   margin-left: 12px;
   font-size: 14px;
   color: #dc2626;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -348,6 +413,8 @@ onMounted(async () => {
   padding: 0 16px;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
+  height: 44px;
+  align-items: center;
 }
 
 .menu-tabs::-webkit-scrollbar {
@@ -355,12 +422,13 @@ onMounted(async () => {
 }
 
 .menu-tab {
-  padding: 12px 16px;
+  padding: 8px 16px;
   font-size: 14px;
   color: #6b7280;
   cursor: pointer;
   position: relative;
   flex-shrink: 0;
+  transition: color 0.3s;
 }
 
 .active-menu {
@@ -371,9 +439,10 @@ onMounted(async () => {
 .active-menu::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 16px;
-  right: 16px;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
   height: 2px;
   background-color: #dc2626;
   border-radius: 2px;
@@ -384,15 +453,18 @@ onMounted(async () => {
   padding-top: 110px; /* 搜索头部 + 菜单高度 + 额外空间 */
   padding-left: 16px;
   padding-right: 16px;
-  padding-bottom: 16px;
+  padding-bottom: 24px;
+  background-color: #fafafa;
+  min-height: calc(100vh - 110px);
 }
 
 /* 区域标题样式 */
 .section-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 16px;
-  color: #374151;
+  color: #333;
+  padding-top: 16px;
 }
 
 /* 搜索历史样式 */
@@ -404,27 +476,33 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .clear-history {
   color: #9ca3af;
   cursor: pointer;
+  font-size: 14px;
 }
 
 .history-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .history-tag {
-  padding: 6px 12px;
+  padding: 8px 16px;
   background-color: #f3f4f6;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 13px;
   color: #4b5563;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.history-tag:hover {
+  background-color: #e5e7eb;
 }
 
 /* 热门搜索样式 */
@@ -432,13 +510,15 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+  margin-bottom: 20px;
 }
 
 .hot-search-item {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
 }
 
 .hot-rank {
@@ -450,10 +530,12 @@ onMounted(async () => {
   margin-right: 12px;
   color: #9ca3af;
   font-weight: 500;
+  font-size: 16px;
 }
 
 .top-rank {
   color: #dc2626;
+  font-weight: 600;
 }
 
 .hot-title {
@@ -462,6 +544,7 @@ onMounted(async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
 /* 搜索结果样式 */
@@ -469,22 +552,34 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin-bottom: 20px;
 }
 
 .search-result-item {
   display: flex;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f3f4f6;
   cursor: pointer;
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 4px;
+}
+
+.search-result-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .result-cover {
-  width: 120px;
-  height: 80px;
-  border-radius: 4px;
-  overflow: hidden;
+  width: 140px;
+  height: 186px;
   position: relative;
+  overflow: hidden;
+  border-radius: 8px;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .result-cover img {
@@ -496,39 +591,115 @@ onMounted(async () => {
 .result-episode {
   position: absolute;
   bottom: 0;
-  left: 0;
   right: 0;
   background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
   color: white;
   font-size: 12px;
   padding: 4px 8px;
   text-align: right;
+  width: 100%;
 }
 
 .result-info {
-  margin-left: 12px;
+  padding: 0 0 0 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
 .result-title {
-  font-size: 15px;
-  margin: 0 0 8px;
+  font-size: 18px;
+  margin: 0 0 10px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.3;
+  line-height: 1.4;
+  color: #333;
+  font-weight: 600;
+}
+
+.result-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.result-tags {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.result-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  color: #6b7280;
+  display: inline-block;
+  margin-right: 4px;
+  margin-bottom: 4px;
 }
 
 .result-score {
   font-size: 13px;
   color: #6b7280;
+  background-color: #f9f9f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 .score-value {
   color: #dc2626;
+  font-weight: 600;
+}
+
+.result-content {
+  font-size: 13px;
+  color: #6b7280;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  margin-top: auto;
+}
+
+/* 无搜索结果样式 */
+.no-result-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.no-result-icon {
+  font-size: 48px;
+  color: #d1d5db;
+  margin-bottom: 16px;
+}
+
+.no-result-text {
+  font-size: 16px;
+  color: #374151;
+  margin-bottom: 8px;
   font-weight: 500;
 }
-</style> 
+
+.no-result-tips {
+  font-size: 14px;
+  color: #9ca3af;
+}
+</style>

@@ -893,7 +893,7 @@ onMounted(async () => {
     <div class="detail-drawer-container" v-show="showDetailDrawer" @click.self="closeDetailDrawer">
       <div class="detail-drawer" :class="{ 'open': showDetailDrawer }">
         <div class="drawer-header">
-          <h2>{{ videoInfo.title }}</h2>
+          <h2 class="drawer-title">{{ videoInfo.title }}</h2>
           <div class="close-btn" @click="closeDetailDrawer">×</div>
         </div>
         
@@ -1723,6 +1723,9 @@ onMounted(async () => {
   overflow-y: auto;
   transition: bottom 0.3s ease;
   z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .detail-drawer.open {
@@ -1736,6 +1739,15 @@ onMounted(async () => {
   margin-bottom: 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.drawer-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+  max-width: 85%;
 }
 
 .drawer-header h2 {
@@ -1813,7 +1825,7 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 3; /* 限制为3行 */
+  -webkit-line-clamp: 2; /* 限制为2行 */
   -webkit-box-orient: vertical;
 }
 
