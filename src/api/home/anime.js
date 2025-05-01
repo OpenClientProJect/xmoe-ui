@@ -55,3 +55,10 @@ export const getSubMenuListService = (typeId) => {
         }
     })
 }
+//消息中心
+export const getMessageListService = () => {
+    return request({
+        url: 'sk-api/topic/art_list',
+        method: 'get',
+    })
+}

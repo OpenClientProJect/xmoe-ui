@@ -78,6 +78,12 @@ const routes = [
     name: 'VIP',
     component: () => import('../views/Vip.vue'),
     meta: { showTabBar: true }
+  },
+  {
+    path: '/settings/messages',
+    name: 'Messages',
+    component: () => import('../views/Messages.vue'),
+    meta: { showTabBar: true }
   }
 ]
 

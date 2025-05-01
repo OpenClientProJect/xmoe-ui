@@ -15,8 +15,8 @@ import HeaderNav from '@/components/home/common/HeaderNav.vue'
 import VideoPlayer from '@/components/player/VideoPlayer.vue'
 // 导入相关推荐组件
 import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
-import {getCommentsService} from "@/api/comments.js";
-import {addHistoryService, isFollowService, sendCommentService, sendRemindService} from "@/api/user.js";
+import {getCommentsService, sendCommentService} from "@/api/comments.js";
+import {addHistoryService, isFollowService, sendRemindService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 
 const router = useRouter()

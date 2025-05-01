@@ -69,16 +69,6 @@ export const isFollowService = (params) => {
     })
 }
 /**
- * 发送评论
- */
-export const sendCommentService = (params) => {
-    return request({
-        url: 'sk-api/vod/post_pinglun',
-        method: 'post',
-        data: params
-    })
-}
-/**
  * 催更
  */
 export const sendRemindService = (params) => {

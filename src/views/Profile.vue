@@ -6,6 +6,7 @@ import localLoginImg from '../assets/image/localhlogin.jpg'
 import {getHistoryService, getUserInfoService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 import {ElMessage} from 'element-plus'
+import { Bell } from '@element-plus/icons-vue'
 
 const userStore = useUserInfoStore()
 const router = useRouter()
@@ -53,7 +54,6 @@ const userStats = ref({
 const allMenuItems = [
   {id: 1, name: '会员中心', icon: 'Medal', path: '/vip', category: 'feature'},
   {id: 2, name: '我的积分', icon: 'Money', path: '/points', category: 'feature'},
-  {id: 3, name: '留言求片', icon: 'Headset', path: '/request', category: 'feature'},
   {
     id: 4, 
     name: '我的追剧', 
@@ -65,7 +65,6 @@ const allMenuItems = [
   {id: 5, name: '个人详情', icon: 'Setting', path: '/settings/profile', category: 'setting'},
   {id: 6, name: '修改密码', icon: 'Lock', path: '/settings/password', category: 'setting'},
   {id: 7, name: '消息中心', icon: 'Bell', path: '/settings/messages', category: 'setting'},
-  {id: 8, name: '清除缓存', icon: 'Delete', path: '/settings/clear-cache', category: 'setting'}
 ]
 
 // 过滤出功能菜单项

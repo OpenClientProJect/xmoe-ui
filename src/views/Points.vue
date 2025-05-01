@@ -100,12 +100,7 @@ const formatDate = (timestamp) => {
 
 // 返回上一页
 const goBack = () => {
-  router.back()
-}
-
-// 前往会员中心
-const goToVip = () => {
-  router.push('/vip')
+  router.push('/profile')
 }
 
 // 组件挂载时获取数据
@@ -202,69 +197,6 @@ onMounted(() => {
 
 .header-right {
   width: 40px;
-}
-
-/* 积分卡片 */
-.points-card {
-  margin: 16px;
-  padding: 16px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.points-card-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 8px;
-}
-
-.points-card-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #10b981;
-}
-
-.points-card-subtitle {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-/* 前往会员中心按钮 */
-.vip-entry-container {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.vip-entry-button {
-  padding: 12px 24px;
-  background-color: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.vip-entry-button:hover {
-  background-color: #c21f1f;
-}
-
-/* 积分记录标题 */
-.points-records-header {
-  margin: 16px;
-  padding: 16px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.records-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
 }
 
 /* 积分记录列表 */
