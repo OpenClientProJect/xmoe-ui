@@ -168,10 +168,10 @@ const scheduleContainerRef = ref(null)
 // 滚动排期表内容
 const scrollSchedule = (direction) => {
   if (!scheduleContainerRef.value) return
-  
+
   const container = scheduleContainerRef.value
   const scrollAmount = container.clientWidth * 0.8 // 滚动80%的容器宽度
-  
+
   if (direction === 'left') {
     container.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
   } else {
@@ -191,7 +191,7 @@ const scrollSchedule = (direction) => {
 
         <!-- 快捷分类 -->
         <div class="category-buttons mx-4 my-4">
-          <div class="category-btn category-btn-blue">
+          <div  class="category-btn category-btn-blue">
             <span>全部</span>
           </div>
           <div class="category-btn category-btn-pink">

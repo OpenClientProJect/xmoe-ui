@@ -29,7 +29,7 @@ const getUserPointsRecord = async () => {
   // 检查用户是否登录
   if (!userStore.info || !userStore.info.user_id) {
     ElMessage.warning('请先登录')
-    await router.push('/login')
+    router.push('/login')
     return
   }
   
@@ -37,30 +37,32 @@ const getUserPointsRecord = async () => {
     loading.value = true
     const res = await getUserScoreService(userStore.info.user_id)
     
-    if (res && res.data) {
+    if (res && res.code === 200 && res.data) {
       console.log('获取到的积分记录:', res.data)
       
-      // 设置总积分
-      pointsData.value.total = res.data.total || 0
-      
       // 处理积分记录
-      if (res.data.records && Array.isArray(res.data.records)) {
-        const processedRecords = res.data.records.map(record => ({
-          id: record.id,
-          type: record.type, // 积分类型
-          points: record.points || 0, // 积分数量
-          description: record.description || '', // 积分描述
-          time: formatDate(record.time), // 时间
-          isPositive: record.card_pwd === 'use_points_1', // 根据card_pwd判断是充值还是消费
-          isConsumption: record.card_pwd === 'use_points_8', // 是否为消费
-          transactionType: record.card_pwd === 'use_points_1' ? '充值' : '消费',
-          card_pwd: record.card_pwd // 原始类型值
-        }))
+      if (Array.isArray(res.data)) {
+        // 计算总积分
+        let total = 0
+        res.data.forEach(record => {
+          if (record.card_pwd === 'use_points_1') {
+            total += record.card_points
+          } else if (record.card_pwd === 'use_points_8') {
+            total -= record.card_points
+          }
+        })
+        pointsData.value.total = total
         
-        // 保存原始记录数据
-        originalRecords.value = processedRecords
-        // 设置当前显示的记录
-        pointsData.value.records = processedRecords
+        // 处理记录
+        pointsData.value.records = res.data.map(record => ({
+          id: record.card_id || Math.random().toString(36).substring(2, 10),
+          points: record.card_points || 0,
+          description: getDescriptionByType(record.card_pwd),
+          time: formatDate(record.card_use_time || record.card_add_time),
+          isPositive: record.card_pwd === 'use_points_1',
+          isConsumption: record.card_pwd === 'use_points_8',
+          card_pwd: record.card_pwd
+        }))
       }
     }
   } catch (error) {
@@ -68,6 +70,18 @@ const getUserPointsRecord = async () => {
     ElMessage.error('获取积分记录失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 根据记录类型获取描述
+const getDescriptionByType = (type) => {
+  switch (type) {
+    case 'use_points_1':
+      return '积分充值'
+    case 'use_points_8':
+      return '积分消费'
+    default:
+      return '积分变动'
   }
 }
 
@@ -87,6 +101,11 @@ const formatDate = (timestamp) => {
 // 返回上一页
 const goBack = () => {
   router.back()
+}
+
+// 前往会员中心
+const goToVip = () => {
+  router.push('/vip')
 }
 
 // 组件挂载时获取数据
@@ -134,9 +153,7 @@ onMounted(() => {
         <div class="record-left">
           <div class="record-title-row">
             <div class="record-title">{{ record.description }}</div>
-            <div class="record-tag" :class="{'tag-positive': record.isPositive, 'tag-negative': record.isConsumption}">
-              {{ record.transactionType }}
-            </div>
+
           </div>
           <div class="record-time">{{ record.time }}</div>
         </div>
@@ -187,7 +204,68 @@ onMounted(() => {
   width: 40px;
 }
 
+/* 积分卡片 */
+.points-card {
+  margin: 16px;
+  padding: 16px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
 
+.points-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.points-card-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.points-card-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* 前往会员中心按钮 */
+.vip-entry-container {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.vip-entry-button {
+  padding: 12px 24px;
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.vip-entry-button:hover {
+  background-color: #c21f1f;
+}
+
+/* 积分记录标题 */
+.points-records-header {
+  margin: 16px;
+  padding: 16px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.records-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
 
 /* 积分记录列表 */
 .points-records-list {

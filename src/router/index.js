@@ -72,6 +72,12 @@ const routes = [
     name: 'Points',
     component: () => import('../views/Points.vue'),
     meta: { showTabBar: true }
+  },
+  {
+    path: '/vip',
+    name: 'VIP',
+    component: () => import('../views/Vip.vue'),
+    meta: { showTabBar: true }
   }
 ]
 
