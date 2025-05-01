@@ -5,9 +5,9 @@ import {useRouter} from 'vue-router'
 import 'swiper/css'
 import 'swiper/css/pagination'
 // 导入番剧列表组件
-import AnimeList from '@/components/home/DramaList.vue'
+import AnimeList from '@/views/home/DramaList.vue'
 // 导入轮播图组件
-import BannerCarousel from '@/components/home/BannerCarousel.vue'
+import BannerCarousel from '@/views/home/BannerCarousel.vue'
 import {getBannerListService, getDramaListService, getDramaScheduleService} from "@/api/home/anime.js";
 
 const router = useRouter()

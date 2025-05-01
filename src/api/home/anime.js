@@ -62,3 +62,40 @@ export const getMessageListService = () => {
         method: 'get',
     })
 }
+//搜索
+export const searchService = (params) => {
+    // 处理参数：支持字符串或对象形式的参数
+    let keyword, typeId;
+
+    if (typeof params === 'string') {
+        keyword = params;
+        typeId = -1; // 默认值
+    } else {
+        keyword = params.keyword;
+        typeId = params.typeId !== undefined ? params.typeId : -1;
+    }
+
+    return request({
+        url: "/sk-api/search/pages",
+        method: "get",
+        params: {
+            keyword: keyword,
+            page: 1,
+            limit: 10,
+            typeId: typeId,
+        },
+    });
+};
+
+//获取留言求片
+export const getMessageService = (user_id) => {
+    return request.get('sk-api/user/getleavemsg?user_id=' + user_id )
+}
+//发送留言
+export const sendMessageService = (params) => {
+    return request({
+        url: 'sk-api/user/leavemsg',
+        method: 'post',
+        data: params
+    })
+}

@@ -1,7 +1,7 @@
 <script setup>
 import {ref, reactive, onUnmounted} from 'vue'
 import {useRouter} from 'vue-router'
-import localLoginImg from '../assets/image/login.jpg'
+import localLoginImg from '../../assets/image/login.jpg'
 import {registerService, sendCodeService, loginService} from "@/api/login.js";
 import {ElMessage} from 'element-plus'
 import useUserInfoStore from '@/stores/userstores.js'

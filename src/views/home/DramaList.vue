@@ -3,7 +3,7 @@ import {computed, onMounted, ref, watch} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import {getDramaListService} from "@/api/Drama.js";
 import {getSubMenuListService} from "@/api/home/anime.js";
-import {handleImageUrl} from '@/utils/imageUtils';
+import {handleImageUrl} from '@/utils/imageUtils.js';
 
 const emit = defineEmits(['tab-change'])
 

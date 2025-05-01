@@ -6,7 +6,7 @@ import localLoginImg from '../assets/image/localhlogin.jpg'
 import {getHistoryService, getUserInfoService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 import {ElMessage} from 'element-plus'
-import { Bell } from '@element-plus/icons-vue'
+import {Bell} from '@element-plus/icons-vue'
 
 const userStore = useUserInfoStore()
 const router = useRouter()
@@ -22,25 +22,25 @@ const historys = ref({
 // 用户信息
 const userInfo = ref({
   username: '登录/注册',
-  avatar: isLoggedIn.value ? 'https://avatars.githubusercontent.com/u/156616301?v=4' : localLoginImg,
+  avatar: isLoggedIn.value ? localLoginImg : localLoginImg,
   coins: 0
 })
 
 //获取追番
 const getUserFavorites = async () => {
-  const res= await getHistoryService({
+  const res = await getHistoryService({
     user_id: userStore.info.user_id,
     ulog_type: 2
   })
-  historys.value.favorites  = res.data
+  historys.value.favorites = res.data
 }
 //获取追番
 const getUserHistory = async () => {
-  const res= await getHistoryService({
+  const res = await getHistoryService({
     user_id: userStore.info.user_id,
     ulog_type: 4
   })
-  historys.value.history  = res.data
+  historys.value.history = res.data
 }
 
 // 用户统计数据
@@ -55,27 +55,19 @@ const allMenuItems = [
   {id: 1, name: '会员中心', icon: 'Medal', path: '/vip', category: 'feature'},
   {id: 2, name: '我的积分', icon: 'Money', path: '/points', category: 'feature'},
   {
-    id: 4, 
-    name: '我的追剧', 
-    icon: 'Collection', 
-    path: '/favorites', 
+    id: 4,
+    name: '我的追剧',
+    icon: 'Collection',
+    path: '/favorites',
     category: 'feature',
     handler: () => goToUserHistory('collect')
   },
   {id: 5, name: '个人详情', icon: 'Setting', path: '/settings/profile', category: 'setting'},
   {id: 6, name: '修改密码', icon: 'Lock', path: '/settings/password', category: 'setting'},
-  {id: 7, name: '消息中心', icon: 'Bell', path: '/settings/messages', category: 'setting'},
+  {id: 7, name: '消息中心', icon: 'Message', path: '/settings/messages', category: 'setting'},
+  {id: 8, name: '留言求片', icon: 'ChatRound', path: '/feedback', category: 'setting'},
 ]
 
-// 过滤出功能菜单项
-const getFeatureMenuItems = computed(() => {
-  return allMenuItems.filter(item => item.category === 'feature')
-})
-
-// 过滤出设置菜单项
-const getSettingMenuItems = computed(() => {
-  return allMenuItems.filter(item => item.category === 'setting')
-})
 
 // 跳转到登录页面
 const goToLogin = () => {
@@ -212,7 +204,7 @@ const handleMenuClick = (item) => {
     item.handler()
     return
   }
-  
+
   // 否则使用path进行导航
   router.push(item.path)
 }
@@ -224,11 +216,11 @@ const goToUserHistory = (tab) => {
     ElMessage.warning('请先登录');
     return;
   }
-  
+
   // 跳转到用户历史记录页面，并传入用户ID和默认激活的标签
   router.push({
     path: `/history/${userStore.info.user_id}`,
-    query: { tab }
+    query: {tab}
   });
 }
 
@@ -246,17 +238,17 @@ onMounted(() => {
     <div class="pt-10 pb-6 px-4 relative">
       <div class="flex items-center">
         <div class="relative">
-          <img 
-            :src="userInfo.avatar" 
-            class="w-20 h-20 rounded-full border-4 border-white shadow-sm cursor-pointer" 
-            alt="avatar"
-            @click="!isLoggedIn && goToLogin()"
+          <img
+              :src="userInfo.avatar"
+              class="w-20 h-20 rounded-full border-4 border-white shadow-sm cursor-pointer"
+              alt="avatar"
+              @click="!isLoggedIn && goToLogin()"
           />
         </div>
         <div class="ml-4">
-          <h2 
-            class="text-xl font-bold text-gray-800 cursor-pointer"
-            @click="!isLoggedIn && goToLogin()"
+          <h2
+              class="text-xl font-bold text-gray-800 cursor-pointer"
+              @click="!isLoggedIn && goToLogin()"
           >
             {{ userInfo.username }}
           </h2>
@@ -267,16 +259,16 @@ onMounted(() => {
 
     <!-- 用户统计信息 -->
     <div class="bg-white flex justify-between p-5 text-center">
-      <div 
-        class="flex-1 cursor-pointer"
-        @click="isLoggedIn ? goToUserHistory('history') : goToLogin()"
+      <div
+          class="flex-1 cursor-pointer"
+          @click="isLoggedIn ? goToUserHistory('history') : goToLogin()"
       >
         <div class="text-lg font-bold">{{ historys.history }}</div>
         <div class="text-gray-500 text-sm">播放记录</div>
       </div>
-      <div 
-        class="flex-1 cursor-pointer" 
-        @click="isLoggedIn ? goToUserHistory('collect') : goToLogin()"
+      <div
+          class="flex-1 cursor-pointer"
+          @click="isLoggedIn ? goToUserHistory('collect') : goToLogin()"
       >
         <div class="text-lg font-bold">{{ historys.favorites }}</div>
         <div class="text-gray-500 text-sm">我的追剧</div>
@@ -306,11 +298,11 @@ onMounted(() => {
     <!-- 合并后的菜单区域 -->
     <div class="bg-white rounded-md mx-3 mt-3 p-3">
       <div class="grid grid-cols-6 gap-2 flex-wrap sm:grid-cols-5 xs:grid-cols-4">
-        <div 
-          v-for="item in allMenuItems" 
-          :key="item.id"
-          class="flex flex-col items-center mb-3"
-          @click="isLoggedIn ? handleMenuClick(item) : goToLogin()"
+        <div
+            v-for="item in allMenuItems"
+            :key="item.id"
+            class="flex flex-col items-center mb-3"
+            @click="isLoggedIn ? handleMenuClick(item) : goToLogin()"
         >
           <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
             <el-icon :size="20" class="text-gray-600">

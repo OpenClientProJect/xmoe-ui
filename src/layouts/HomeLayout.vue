@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import HeaderNav from "@/components/home/common/HeaderNav.vue";
+import HeaderNav from "@/views/home/common/HeaderNav.vue";
 import TabBar from "@/components/TabBar.vue";
 
 // 当前激活的标签

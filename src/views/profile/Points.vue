@@ -15,12 +15,6 @@ const pointsData = ref({
   records: []
 })
 
-// 原始记录数据
-const originalRecords = ref([])
-
-// 记录类型筛选
-const currentFilter = ref('all') // 'all', 'recharge', 'consume'
-
 // 加载状态
 const loading = ref(false)
 

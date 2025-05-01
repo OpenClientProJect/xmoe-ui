@@ -201,7 +201,7 @@ const getFormattedDuration = (duration) => {
           <div class="desktop-item-container">
             <div class="cover-container">
               <img
-                  src="@/assets/gif/loading.gif"
+                  src="../../assets/gif/loading.gif"
                   alt="封面"
                   class="cover-img animated"
               >
@@ -221,7 +221,7 @@ const getFormattedDuration = (duration) => {
              @click="goToVideoDetail(item.id)">
           <div class="cover-wrapper">
             <img
-                src="@/assets/gif/loading.gif"
+                src="../../assets/gif/loading.gif"
                 alt="封面"
                 class="cover-img"
             >
@@ -244,7 +244,7 @@ const getFormattedDuration = (duration) => {
           <div class="desktop-item-container">
             <div class="cover-container">
               <img
-                  src="@/assets/gif/loading.gif"
+                  src="../../assets/gif/loading.gif"
                   alt="封面"
                   class="cover-img animated"
               >
@@ -264,7 +264,7 @@ const getFormattedDuration = (duration) => {
              @click="goToVideoDetail(item.id)">
           <div class="cover-wrapper">
             <img
-                src="@/assets/gif/loading.gif"
+                src="../../assets/gif/loading.gif"
                 alt="封面"
                 class="cover-img"
             >

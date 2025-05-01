@@ -1,8 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { searchService } from '@/api/video.js'
-import { getMenuListService } from '@/api/home/anime.js'
+import {getMenuListService, searchService} from '@/api/home/anime.js'
 import { handleImageUrl } from '@/utils/imageUtils'
 import { ElLoading } from 'element-plus'
 

@@ -14,13 +14,13 @@ const routes = [
       {
         path: 'anime',
         name: 'Anime',
-        component: () => import('../components/home/DramaList.vue'),
+        component: () => import('../views/home/DramaList.vue'),
         meta: { showTabBar: true }
       },
       {
         path: 'movie',
         name: 'Movie',
-        component: () => import('../components/home/Movie.vue'),
+        component: () => import('../views/home/Movie.vue'),
         meta: { showTabBar: true }
       },
       {
@@ -40,13 +40,13 @@ const routes = [
   {
     path: '/settings/profile',
     name: 'UserSettings',
-    component: () => import('../views/UserSettings.vue'),
+    component: () => import('../views/profile/UserSettings.vue'),
     meta: { showTabBar: true }
   },
   {
     path: '/video/:id',
     name: 'VideoDetail',
-    component: () => import('../components/home/VideoDetail.vue'),
+    component: () => import('../views/home/VideoDetail.vue'),
     meta: { showTabBar: true }
   },
   {
@@ -58,31 +58,43 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue'),
+    component: () => import('../views/profile/Login.vue'),
     meta: { showTabBar: true }
   },
   {
     path: '/history/:userId',
     name: 'UserHistory',
-    component: () => import('../views/UserHistory.vue'),
+    component: () => import('../views/profile/UserHistory.vue'),
     meta: { showTabBar: true }
   },
   {
     path: '/points',
     name: 'Points',
-    component: () => import('../views/Points.vue'),
+    component: () => import('../views/profile/Points.vue'),
     meta: { showTabBar: true }
   },
   {
     path: '/vip',
     name: 'VIP',
-    component: () => import('../views/Vip.vue'),
+    component: () => import('../views/profile/Vip.vue'),
     meta: { showTabBar: true }
   },
   {
     path: '/settings/messages',
     name: 'Messages',
-    component: () => import('../views/Messages.vue'),
+    component: () => import('../views/profile/Messages.vue'),
+    meta: { showTabBar: true }
+  },
+  {
+    path: '/feedback',
+    name: 'Feedback',
+    component: () => import('../views/profile/Feedback.vue'),
+    meta: { showTabBar: true }
+  },
+  {
+    path: '/settings/password',
+    name: 'ChangePassword',
+    component: () => import('../views/profile/ChangePassword.vue'),
     meta: { showTabBar: true }
   }
 ]

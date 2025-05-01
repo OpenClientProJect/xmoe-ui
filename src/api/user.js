@@ -88,3 +88,14 @@ export const getUserScoreService = (user_id) => {
         params: { user_id }
     })
 }
+
+/**
+ * 修改密码
+ */
+export const updatePasswordService = (params) => {
+    return request({
+        url: 'sk-api/user/user_pwd',
+        method: 'post',
+        data: params
+    })
+}

@@ -10,7 +10,7 @@ import Collection from '@/assets/icon/collection.svg'
 import Ringtones from '@/assets/icon/ringtones.svg'
 import Loading from '@/assets/gif/loading.gif'
 // 导入顶部导航栏组件
-import HeaderNav from '@/components/home/common/HeaderNav.vue'
+import HeaderNav from '@/views/home/common/HeaderNav.vue'
 // 导入播放器组件
 import VideoPlayer from '@/components/player/VideoPlayer.vue'
 // 导入相关推荐组件
