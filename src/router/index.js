@@ -20,7 +20,7 @@ const routes = [
       {
         path: 'movie',
         name: 'Movie',
-        component: () => import('../views/Movie.vue'),
+        component: () => import('../components/home/Movie.vue'),
         meta: { showTabBar: true }
       },
       {
