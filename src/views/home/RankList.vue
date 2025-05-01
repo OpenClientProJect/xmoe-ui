@@ -286,7 +286,7 @@ onMounted(() => {
       <!-- 待添加专区排行榜 -->
       <div class="rank-section">
         <div class="rank-header">
-          <h2 class="rank-title">当季新番</h2>
+          <h2 class="rank-title">待添加</h2>
         </div>
         
         <!-- 加载提示 -->

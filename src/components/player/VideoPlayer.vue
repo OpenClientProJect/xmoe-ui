@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import Artplayer from 'artplayer'
+import artplayerPluginDanmuku from 'artplayer-plugin-danmuku'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
@@ -46,6 +46,11 @@ const props = defineProps({
   showSidebar: {
     type: Boolean,
     default: true
+  },
+  // 弹幕数据
+  danmaku: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -135,6 +140,25 @@ const initPlayer = (url) => {
       artRefHeight: artRef.value.offsetHeight
     })
 
+    // 弹幕插件配置
+    const danmukuOptions = {
+      danmuku: props.danmaku || [],
+      speed: 5, // 弹幕速度
+      opacity: 1, // 弹幕透明度
+      fontSize: 25, // 弹幕字体大小
+      color: '#FFFFFF', // 弹幕默认颜色
+      mode: 0, // 弹幕默认模式 0-滚动 1-顶部 2-底部
+      margin: [10, 100], // 弹幕上下边距
+      antiOverlap: true, // 防重叠
+      useWorker: true, // 使用 web worker
+      synchronousPlayback: true, // 同步播放
+      lockTime: 5, // 输入框锁定时间
+      maxLength: 100, // 输入框最大长度
+      minWidth: 200, // 输入框最小宽度
+      maxWidth: 400, // 输入框最大宽度
+      theme: '#DC2626' // 输入框主题色
+    }
+
     // 播放器配置 - 优化性能
     const options = {
       container: artRef.value,
@@ -165,6 +189,9 @@ const initPlayer = (url) => {
       airplay: true,
       theme: '#dc2626',
       lang: 'zh-cn',
+      plugins: [
+        artplayerPluginDanmuku(danmukuOptions)
+      ],
       icons: {
         loading: `<img src="${Loading}" alt="加载中" style="width: 60px; height: 70px;">`,
       },
@@ -203,11 +230,9 @@ const initPlayer = (url) => {
               if (data.fatal) {
                 switch(data.type) {
                   case window.Hls.ErrorTypes.NETWORK_ERROR:
-                    console.log('HLS网络错误，尝试恢复')
                     hls.startLoad()
                     break
                   case window.Hls.ErrorTypes.MEDIA_ERROR:
-                    console.log('HLS媒体错误，尝试恢复')
                     hls.recoverMediaError()
                     break
                   default:
@@ -220,7 +245,6 @@ const initPlayer = (url) => {
 
             // 添加成功事件
             hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
-              console.log('HLS清单解析完成，开始播放')
               video.play().catch(e => {
                 console.error('自动播放失败:', e)
               })

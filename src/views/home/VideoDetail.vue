@@ -18,6 +18,7 @@ import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
 import {getCommentsService, sendCommentService} from "@/api/comments.js";
 import {addHistoryService, isFollowService, sendRemindService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
+import {getDanmakuService} from "@/api/danmaku.js";
 
 const router = useRouter()
 const route = useRoute()
@@ -130,7 +131,7 @@ const handlePlayerTimeUpdate = (currentTime) => {
 
 // 播放视频
 const playVideo = async (episodeId) => {
-
+  console.log("剧集id" + episodeId)
   const episode = episodes.value.find(ep => ep.id === episodeId)
   if (!episode) {
     console.error('找不到剧集信息')
@@ -156,10 +157,12 @@ const playVideo = async (episodeId) => {
   episode.watched = true
 
   // 添加到播放记录
-  addPlayHistory()
+  await addPlayHistory()
 
   // 调用API获取视频地址 - 不再需要传递videoInfo.value.id参数
   const res = await getVideoUrlService(episode.sourceId)
+
+  const danmaku = await getDanmakuService(episode.sourceId)
 
   console.log('获取到视频地址:', res.data)
 
@@ -221,7 +224,7 @@ const isFollowing = ref(false)
 
 const checkIsFollowing = async () => {
   const res = await isFollowService({
-    user_id:  userStore.info.user_id,
+    user_id: userStore.info.user_id,
     ulog_rid: videoInfo.value.id,
     ulog_type: 4
   })
@@ -340,7 +343,7 @@ const goToVideoDetail = (id) => {
   }
 
   console.log('跳转到视频详情页,ID:', id)
-  
+
   // 停止当前视频播放
   if (playerRef.value) {
     try {
@@ -407,6 +410,7 @@ const getVideoDetail = async () => {
 
       // 如果有播放地址，处理剧集信息
       if (data.vod_play_url) {
+
         // 处理所有线路的剧集数据
         const playUrls = data.vod_play_url.split('$$$')
 
@@ -568,11 +572,11 @@ const addPlayHistory = async () => {
     console.log('用户未登录，不添加播放记录');
     return;
   }
-    await addHistoryService({
-      user_id: userStore.info.user_id,
-      ulog_type: 4,
-      ulog_rid: videoId,
-    });
+  await addHistoryService({
+    user_id: userStore.info.user_id,
+    ulog_type: 4,
+    ulog_rid: videoId,
+  });
 }
 
 // 添加侧边栏显示控制状态
@@ -624,13 +628,13 @@ const sendComment = async () => {
     ElMessage.warning('请先登录');
     return;
   }
-  
+
   // 检查评论内容是否为空
   if (!comment.value.trim()) {
     ElMessage.warning('评论内容不能为空');
     return;
   }
-  
+
   try {
     const params = {
       user_id: userStore.info.user_id,
@@ -643,18 +647,18 @@ const sendComment = async () => {
       comment_pid: replyMode.value ? replyTo.value.comment_id : '0',
       reply_user_id: replyMode.value ? replyTo.value.user_id : '',
     }
-    
+
     await sendCommentService(params)
-    
+
     // 发送成功后清空输入框
     ElMessage.success('评论发送成功');
     comment.value = '';
-    
+
     // 如果是回复模式，退出回复模式
     if (replyMode.value) {
       cancelReply()
     }
-    
+
     // 重新获取评论列表
     await getComments();
   } catch (error) {
@@ -662,6 +666,7 @@ const sendComment = async () => {
     ElMessage.error('评论发送失败，请稍后重试');
   }
 }
+//获取弹幕
 
 onMounted(async () => {
   await getVideoDetail()
@@ -678,7 +683,7 @@ onMounted(async () => {
       <HeaderNav
       />
     </div>
-    
+
     <!-- 视频播放区域和信息区域的布局容器 -->
     <div class="player-info-layout" :class="{'sidebar-hidden': !showSidebar}">
       <!-- 视频播放器区域 -->
@@ -743,17 +748,17 @@ onMounted(async () => {
 
         <!-- 侧边栏内容选择标签页 -->
         <div class="sidebar-tabs">
-          <div 
-            class="sidebar-tab" 
-            :class="{ active: sidebarContent === 'episodes' }" 
-            @click="switchSidebarContent('episodes')"
+          <div
+              class="sidebar-tab"
+              :class="{ active: sidebarContent === 'episodes' }"
+              @click="switchSidebarContent('episodes')"
           >
             剧集 ({{ episodes.length }})
           </div>
-          <div 
-            class="sidebar-tab" 
-            :class="{ active: sidebarContent === 'comments' }" 
-            @click="switchSidebarContent('comments')"
+          <div
+              class="sidebar-tab"
+              :class="{ active: sidebarContent === 'comments' }"
+              @click="switchSidebarContent('comments')"
           >
             评论 ({{ comments.count || 0 }})
           </div>
@@ -806,8 +811,8 @@ onMounted(async () => {
           <!-- 评论列表 -->
           <div v-if="comments.lists && comments.lists.length > 0" class="comment-list">
             <div v-for="commentItem in comments.lists"
-                  :key="commentItem.comment_id"
-                  class="comment-item">
+                 :key="commentItem.comment_id"
+                 class="comment-item">
               <div class="comment-avatar">
                 <img :src="commentItem.user_pic || Loading" alt="用户头像">
               </div>
@@ -817,14 +822,14 @@ onMounted(async () => {
                   <div class="comment-date">{{ formatDate(commentItem.comment_time) }}</div>
                 </div>
                 <div class="comment-text">{{ commentItem.comment_content }}</div>
-<!--                <div class="comment-actions">-->
-<!--                  <div class="action-btn reply-btn" @click="startReply(commentItem)">-->
-<!--                    <el-icon size="14">-->
-<!--                      <ChatDotRound/>-->
-<!--                    </el-icon>-->
-<!--                    <span>回复</span>-->
-<!--                  </div>-->
-<!--                </div>-->
+                <!--                <div class="comment-actions">-->
+                <!--                  <div class="action-btn reply-btn" @click="startReply(commentItem)">-->
+                <!--                    <el-icon size="14">-->
+                <!--                      <ChatDotRound/>-->
+                <!--                    </el-icon>-->
+                <!--                    <span>回复</span>-->
+                <!--                  </div>-->
+                <!--                </div>-->
 
                 <!-- 回复列表 -->
                 <div v-if="commentItem.rp_lists && commentItem.rp_lists.length > 0" class="reply-list">
@@ -843,14 +848,14 @@ onMounted(async () => {
                         <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
                         {{ reply.comment_content }}
                       </div>
-<!--                      <div class="reply-actions">-->
-<!--                        <div class="action-btn reply-btn" @click="startReply(reply)">-->
-<!--                          <el-icon size="12">-->
-<!--                            <ChatDotRound/>-->
-<!--                          </el-icon>-->
-<!--                          <span>回复</span>-->
-<!--                        </div>-->
-<!--                      </div>-->
+                      <!--                      <div class="reply-actions">-->
+                      <!--                        <div class="action-btn reply-btn" @click="startReply(reply)">-->
+                      <!--                          <el-icon size="12">-->
+                      <!--                            <ChatDotRound/>-->
+                      <!--                          </el-icon>-->
+                      <!--                          <span>回复</span>-->
+                      <!--                        </div>-->
+                      <!--                      </div>-->
                     </div>
                   </div>
                 </div>
@@ -865,7 +870,7 @@ onMounted(async () => {
             </el-icon>
             <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
           </div>
-          
+
           <!-- 评论输入区域 -->
           <div class="comment-input-area">
             <div v-if="replyMode" class="reply-indicator">
@@ -879,7 +884,8 @@ onMounted(async () => {
                   :placeholder="replyPlaceholder"
                   class="comment-input"
               />
-              <el-button type="primary" @click="sendComment" :disabled="!comment.trim()" class="send-button">发表</el-button>
+              <el-button type="primary" @click="sendComment" :disabled="!comment.trim()" class="send-button">发表
+              </el-button>
             </div>
           </div>
         </div>
@@ -955,25 +961,25 @@ onMounted(async () => {
           <h2 class="drawer-title">{{ videoInfo.title }}</h2>
           <div class="close-btn" @click="closeDetailDrawer">×</div>
         </div>
-        
+
         <div class="drawer-content">
           <!-- 顶部信息区域：左侧封面 + 右侧基本信息 -->
           <div class="drawer-top-info">
             <!-- 封面图片 -->
             <div class="cover-image-container">
-              <img :src="videoInfo.cover" alt="视频封面" class="cover-image" />
+              <img :src="videoInfo.cover" alt="视频封面" class="cover-image"/>
             </div>
-            
+
             <!-- 右侧基本信息 -->
             <div class="info-container">
               <!-- 更新信息 -->
               <div class="update-info">{{ videoInfo.episode }}</div>
-              
+
               <!-- 演员表 -->
               <div class="actors-list" v-if="videoInfo.actors && videoInfo.actors.length">
                 <div class="actors-line">{{ videoInfo.actors.join(' ') }}</div>
               </div>
-              
+
               <!-- 标签列表 -->
               <div class="tag-list">
                 <span
@@ -984,7 +990,7 @@ onMounted(async () => {
                   {{ tag }}
                 </span>
               </div>
-              
+
               <!-- 基本元数据 -->
               <div class="meta-info">
                 <div class="meta-item" v-if="videoInfo.area">
@@ -999,7 +1005,7 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-          
+
           <!-- 简介区域 -->
           <div class="description-section">
             <h3 class="section-title">影视简介</h3>
@@ -1250,13 +1256,13 @@ onMounted(async () => {
     margin-left: auto;
     margin-right: auto;
   }
-  
+
   .player-wrapper {
     width: 75%; /* 增加播放器宽度比例，从65%到75% */
     flex-shrink: 0;
     transition: width 0.3s ease;
   }
-  
+
   .sidebar-wrapper {
     width: 25%;
     border-left: 1px solid #f0f0f0;
@@ -1265,36 +1271,36 @@ onMounted(async () => {
     flex-direction: column;
     height: 600px;
   }
-  
+
   /* 当侧边栏隐藏时，播放器占据100%宽度 */
   .player-info-layout.sidebar-hidden .player-wrapper {
     width: 100%;
   }
-  
+
   .player-info-layout.sidebar-hidden .sidebar-wrapper {
     display: none;
   }
-  
+
   .video-info-wrapper {
     display: flex;
     flex-direction: column;
   }
-  
+
   .video-info {
     padding: 16px;
     flex: 1;
   }
-  
+
   .video-title {
     font-size: 18px; /* 减小字体大小以适应更窄的侧边栏 */
     margin-bottom: 12px;
     line-height: 1.3;
   }
-  
+
   .mobile-only {
     display: none;
   }
-  
+
   /* 剧集和内容区域在桌面端的宽度限制 */
   .episodes-section,
   .content-container,
@@ -1313,11 +1319,11 @@ onMounted(async () => {
   .related-recommendations {
     max-width: 1600px; /* 在超大屏幕上进一步增加最大宽度 */
   }
-  
+
   .player-wrapper {
     width: 78%; /* 在大屏幕上进一步增加播放器宽度 */
   }
-  
+
   .sidebar-wrapper {
     width: 22%; /* 相应减少侧边栏宽度 */
   }
@@ -1796,15 +1802,15 @@ onMounted(async () => {
   .related-recommendations {
     max-width: 1600px; /* 在超大屏幕上进一步增加最大宽度 */
   }
-  
+
   .player-wrapper {
     width: 78%; /* 在大屏幕上进一步增加播放器宽度 */
   }
-  
+
   .sidebar-wrapper {
     width: 22%; /* 相应减少侧边栏宽度 */
   }
-  
+
   :deep(.recommendations-list) {
     grid-template-columns: repeat(6, 1fr);
   }
