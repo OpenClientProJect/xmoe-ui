@@ -32,6 +32,12 @@ const routes = [
     ]
   },
   {
+    path: '/rank',
+    name: 'RankList',
+    component: () => import('../views/home/RankList.vue'),
+    meta: { showTabBar: true }
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/Profile.vue'),

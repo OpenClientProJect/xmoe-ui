@@ -91,11 +91,26 @@ export const searchService = (params) => {
 export const getMessageService = (user_id) => {
     return request.get('sk-api/user/getleavemsg?user_id=' + user_id )
 }
+
 //发送留言
 export const sendMessageService = (params) => {
     return request({
         url: 'sk-api/user/leavemsg',
         method: 'post',
         data: params
+    })
+}
+
+//排行榜
+export const getRankListService = (typeId) => {
+    return request({
+        url: '/sk-api/vod/list',
+        method: 'get',
+        params: {
+            typeId: typeId,
+            page: 1,
+            limit: 20,
+            type: 'bangdandetail'
+        }
     })
 }

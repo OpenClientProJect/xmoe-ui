@@ -162,6 +162,11 @@ const goToVideoDetail = (id) => {
   }
 }
 
+// 跳转到排行榜页面
+const goToRankList = () => {
+  router.push('/rank')
+}
+
 // 排期表滚动控制
 const scheduleContainerRef = ref(null)
 
@@ -191,10 +196,10 @@ const scrollSchedule = (direction) => {
 
         <!-- 快捷分类 -->
         <div class="category-buttons mx-4 my-4">
-          <div  class="category-btn category-btn-blue">
+          <div class="category-btn category-btn-blue">
             <span>全部</span>
           </div>
-          <div class="category-btn category-btn-pink">
+          <div class="category-btn category-btn-pink" @click="goToRankList">
             <span>榜单</span>
           </div>
           <div class="category-btn category-btn-purple">
