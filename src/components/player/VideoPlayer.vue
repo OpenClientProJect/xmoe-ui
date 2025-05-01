@@ -135,12 +135,6 @@ const initPlayer = (url) => {
     // 清空容器
     artRef.value.innerHTML = ''
 
-    // 添加调试信息
-    console.log('创建播放器容器:', {
-      artRefWidth: artRef.value.offsetWidth,
-      artRefHeight: artRef.value.offsetHeight
-    })
-
     // 弹幕插件配置
     const danmukuOptions = {
       danmuku: props.danmaku || [],
@@ -338,15 +332,13 @@ watch(() => props.url, (newUrl) => {
   }
 })
 
-// 监听弹幕数据变化
-watch(() => props.danmaku, (newDanmaku) => {
-  if (artInstance.value && artInstance.value.plugins.artplayerPluginDanmuku) {
-    // 更新弹幕数据
-    artInstance.value.plugins.artplayerPluginDanmuku.config({
-      danmuku: newDanmaku || []
-    })
-  }
-}, { deep: true })
+// // 监听弹幕数据变化
+// watch(() => props.danmaku, (newDanmaku) => {
+//   if (artInstance.value) {
+//     // 更新弹幕数据
+//       newDanmaku || []
+//   }
+// }, { deep: true })
 
 // 组件挂载时初始化播放器
 onMounted(() => {

@@ -32,7 +32,7 @@ const hotSearches = [
 const getSearchFromRoute = () => {
   if (route.query.keyword) {
     searchKeyword.value = route.query.keyword
-    handleSearch()
+    // 不自动触发搜索，只设置关键词
   }
 }
 
@@ -40,7 +40,7 @@ const getSearchFromRoute = () => {
 watch(() => route.query.keyword, (newKeyword) => {
   if (newKeyword) {
     searchKeyword.value = newKeyword
-    handleSearch()
+    // 不自动触发搜索，只设置关键词
   }
 })
 
@@ -69,13 +69,11 @@ const getMenuList = async () => {
 // 切换菜单
 const handleMenuChange = (menuId) => {
   activeMenuId.value = menuId
-  if (searchKeyword.value.trim()) {
-    handleSearch() // 如果有搜索关键词，立即重新搜索
-  }
+  // 切换菜单时不自动搜索
 }
 
 const goBack = () => {
-  router.back()
+  router.push('/')
 }
 
 const handleSearch = async () => {
@@ -313,8 +311,7 @@ onMounted(async () => {
         <div class="no-result-icon">
           <el-icon><img src="@/assets/icon/search.svg" alt="search"></el-icon>
         </div>
-        <div class="no-result-text">没有找到"{{ searchKeyword }}"相关内容</div>
-        <div class="no-result-tips">换个关键词试试吧</div>
+        <div class="no-result-text">回车搜索或点击搜索"{{ searchKeyword }}"相关内容</div>
       </div>
     </div>
   </div>

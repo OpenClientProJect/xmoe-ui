@@ -24,8 +24,6 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserInfoStore()
 
-// 顶部导航栏选中的标签
-const headerActiveTab = ref('番剧') // 默认选中番剧标签
 
 // 侧边栏显示内容控制（剧集/评论）
 const sidebarContent = ref('episodes') // 'episodes'表示显示剧集列表，'comments'表示显示评论区
@@ -150,8 +148,6 @@ const playVideo = async (episodeId) => {
 
   // 然后设置新的当前剧集
   currentEpisode.value = episode
-  console.log('当前选择的剧集:', episode)
-  console.log('原始视频源ID:', episode.sourceId)
 
   // 标记当前集为已观看
   episode.watched = true
@@ -405,10 +401,6 @@ const getVideoDetail = async () => {
     if (res.code === 200 && res.data) {
       const data = res.data
 
-      // 打印原始数据便于调试
-      console.log('原始视频数据:', data)
-
-
       // 更新视频信息
       videoInfo.value = {
         id: data.vod_id,
@@ -503,11 +495,9 @@ const getVideoDetail = async () => {
           // 默认使用第一个线路
           currentSource.value = 0;
           episodes.value = allEpisodes.value[0] || [];
-          console.log('当前线路剧集:', episodes.value);
 
           // 自动播放第一集视频
           if (episodes.value && episodes.value.length > 0) {
-            console.log('自动播放第一集视频')
             playVideo(episodes.value[0].id)
           }
         }
@@ -532,7 +522,6 @@ const getRelatedDrama = async () => {
     if (Array.isArray(res.data)) {
       // 新的响应格式，直接是数组
       relatedData = res.data;
-      console.log('获取到相关推荐(新格式):', relatedData);
     } else if (res.data && res.data.list) {
       // 旧的响应格式，有list属性
       relatedData = res.data.list;
@@ -693,7 +682,6 @@ const sendComment = async () => {
     ElMessage.error('评论发送失败，请稍后重试');
   }
 }
-//获取弹幕
 
 onMounted(async () => {
   await getVideoDetail()
