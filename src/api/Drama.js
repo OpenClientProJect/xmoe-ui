@@ -67,8 +67,6 @@ export const getVideoUrlService = (sourceId) =>   {
  * @returns {Promise} 请求Promise
  */
 export const getRelatedDramaService = (typeId) => {
-    // 打印传入的typeId参数
-    console.log('调用getRelatedDramaService，typeId:', typeId, '类型:', typeof typeId)
 
     // 确保typeId是有效值
     const finalTypeId = typeId || 1
@@ -81,19 +79,6 @@ export const getRelatedDramaService = (typeId) => {
             page: '1',
             limit: '10',
             type: 'randomlike'
-        }
-    })
-}
-
-/**
- * 番剧页面分类表
- */
-export const getMenuListService = () => {
-    return request({
-        url: '/sk-api//type/alltypeextend',
-        method: 'get',
-        params: {
-            typeId: 1
         }
     })
 }

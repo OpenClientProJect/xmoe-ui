@@ -38,9 +38,20 @@ export const getBannerListService = () => {
 }
 
 //首页顶部菜单
-export const getMenuListService = () => {
+export const getMenuListService = () => {               
     return request({
         url: '/sk-api/type/list',
         method: 'get',
+    })
+}
+
+//获取子分类菜单
+export const getSubMenuListService = (typeId) => {
+    return request({
+        url: '/sk-api/type/alltypeextend',
+        method: 'get',
+        params: {
+            typeId: typeId
+        }
     })
 }

@@ -4,7 +4,6 @@ import {useRouter} from 'vue-router'
 // 导入样式
 import 'swiper/css'
 import 'swiper/css/pagination'
-import HeaderNav from "@/components/home/common/HeaderNav.vue";
 // 导入番剧列表组件
 import AnimeList from '@/components/home/DramaList.vue'
 // 导入轮播图组件
@@ -149,7 +148,12 @@ onMounted(() => {
 const handleTabChange = (tab) => {
   activeTab.value = tab
   console.log('切换到标签:', tab)
+  // 向父组件(HomeLayout)发送tab-change事件
+  emit('tab-change', tab)
 }
+
+// 定义emit
+const emit = defineEmits(['tab-change'])
 
 // 在轮播图中点击跳转到详情页
 const goToVideoDetail = (id) => {
@@ -178,16 +182,7 @@ const scrollSchedule = (direction) => {
 
 <template>
   <div class="home-container">
-    <!-- 顶部导航容器 - 使用fixed定位 -->
-    <div class="page-header">
-      <!-- 顶部搜索栏和导航栏 -->
-      <HeaderNav
-        :active-tab="activeTab"
-        @tab-change="handleTabChange"
-      />
-    </div>
-
-    <!-- 内容区域 - 添加足够的上边距避免被顶部遮挡 -->
+    <!-- 内容区域 -->
     <div class="page-content">
       <!-- 推荐标签页内容 -->
       <div v-if="activeTab === '推荐'">
@@ -350,18 +345,8 @@ const scrollSchedule = (direction) => {
   overflow-x: hidden;
 }
 
-/* 顶部固定导航 */
-.page-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 100;
-}
-
 /* 内容区域样式 */
 .page-content {
-  padding-top: 106px; /* 顶部导航高度 + 额外空间 */
   position: relative;
   z-index: 1;
   width: 100%;

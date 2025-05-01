@@ -3,9 +3,33 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: () => import('../views/Home.vue'),
-    meta: { showTabBar: true }
+    component: () => import('../layouts/HomeLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Home',
+        component: () => import('../views/Home.vue'),
+        meta: { showTabBar: true }
+      },
+      {
+        path: 'anime',
+        name: 'Anime',
+        component: () => import('../components/home/DramaList.vue'),
+        meta: { showTabBar: true }
+      },
+      {
+        path: 'movie',
+        name: 'Movie',
+        component: () => import('../views/Movie.vue'),
+        meta: { showTabBar: true }
+      },
+      {
+        path: '4k',
+        name: '4K',
+        component: () => import('../views/Home.vue'),
+        meta: { showTabBar: true }
+      }
+    ]
   },
   {
     path: '/profile',
@@ -50,4 +74,4 @@ const router = createRouter({
   routes
 })
 
-export default router 
+export default router

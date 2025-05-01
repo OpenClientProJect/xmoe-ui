@@ -1,10 +1,14 @@
 <script setup>
-import {computed, onMounted, ref} from 'vue'
-import {useRouter} from 'vue-router'
-import {getDramaListService, getMenuListService} from "@/api/Drama.js";
+import {computed, onMounted, ref, watch} from 'vue'
+import {useRouter, useRoute} from 'vue-router'
+import {getDramaListService} from "@/api/Drama.js";
+import {getSubMenuListService} from "@/api/home/anime.js";
 import {handleImageUrl} from '@/utils/imageUtils';
 
+const emit = defineEmits(['tab-change'])
+
 const router = useRouter()
+const route = useRoute()
 
 // 番剧列表
 const DramaList = ref([])
@@ -65,19 +69,44 @@ const tagRows = computed(() => [
 // 获取标签
 const animeTags = async () => {
   try {
-    isLoading.value = true
-    const res = await getMenuListService()
-    
-      // 只保存需要的字段数据
-      tagData.value = {
-        class: res.data.class || '',
-        lang: res.data.lang || '',
-        year: res.data.year || ''
+    // 获取番剧的子分类数据（type_id为1表示番剧）
+    const res = await getSubMenuListService(1)
+      // 处理子分类数据
+      if (Array.isArray(res.data)) {
+        // 如果是数组格式（旧格式）
+        const classValues = []
+        const yearValues = []
+        const langValues = []
+        
+        // 遍历子分类数据，根据类型分类
+        res.data.forEach(item => {
+          if (item.type_name && item.type_name.includes('年')) {
+            yearValues.push(item.type_name)
+          } else if (item.type_name && ['1月', '4月', '7月', '10月'].some(month => item.type_name.includes(month))) {
+            langValues.push(item.type_name)
+          } else if (item.type_name) {
+            classValues.push(item.type_name)
+          }
+        })
+        
+        // 更新标签数据
+        tagData.value = {
+          class: classValues.join(','),
+          year: yearValues.join(','),
+          lang: langValues.join(',')
+        }
+      } else if (typeof res.data === 'object' && res.data !== null) {
+        // 如果是对象格式（新格式）
+        tagData.value = res.data
       }
   } catch (error) {
-    console.error('获取分类标签出错:', error)
-  } finally {
-    isLoading.value = false
+    console.error('获取番剧子分类错误:', error)
+    // 初始化默认标签数据
+    tagData.value = {
+      class: '',
+      lang: '',
+      year: ''
+    }
   }
 }
 
@@ -248,8 +277,30 @@ const goToAnimeDetail = (id) => {
 
 // 挂载函数
 onMounted(() => {
+  // 设置当前标签为"番剧"
+  emit('tab-change', '番剧')
+  // 获取番剧子分类数据
   animeTags()
-  getDramaList()
+  
+  // 检查URL参数中是否有typeId
+  if (route.query.typeId) {
+    // 如果有typeId参数，使用该参数获取对应分类的番剧
+    getDramaList({ typeId: route.query.typeId })
+  } else {
+    // 否则获取全部番剧
+    getDramaList()
+  }
+})
+
+// 监听路由参数变化
+watch(() => route.query.typeId, (newTypeId) => {
+  if (newTypeId) {
+    // 如果typeId变化，重新获取对应分类的番剧
+    getDramaList({ typeId: newTypeId })
+  } else {
+    // 如果typeId被移除，获取全部番剧
+    getDramaList()
+  }
 })
 </script>
 
@@ -316,6 +367,7 @@ onMounted(() => {
 /* 番剧内容区域 */
 .anime-content {
   padding: 0 0 80px;
+  margin-top: 0; 
 }
 
 /* 分类标签容器 */
@@ -552,4 +604,4 @@ onMounted(() => {
 .retry-button:hover {
   background-color: #0055cc;
 }
-</style> 
+</style>

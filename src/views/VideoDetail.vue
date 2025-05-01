@@ -100,24 +100,6 @@ const toggleSubscribe = () => {
 // 处理顶部导航栏标签切换
 const handleHeaderTabChange = (tab) => {
   headerActiveTab.value = tab
-
-  // 根据标签跳转到相应页面
-  switch (tab) {
-    case '推荐':
-      router.push('/')
-      break
-    case '番剧':
-      // 当前已经在番剧页面，不需要跳转
-      break
-    case '剧场版':
-      router.push('/movie')
-      break
-    case '4K':
-      router.push('/4k')
-      break
-    default:
-      break
-  }
 }
 
 // 处理播放器返回按钮事件
@@ -630,9 +612,6 @@ onMounted(async () => {
     <!-- 顶部导航栏 -->
     <div class="header-container">
       <HeaderNav
-          :tabs="['推荐', '番剧', '剧场版', '4K']"
-          :active-tab="headerActiveTab"
-          @tab-change="handleHeaderTabChange"
       />
     </div>
     

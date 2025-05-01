@@ -18,12 +18,32 @@ const emit = defineEmits(['tab-change'])
 
 const router = useRouter()
 const menuList = ref([])
+const subMenuList = ref([])
 const isLoading = ref(false)
+const showSubMenu = ref(false)
 
 // 切换标签
 const changeTab = (tab) => {
   emit('tab-change', tab)
+  
+  // 根据标签名称跳转到对应路由
+  if (tab === '推荐') {
+    router.push('/')
+    showSubMenu.value = false
+  } else if (tab === '番剧') {
+    router.push('/anime')
+  } else if (tab === '剧场版') {
+    router.push('/movie')
+  } else if (tab === '4K') {
+    router.push('/4k')
+    showSubMenu.value = false
+  } else {
+    // 其他动态菜单项，暂时跳转到首页
+    router.push('/')
+    showSubMenu.value = false
+  }
 }
+
 
 // 跳转到搜索页
 const goToSearch = () => {
@@ -35,8 +55,7 @@ const getMenuList = async () => {
   try {
     isLoading.value = true
     const res = await getMenuListService()
-    menuList.value = res.data
-    console.error('获取菜单列表失败:', error)
+      menuList.value = res.data
   } finally {
     isLoading.value = false // 结束加载
   }
@@ -87,6 +106,18 @@ onMounted(() => {
       <!-- 加载中提示 -->
       <div v-if="isLoading" class="tab-item loading-tab">
         加载中...
+      </div>
+    </div>
+    
+    <!-- 子分类导航栏 -->
+    <div v-if="showSubMenu && subMenuList.length > 0" class="sub-menu-container">
+      <div
+          v-for="item in subMenuList"
+          :key="item.type_id"
+          class="sub-menu-item"
+          @click="router.push(`${activeTab === '番剧' ? '/anime' : '/movie'}?typeId=${item.type_id}`)"
+      >
+        {{ item.type_name }}
       </div>
     </div>
   </div>
@@ -262,5 +293,38 @@ onMounted(() => {
 .loading-tab {
   color: #9ca3af;
   font-style: italic;
+}
+
+/* 子分类导航栏样式 */
+.sub-menu-container {
+  display: flex;
+  overflow-x: auto;
+  background-color: #f9f9f9;
+  padding: 8px 16px;
+  border-bottom: 1px solid #eee;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.sub-menu-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+.sub-menu-item {
+  padding: 6px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: #666;
+  background-color: #fff;
+  border-radius: 16px;
+  margin-right: 10px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.sub-menu-item:hover {
+  background-color: #f0f0f0;
+  color: #dc2626;
 }
 </style>
