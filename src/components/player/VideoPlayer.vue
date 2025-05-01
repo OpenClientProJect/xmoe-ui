@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import Artplayer from 'artplayer'
 import artplayerPluginDanmuku from 'artplayer-plugin-danmuku'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
@@ -336,6 +337,16 @@ watch(() => props.url, (newUrl) => {
     initPlayer(newUrl)
   }
 })
+
+// 监听弹幕数据变化
+watch(() => props.danmaku, (newDanmaku) => {
+  if (artInstance.value && artInstance.value.plugins.artplayerPluginDanmuku) {
+    // 更新弹幕数据
+    artInstance.value.plugins.artplayerPluginDanmuku.config({
+      danmuku: newDanmaku || []
+    })
+  }
+}, { deep: true })
 
 // 组件挂载时初始化播放器
 onMounted(() => {

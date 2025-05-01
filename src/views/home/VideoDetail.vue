@@ -162,9 +162,34 @@ const playVideo = async (episodeId) => {
   // 调用API获取视频地址 - 不再需要传递videoInfo.value.id参数
   const res = await getVideoUrlService(episode.sourceId)
 
-  const danmaku = await getDanmakuService(episode.sourceId)
+  const danmakuRes = await getDanmakuService(episode.sourceId)
+  let danmakuData = []
+  
+  // 处理弹幕数据
+  if (danmakuRes.data && danmakuRes.data.danmuku && Array.isArray(danmakuRes.data.danmuku)) {
+    // 转换弹幕数据为artplayer-plugin-danmuku要求的格式
+    danmakuData = danmakuRes.data.danmuku.map(item => {
+      // 检查弹幕项是否有效
+      if (!Array.isArray(item) || item.length < 5) return null
+      
+      // 获取时间、类型、颜色、文本
+      const time = typeof item[0] === 'number' ? item[0] : parseFloat(item[0]) || 0
+      const type = item[1] === 'top' ? 1 : (item[1] === 'bottom' ? 2 : 0) // 0-滚动 1-顶部 2-底部
+      const color = item[2] || '#ffffff'
+      const text = item[4] || ''
+      
+      return {
+        text: text,
+        time: time,
+        color: color,
+        type: type, // 弹幕类型: 0滚动, 1顶部, 2底部
+        border: false
+      }
+    }).filter(item => item !== null) // 过滤掉无效的弹幕
+  }
 
   console.log('获取到视频地址:', res.data)
+  console.log('获取到弹幕数据:', danmakuData)
 
   // 处理视频URL，确保可以正确播放
   let videoUrl = ''
@@ -215,11 +240,13 @@ const playVideo = async (episodeId) => {
 
   // 更新当前播放的视频URL
   currentVideoUrl.value = proxyUrl
+  currentDanmaku.value = danmakuData
 
   return proxyUrl
 }
 
 const isFollowing = ref(false)
+const currentDanmaku = ref([]) // 当前视频的弹幕数据
 //判断是否已追番
 
 const checkIsFollowing = async () => {
@@ -696,6 +723,7 @@ onMounted(async () => {
             :video-id="videoId"
             :show-back-button="true"
             :show-sidebar="showSidebar"
+            :danmaku="currentDanmaku"
             @error="handlePlayerError"
             @play="handlePlayerPlay"
             @pause="handlePlayerPause"
