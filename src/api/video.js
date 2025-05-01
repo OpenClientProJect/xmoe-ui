@@ -5,14 +5,14 @@ import request from "@/utils/request.js";
  */
 export const searchService = (params) => {
   // 处理参数：支持字符串或对象形式的参数
-  let keyword, limitlimit;
+  let keyword, typeId;
   
   if (typeof params === 'string') {
     keyword = params;
-    limitlimit = -1; // 默认值
+      typeId = -1; // 默认值
   } else {
     keyword = params.keyword;
-    limitlimit = params.limitlimit !== undefined ? params.limitlimit : -1;
+      typeId = params.typeId !== undefined ? params.typeId : -1;
   }
   
   return request({
@@ -22,7 +22,7 @@ export const searchService = (params) => {
         keyword: keyword,
         page: 1,
         limit: 10,
-        limitlimit: limitlimit,
+        typeId: typeId,
     },
   });
 };

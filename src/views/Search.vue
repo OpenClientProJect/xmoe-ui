@@ -73,10 +73,9 @@ const handleSearch = async () => {
       background: 'rgba(255, 255, 255, 0.7)',
     })
     
-    // 调用实际的搜索API，传入type_id作为limitlimit参数
     const res = await searchService({
       keyword: searchKeyword.value,
-      limitlimit: activeMenuId.value // 使用当前选中的type_id
+      typeId: activeMenuId.value // 使用当前选中的type_id
     })
     
     if (res.code === 200 && res.data) {
