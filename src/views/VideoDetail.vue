@@ -16,7 +16,7 @@ import VideoPlayer from '@/components/player/VideoPlayer.vue'
 // 导入相关推荐组件
 import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
 import {getCommentsService} from "@/api/comments.js";
-import {addHistoryService, isFollowService} from "@/api/user.js";
+import {addHistoryService, isFollowService, sendCommentService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
 
 const router = useRouter()
@@ -598,6 +598,47 @@ const openDetailDrawer = () => {
 const closeDetailDrawer = () => {
   showDetailDrawer.value = false
 }
+// 添加评论输入变量
+const comment = ref('')
+
+//发送评论
+const sendComment = async () => {
+  // 检查用户是否登录
+  if (!userStore.info || !userStore.info.user_id) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+  
+  // 检查评论内容是否为空
+  if (!comment.value.trim()) {
+    ElMessage.warning('评论内容不能为空');
+    return;
+  }
+  
+  try {
+    await sendCommentService({
+      user_id: userStore.info.user_id,
+      user_name: userStore.info.user_name,
+      user_nick_name: userStore.info.user_nick_name,
+      content: comment.value,
+      vod_id: videoId,
+      type: 'comment',
+      comment_mid: '0',
+      comment_pid: '0',
+      reply_user_id: ''
+    })
+    
+    // 发送成功后清空输入框
+    ElMessage.success('评论发送成功');
+    comment.value = '';
+    
+    // 重新获取评论列表
+    await getComments();
+  } catch (error) {
+    console.error('发送评论失败:', error);
+    ElMessage.error('评论发送失败，请稍后重试');
+  }
+}
 
 onMounted(async () => {
   await getVideoDetail()
@@ -801,6 +842,24 @@ onMounted(async () => {
 
       <!-- 评论内容 -->
       <div v-if="activeTab === '评论(0)' || activeTab.startsWith('评论(')" class="comment-container">
+        <!-- 评论输入区域 -->
+        <div class="comment-input-area">
+          <div class="comment-input-container">
+            <div class="input-wrapper">
+              <el-input
+                v-model="comment"
+                type="textarea"
+                :rows="2"
+                placeholder="发表你的评论..."
+                resize="none"
+              />
+              <div class="comment-actions">
+                <el-button type="primary" @click="sendComment" :disabled="!comment.trim()">发表评论</el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 评论列表 -->
         <div v-if="comments.lists && comments.lists.length > 0" class="comment-list">
           <div v-for="comment in comments.lists"
@@ -1227,10 +1286,6 @@ onMounted(async () => {
   background-color: #dc2626;
 }
 
-.tab-content {
-  padding: 12px 16px; /* 添加左右间距，上下保持12px */
-}
-
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -1243,11 +1298,6 @@ onMounted(async () => {
   background-color: #f3f4f6;
   border-radius: 999px;
   font-size: 12px;
-}
-
-.description-container {
-  position: relative;
-  margin-bottom: 4px;
 }
 
 .description {
@@ -1267,28 +1317,10 @@ onMounted(async () => {
   text-overflow: ellipsis;
 }
 
-.show-more {
-  color: #dc2626;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 0;
-  margin-top: 4px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 20%);
-}
 
 .show-more i {
   margin-left: 4px;
   font-size: 12px;
-}
-
-.video-meta {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .meta-item {
@@ -1296,15 +1328,10 @@ onMounted(async () => {
   color: #4b5563;
 }
 
-.meta-label {
-  color: #6b7280;
-  margin-right: 8px;
-}
 
 .meta-value {
   color: #374151;
 }
-
 
 .comment-container {
   padding: 12px 16px;
@@ -1849,5 +1876,441 @@ onMounted(async () => {
   line-height: 1.6;
   margin: 0;
   white-space: pre-line;
+}
+/* 评论输入区域样式 */
+.comment-input-area {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.comment-input-container {
+  display: flex;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.input-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-wrapper :deep(.el-textarea__inner) {
+  border-radius: 8px;
+  resize: none;
+  font-size: 14px;
+}
+
+.input-wrapper .comment-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.input-wrapper .comment-actions .el-button {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 4px;
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+.input-wrapper .comment-actions .el-button:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.input-wrapper .comment-actions .el-button:disabled {
+  background-color: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #9ca3af;
+}
+
+.comment-placeholder {
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+/* 剧集列表 */
+.episodes-section {
+  background-color: white;
+  margin-top: 8px;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.episodes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-weight: 500;
+}
+
+.episode-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.episode-item {
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.current-episode {
+  border-color: #dc2626;
+  color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.05);
+}
+
+.watched-episode {
+  background-color: #f9fafb;
+}
+
+.episode-title {
+  font-size: 12px;
+}
+
+.progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #d1d5db;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #dc2626;
+  width: 100%;
+}
+
+/* 顶部导航栏样式 */
+.header-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: #fff; /* 确保导航栏有背景色 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加阴影效果增强视觉层次 */
+  height: 60px; /* 明确指定高度 */
+}
+
+/* 评论区域响应式样式 */
+@media (min-width: 768px) {
+  .comment-container {
+    padding: 16px 24px;
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 767px) {
+  .comment-container {
+    padding: 12px 16px;
+  }
+}
+
+/* 平板和桌面设备上优化网格显示 */
+@media (min-width: 768px) {
+  .episodes-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* 大屏设备上优化网格显示 */
+@media (min-width: 1024px) {
+  .episodes-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+/* 为相关推荐添加样式 */
+.related-recommendations {
+  margin-top: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* 调整相关视频组件的样式，与播放器区域保持一致 */
+:deep(.recommendations-section) {
+  background-color: white;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+:deep(.recommendations-list) {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 在手机端默认展示2列 */
+  gap: 12px; /* 减小间距使卡片更紧凑 */
+}
+
+/* 在平板和桌面设备上改为网格布局 */
+@media (min-width: 768px) {
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+}
+
+/* 在大屏设备上展示更多列 */
+@media (min-width: 1024px) {
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 在超大屏设备上展示更多列 */
+@media (min-width: 1440px) {
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* 适应相关推荐中的项目网格布局 */
+:deep(.recommendation-item) {
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  background-color: #f9fafb;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+:deep(.recommendation-item:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  opacity: 1;
+}
+
+:deep(.thumbnail-container) {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px 4px 0 0;
+}
+
+:deep(.recommendation-info) {
+  margin-left: 0;
+  padding: 12px;
+}
+
+:deep(.recommendation-title) {
+  font-size: 14px;
+  margin-bottom: 8px;
+  /* 确保在小屏幕上标题不会太长，最多显示两行 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  height: 2.6em;
+}
+
+:deep(.section-title) {
+  font-size: 18px;
+  font-weight: 500;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+}
+
+/* 适应大屏幕尺寸 */
+@media (min-width: 1600px) {
+  .player-info-layout,
+  .episodes-section,
+  .content-container,
+  .related-recommendations {
+    max-width: 1600px; /* 在超大屏幕上进一步增加最大宽度 */
+  }
+  
+  .player-wrapper {
+    width: 78%; /* 在大屏幕上进一步增加播放器宽度 */
+  }
+  
+  .sidebar-wrapper {
+    width: 22%; /* 相应减少侧边栏宽度 */
+  }
+  
+  :deep(.recommendations-list) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* 详情按钮样式 */
+.detail-button {
+  margin-left: auto;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 8px;
+  background-color: rgba(220, 38, 38, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 详情抽屉弹窗 */
+.detail-drawer-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.detail-drawer {
+  position: absolute;
+  bottom: -100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border-radius: 16px 16px 0 0;
+  padding: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transition: bottom 0.3s ease;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.detail-drawer.open {
+  bottom: 0;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.drawer-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+  max-width: 85%;
+}
+
+.drawer-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  padding-right: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.close-btn {
+  font-size: 24px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.drawer-content {
+  padding-bottom: 24px;
+}
+
+/* 顶部信息区域布局 */
+.drawer-top-info {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+/* 封面图片容器 */
+.cover-image-container {
+  width: 120px;
+  height: 160px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 右侧信息容器 */
+.info-container {
+  flex: 1;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.update-info {
+  color: #dc2626;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.actors-list {
+  margin-bottom: 8px;
+}
+
+.actors-line {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+  max-height: 4.5em; /* 3行的高度 = 行高 × 3 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
 }
 </style>
