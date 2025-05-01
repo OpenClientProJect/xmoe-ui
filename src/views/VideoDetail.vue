@@ -1,8 +1,8 @@
 <script setup>
-import {ref, onMounted, onUnmounted} from 'vue'
-import {useRouter, useRoute} from 'vue-router'
+import {onMounted, onUnmounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 import {getDramaDetailService, getRelatedDramaService, getVideoUrlService} from '@/api/Drama.js'
-import {ChatDotRound, ArrowDown, ArrowUp, Share} from "@element-plus/icons-vue"
+import {ArrowDown, ChatDotRound, Share} from "@element-plus/icons-vue"
 import {ElMessage} from 'element-plus'
 import {handleImageUrl} from '@/utils/imageUtils'
 //icon
@@ -378,8 +378,7 @@ const goToVideoDetail = (id) => {
   }
 
   // 强制使用全新的URL并刷新页面，而不是使用路由跳转
-  const newUrl = `/video/${id}`
-  window.location.href = newUrl
+  window.location.href = `/video/${id}`
 }
 
 // 组件卸载时清理资源

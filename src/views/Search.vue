@@ -251,9 +251,9 @@ onMounted(async () => {
             <div class="result-info">
               <div class="result-header">
                 <h4 class="result-title">{{ result.title }}</h4>
-                <div class="result-score" v-if="result.score">
-                  <span class="score-value">{{ result.score }}</span>分
-                </div>
+              </div>
+              <div class="result-score" v-if="result.score">
+                <span class="score-value">{{ result.score }}</span>分
               </div>
               <div class="result-meta">
                 <span class="result-year" v-if="result.year">{{ result.year }}</span>
@@ -637,7 +637,7 @@ onMounted(async () => {
 .result-tags {
   display: flex;
   gap: 6px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .result-tag {
@@ -653,11 +653,11 @@ onMounted(async () => {
 
 .result-score {
   font-size: 13px;
-  color: #6b7280;
-  background-color: #f9f9f9;
   padding: 2px 6px;
-  border-radius: 4px;
   white-space: nowrap;
+  display: inline-block;
+  margin-bottom: 8px;
+  margin-top: -5px;
 }
 
 .score-value {
@@ -673,7 +673,7 @@ onMounted(async () => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.4;
-  margin-top: auto;
+  margin-top: 0;
 }
 
 /* 无搜索结果样式 */
