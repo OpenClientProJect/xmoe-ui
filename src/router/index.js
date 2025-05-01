@@ -66,6 +66,12 @@ const routes = [
     name: 'UserHistory',
     component: () => import('../views/UserHistory.vue'),
     meta: { showTabBar: true }
+  },
+  {
+    path: '/points',
+    name: 'Points',
+    component: () => import('../views/Points.vue'),
+    meta: { showTabBar: true }
   }
 ]
 

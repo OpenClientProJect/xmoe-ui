@@ -88,3 +88,13 @@ export const sendRemindService = (params) => {
         data: params
     })
 }
+/**
+ * 用户积分
+ */
+export const getUserScoreService = (user_id) => {
+    return request({
+        url: 'sk-api/user/wallet_record',
+        method: 'get',
+        params: { user_id }
+    })
+}
