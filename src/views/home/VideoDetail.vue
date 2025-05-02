@@ -18,12 +18,13 @@ import RelatedRecommend from '@/components/common/RelatedRecommend.vue'
 import {getCommentsService, sendCommentService} from "@/api/comments.js";
 import {addHistoryService, isFollowService, sendRemindService} from "@/api/user.js";
 import useUserInfoStore from "@/stores/userstores.js";
-import {getDanmakuService} from "@/api/danmaku.js";
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserInfoStore()
 
+// 顶部导航栏选中的标签
+const headerActiveTab = ref('番剧') // 默认选中番剧标签
 
 // 侧边栏显示内容控制（剧集/评论）
 const sidebarContent = ref('episodes') // 'episodes'表示显示剧集列表，'comments'表示显示评论区
@@ -129,120 +130,111 @@ const handlePlayerTimeUpdate = (currentTime) => {
 
 // 播放视频
 const playVideo = async (episodeId) => {
-  console.log("剧集id" + episodeId)
+  console.log("播放剧集id:", episodeId)
   const episode = episodes.value.find(ep => ep.id === episodeId)
   if (!episode) {
     console.error('找不到剧集信息')
     ElMessage.error('无效的剧集信息')
-    return
+    return null
   }
 
   if (!episode.sourceId) {
     console.error('剧集缺少播放源ID')
     ElMessage.error('无效的视频源')
-    return
+    return null
   }
 
-  // 先重置当前选中的剧集
-  currentEpisode.value = null
+  try {
+    // 先重置当前选中的剧集
+    currentEpisode.value = null
 
-  // 然后设置新的当前剧集
-  currentEpisode.value = episode
+    // 然后设置新的当前剧集
+    currentEpisode.value = episode
 
-  // 标记当前集为已观看
-  episode.watched = true
+    // 标记当前集为已观看
+    episode.watched = true
 
-  // 添加到播放记录
-  await addPlayHistory()
+    // 添加到播放记录
+    await addPlayHistory()
 
-  // 调用API获取视频地址 - 不再需要传递videoInfo.value.id参数
-  const res = await getVideoUrlService(episode.sourceId)
+    // 调用API获取视频地址
+    const res = await getVideoUrlService(episode.sourceId)
+    
+    // 检查响应状态
+    if (res.code !== 200 || !res.data) {
+      throw new Error(res.message || '获取视频地址失败')
+    }
 
-  const danmakuRes = await getDanmakuService(episode.sourceId)
-  let danmakuData = []
-  
-  // 处理弹幕数据
-  if (danmakuRes.data && danmakuRes.data.danmuku && Array.isArray(danmakuRes.data.danmuku)) {
-    // 转换弹幕数据为artplayer-plugin-danmuku要求的格式
-    danmakuData = danmakuRes.data.danmuku.map(item => {
-      // 检查弹幕项是否有效
-      if (!Array.isArray(item) || item.length < 5) return null
-      
-      // 获取时间、类型、颜色、文本
-      const time = typeof item[0] === 'number' ? item[0] : parseFloat(item[0]) || 0
-      const type = item[1] === 'top' ? 1 : (item[1] === 'bottom' ? 2 : 0) // 0-滚动 1-顶部 2-底部
-      const color = item[2] || '#ffffff'
-      const text = item[4] || ''
-      
-      return {
-        text: text,
-        time: time,
-        color: color,
-        type: type, // 弹幕类型: 0滚动, 1顶部, 2底部
-        border: false
-      }
-    }).filter(item => item !== null) // 过滤掉无效的弹幕
-  }
+    console.log('获取到视频地址:', res.data)
 
-  console.log('获取到视频地址:', res.data)
-  console.log('获取到弹幕数据:', danmakuData)
+    // 处理视频URL，确保可以正确播放
+    let videoUrl = ''
 
-  // 处理视频URL，确保可以正确播放
-  let videoUrl = ''
-
-  // 检查res.data的类型并提取URL
-  if (typeof res.data === 'string') {
-    videoUrl = res.data
-  } else if (typeof res.data === 'object') {
-    if (res.data.url) {
-      videoUrl = res.data.url
-    } else {
-      console.log('响应数据对象:', res.data)
-      for (const key in res.data) {
-        if (typeof res.data[key] === 'string' &&
-            (res.data[key].includes('http') ||
-                res.data[key].includes('.mp4') ||
-                res.data[key].includes('.m3u8'))) {
-          videoUrl = res.data[key]
-          break
+    // 检查res.data的类型并提取URL
+    if (typeof res.data === 'string') {
+      videoUrl = res.data
+    } else if (typeof res.data === 'object') {
+      if (res.data.url) {
+        videoUrl = res.data.url
+      } else {
+        console.log('响应数据对象:', res.data)
+        for (const key in res.data) {
+          if (typeof res.data[key] === 'string' &&
+              (res.data[key].includes('http') ||
+                  res.data[key].includes('.mp4') ||
+                  res.data[key].includes('.m3u8'))) {
+            videoUrl = res.data[key]
+            break
+          }
         }
       }
     }
-  }
 
-  if (!videoUrl) {
-    throw new Error('无法从响应中提取视频地址')
-  }
-
-  console.log('提取到的原始视频地址:', videoUrl)
-
-  // 处理跨域问题，使用代理URL
-  let proxyUrl = videoUrl
-
-  // 判断是否是外部URL
-  if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
-    try {
-      const urlObj = new URL(videoUrl)
-
-      // 如果是xmoe.video域名，使用video-proxy代理
-      if (urlObj.hostname === 'xmoe.video') {
-        proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
-        console.log('使用代理URL:', proxyUrl)
-      }
-    } catch (e) {
-      console.error('解析URL失败:', e)
+    if (!videoUrl) {
+      throw new Error('无法从响应中提取视频地址')
     }
+
+    console.log('提取到的原始视频地址:', videoUrl)
+
+    // 处理跨域问题，使用代理URL
+    let proxyUrl = videoUrl
+
+    // 判断是否是外部URL
+    if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
+      try {
+        const urlObj = new URL(videoUrl)
+
+        // 如果是xmoe.video域名，使用video-proxy代理
+        if (urlObj.hostname === 'xmoe.video' || urlObj.hostname.endsWith('.xmoe.video')) {
+          // 处理所有的xmoe.video域名请求，包括带有validate参数的
+          proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
+          console.log('使用代理URL:', proxyUrl)
+        }
+        // 为其他所有外部URL添加CORS代理
+        else {
+          // 使用通用的代理解决跨域问题
+          proxyUrl = `/cors-proxy?url=${encodeURIComponent(videoUrl)}`
+          console.log('使用CORS代理URL:', proxyUrl)
+        }
+      } catch (e) {
+        console.error('解析URL失败:', e)
+        // 直接使用原URL
+        console.log('URL解析失败，使用原始URL')
+      }
+    }
+
+    // 更新当前播放的视频URL
+    currentVideoUrl.value = proxyUrl
+
+    return proxyUrl
+  } catch (error) {
+    console.error('播放视频失败:', error)
+    ElMessage.error(`播放失败: ${error.message || '未知错误，请尝试其他线路'}`)
+    return null
   }
-
-  // 更新当前播放的视频URL
-  currentVideoUrl.value = proxyUrl
-  currentDanmaku.value = danmakuData
-
-  return proxyUrl
 }
 
 const isFollowing = ref(false)
-const currentDanmaku = ref([]) // 当前视频的弹幕数据
 //判断是否已追番
 
 const checkIsFollowing = async () => {
@@ -294,23 +286,17 @@ const copyCurrentUrl = () => {
   // 获取当前页面的完整URL
   const currentUrl = window.location.href
 
-  // 检查是否支持Clipboard API
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    // 使用Clipboard API复制到剪贴板
-    navigator.clipboard.writeText(currentUrl)
-        .then(() => {
-          // 复制成功提示
-          ElMessage.success('链接已复制到剪贴板')
-        })
-        .catch(err => {
-          // 复制失败提示
-          console.error('复制失败:', err)
-          fallbackCopyTextToClipboard(currentUrl)
-        })
-  } else {
-    // 使用备用方案
-    fallbackCopyTextToClipboard(currentUrl)
-  }
+  // 使用Clipboard API复制到剪贴板
+  navigator.clipboard.writeText(currentUrl)
+      .then(() => {
+        // 复制成功提示
+        ElMessage.success('链接已复制到剪贴板')
+      })
+      .catch(err => {
+        // 复制失败提示
+        console.error('复制失败:', err)
+        fallbackCopyTextToClipboard(currentUrl)
+      })
 }
 
 // 备用复制方案
@@ -400,6 +386,7 @@ const getVideoDetail = async () => {
 
     if (res.code === 200 && res.data) {
       const data = res.data
+      console.log('获取到视频详情数据:', data)
 
       // 更新视频信息
       videoInfo.value = {
@@ -415,7 +402,7 @@ const getVideoDetail = async () => {
         releaseDate: data.vod_pubdate || data.vod_year || '',
         description: data.vod_content || data.vod_blurb || '',
         tags: data.vod_class ? data.vod_class.split(',') : [],
-        actors: data.vod_actor ? data.vod_actor.split() : [],
+        actors: data.vod_actor ? data.vod_actor.split(',') : [],
         area: data.vod_area || '',
         year: data.vod_year || '',
         weekday: data.vod_weekday || '',
@@ -423,19 +410,19 @@ const getVideoDetail = async () => {
         isCollected: false,
         isSubscribed: true
       }
-      console.log('设置后的videoInfo.typeId:', videoInfo.value.typeId)
+      console.log('设置后的videoInfo:', videoInfo.value)
+      
       // 存储不同线路的剧集数据
       allEpisodes.value = {}
 
       // 如果有播放地址，处理剧集信息
       if (data.vod_play_url) {
-
         // 处理所有线路的剧集数据
         const playUrls = data.vod_play_url.split('$$$')
 
         // 处理线路信息
         const sourcesInfo = playUrls.map((source, index) => {
-          const lines = ['官方', '主线', '备用']
+          const lines = ['官方', '主线路', '备用线路']
           const name = index < lines.length ? lines[index] : `线路${index + 1}`
 
           // 统计该线路的剧集数
@@ -495,11 +482,6 @@ const getVideoDetail = async () => {
           // 默认使用第一个线路
           currentSource.value = 0;
           episodes.value = allEpisodes.value[0] || [];
-
-          // 自动播放第一集视频
-          if (episodes.value && episodes.value.length > 0) {
-            playVideo(episodes.value[0].id)
-          }
         }
       }
     } else {
@@ -522,6 +504,7 @@ const getRelatedDrama = async () => {
     if (Array.isArray(res.data)) {
       // 新的响应格式，直接是数组
       relatedData = res.data;
+      console.log('获取到相关推荐(新格式):', relatedData);
     } else if (res.data && res.data.list) {
       // 旧的响应格式，有list属性
       relatedData = res.data.list;
@@ -688,6 +671,29 @@ onMounted(async () => {
   await checkIsFollowing()
   await getRelatedDrama()
   await getComments()
+  
+  // 尝试自动播放第一集
+  if (episodes.value && episodes.value.length > 0) {
+    try {
+      console.log('尝试播放第一集视频')
+      const result = await playVideo(episodes.value[0].id)
+      
+      if (!result && videoInfo.value.sources && videoInfo.value.sources.length > 1) {
+        // 如果播放失败，尝试切换到第二个线路
+        console.log('第一条线路播放失败，尝试切换线路')
+        ElMessage.info('尝试切换到备用线路')
+        switchSource(1)
+        // 等待线路切换完成
+        setTimeout(async () => {
+          if (episodes.value && episodes.value.length > 0) {
+            await playVideo(episodes.value[0].id)
+          }
+        }, 500)
+      }
+    } catch (error) {
+      console.error('自动播放第一集视频失败:', error)
+    }
+  }
 })
 </script>
 
@@ -711,7 +717,6 @@ onMounted(async () => {
             :video-id="videoId"
             :show-back-button="true"
             :show-sidebar="showSidebar"
-            :danmaku="currentDanmaku"
             @error="handlePlayerError"
             @play="handlePlayerPlay"
             @pause="handlePlayerPause"

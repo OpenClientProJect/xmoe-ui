@@ -5,7 +5,7 @@ import request from "@/utils/request.js";
  */
 export const getCommentsService = (vodId) => {
   return request({
-    url: "/sk-api//vod/get_pinglun",
+    url: "/sk-api/vod/get_pinglun",
     method: "get",
     params:{
       vodId: vodId,

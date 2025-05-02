@@ -18,7 +18,7 @@ export const getDramaListService = (params = {}) => {
     // 合并默认参数和传入参数
     const finalParams = {...defaultParams, ...params}
 
-    return request.get('/sk-api//vod/list', {
+    return request.get('/sk-api/vod/list', {
         params: finalParams
     })
 }
@@ -27,7 +27,7 @@ export const getDramaListService = (params = {}) => {
  * 获取番剧详情
  */
 export const getDramaDetailService = (vodId) => {
-    return request.get('/sk-api//vod/one?vodId=' + vodId)
+    return request.get('/sk-api/vod/one?vodId=' + vodId)
 }
 
 /**

@@ -4,7 +4,7 @@
 import axios from 'axios';
 import {ElMessage} from "element-plus";
 //定义一个变量,记录公共的前缀  ,  baseURL
-const baseURL = '/api';
+const baseURL = '/sk-api';
 const instance = axios.create({
     baseURL,
     timeout: 15000 // 设置15秒超时时间
