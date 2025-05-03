@@ -11,6 +11,10 @@ const props = defineProps({
   activeTab: {
     type: String,
     default: '推荐'
+  },
+  hideInVideoDetail: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -101,7 +105,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="header-nav">
+  <div class="header-nav" :class="{ 'hidden': hideInVideoDetail }">
     <!-- 顶部搜索栏 -->
     <div class="search-bar">
       <div class="avatar-container" @click="handleAvatarClick">
@@ -167,6 +171,10 @@ onMounted(() => {
   background-color: white;
   padding-top: env(safe-area-inset-top);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-nav.hidden {
+  display: none;
 }
 
 .search-bar {

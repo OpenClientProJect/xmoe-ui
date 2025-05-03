@@ -129,7 +129,19 @@ const initPlayer = (url) => {
 
   // 保存当前URL供调试
   currentVideoUrl.value = url
-  console.log('当前视频播放地址:', url)
+  
+  // 添加video-api前缀，使用代理转发
+  let videoUrl = url
+  if (url.startsWith('http')) {
+    // 如果是完整URL，检查是否需要添加前缀
+    if (!url.includes('/video-api/') && !url.includes('/video-proxy/')) {
+      videoUrl = `/video-api${new URL(url).pathname}${new URL(url).search}`
+    }
+  } else {
+    // 如果是相对路径，直接添加前缀
+    videoUrl = `/video-api/${url}`
+  }
+  console.log('当前视频播放地址:', videoUrl)
 
   // 如果已经有播放器实例，先销毁
   if (artInstance.value) {
@@ -137,7 +149,7 @@ const initPlayer = (url) => {
   }
 
   try {
-    console.log('初始化播放器，URL:', url)
+    console.log('初始化播放器，URL:', videoUrl)
 
     // 清空容器
     artRef.value.innerHTML = ''
@@ -164,7 +176,7 @@ const initPlayer = (url) => {
     // 播放器配置
     const options = {
       container: artRef.value,
-      url: url,
+      url: videoUrl,
       poster: props.poster,
       title: props.title,
       volume: 0.7,
@@ -325,14 +337,6 @@ const initPlayer = (url) => {
 
     // 增强错误处理
     artInstance.value.on('error', (error) => {
-      console.error('播放器错误详情:', {
-        error: error || '未捕获到具体错误',
-        currentUrl: currentVideoUrl.value,
-        message: error && error.message ? error.message : '未知错误',
-        code: error && error.code ? error.code : 'unknown',
-        mediaError: artInstance.value && artInstance.value.$video ? artInstance.value.$video.error : null
-      })
-      
       // 显示错误信息和当前URL，帮助调试
       let errorMessage = '视频加载失败';
       if (error && error.message) {

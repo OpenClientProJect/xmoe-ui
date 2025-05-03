@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { handleImageUrl, handleImageError } from '@/utils/imageUtils' // 导入图片工具类函数
 
@@ -37,98 +37,131 @@ const startX = ref(0)
 const currentTranslate = ref(0)
 const prevTranslate = ref(0)
 const isTransitioning = ref(false)
-// 添加一个变量用于跟踪是否有显著的滑动行为
-const hasMoved = ref(false)
-const clickStartTime = ref(0)
+// 跟踪滑动距离
+const dragDistance = ref(0) 
+// 点击相关控制变量
+const clickEnabled = ref(true)
+
+// 维护点击状态的变量
+let dragStartTime = 0
+let isDragEvent = false
+
+// 专门用于处理点击事件的函数
+const handleBannerClick = (id) => {
+  // 如果点击当前处于禁用状态，不执行操作
+  if (!clickEnabled.value) return
+  
+  // 如果有有效ID，进行跳转
+  if (id) {
+    router.push(`/video/${id}`)
+  }
+}
 
 // 轮播图触摸开始
 const touchStart = (e) => {
   if (!carouselRef.value) return
+  
   stopAutoplay()
   isDragging.value = true
-  hasMoved.value = false
-  clickStartTime.value = Date.now()
+  isDragEvent = false
+  dragDistance.value = 0
+  dragStartTime = Date.now()
+  
+  // 重置点击状态
+  clickEnabled.value = true
+  
   startX.value = getPositionX(e)
   carouselRef.value.style.transition = 'none'
-  // 阻止事件冒泡和默认行为，防止页面滚动
-  if (e.type.includes('touch')) {
-    e.preventDefault()
-  }
 }
 
 // 轮播图触摸移动
 const touchMove = (e) => {
   if (!isDragging.value || !carouselRef.value) return
-  // 阻止事件冒泡和默认行为，防止页面滚动
-  if (e.type.includes('touch')) {
-    e.preventDefault()
-  }
+  
   const currentX = getPositionX(e)
   const diff = currentX - startX.value
-  // 如果移动距离超过5像素，标记为已移动
-  if (Math.abs(diff) > 5) {
-    hasMoved.value = true
+  
+  // 更新拖动距离
+  dragDistance.value = Math.abs(diff)
+  
+  // 如果移动距离超过阈值，标记为拖动事件并禁用点击
+  if (dragDistance.value > 10) {
+    isDragEvent = true
+    clickEnabled.value = false
   }
+  
   currentTranslate.value = prevTranslate.value + diff
   setCarouselPosition()
 }
 
 // 轮播图触摸结束
-const touchEnd = () => {
+const touchEnd = (e) => {
   if (!isDragging.value || !carouselRef.value) return
   isDragging.value = false
-
-  const threshold = window.innerWidth * 0.2 // 20%的屏幕宽度作为阈值
-  const slideWidth = carouselRef.value.clientWidth
-
-  // 根据拖动距离决定是否切换幻灯片
-  if (currentTranslate.value < prevTranslate.value - threshold) {
-    // 向左拖动，显示下一张
-    swiperCurrentIndex.value += 1
-  } else if (currentTranslate.value > prevTranslate.value + threshold) {
-    // 向右拖动，显示上一张
-    swiperCurrentIndex.value -= 1
-  }
-
-  // 更新位置
-  prevTranslate.value = -swiperCurrentIndex.value * slideWidth
-  currentTranslate.value = prevTranslate.value
-
-  // 添加过渡效果并更新位置
-  carouselRef.value.style.transition = 'transform 0.3s ease-out'
-  setCarouselPosition()
-
-  // 处理循环逻辑
-  isTransitioning.value = true
-
-  // 等待过渡结束后检查是否需要重置位置
-  setTimeout(() => {
-    isTransitioning.value = false
-
-    // 如果滑动到了复制的第一张（也就是最后一个位置）
-    if (swiperCurrentIndex.value >= loopSwiperImages.value.length - 1) {
-      carouselRef.value.style.transition = 'none'
-      swiperCurrentIndex.value = 1
-      prevTranslate.value = -swiperCurrentIndex.value * slideWidth
-      currentTranslate.value = prevTranslate.value
-      setCarouselPosition()
-    }
-
-    // 如果滑动到了复制的最后一张（也就是第一个位置）
-    if (swiperCurrentIndex.value <= 0) {
-      carouselRef.value.style.transition = 'none'
-      swiperCurrentIndex.value = loopSwiperImages.value.length - 2
-      prevTranslate.value = -swiperCurrentIndex.value * slideWidth
-      currentTranslate.value = prevTranslate.value
-      setCarouselPosition()
+  
+  // 计算拖动时长
+  const dragDuration = Date.now() - dragStartTime
+  
+  // 短时间内的小距离移动被视为点击
+  if (dragDistance.value < 10 && dragDuration < 300) {
+    // 允许后续点击事件处理
+    clickEnabled.value = true
+  } else {
+    // 这是一个拖动操作，执行轮播逻辑
+    const threshold = window.innerWidth * 0.2 // 20%的屏幕宽度作为阈值
+    const slideWidth = carouselRef.value.clientWidth
+    
+    // 根据拖动距离决定是否切换幻灯片
+    if (currentTranslate.value < prevTranslate.value - threshold) {
+      // 向左拖动，显示下一张
+      swiperCurrentIndex.value += 1
+    } else if (currentTranslate.value > prevTranslate.value + threshold) {
+      // 向右拖动，显示上一张
+      swiperCurrentIndex.value -= 1
     }
     
-    // 500ms后重置hasMoved状态，防止干扰下一次点击
+    // 更新位置
+    prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+    currentTranslate.value = prevTranslate.value
+    
+    // 添加过渡效果并更新位置
+    carouselRef.value.style.transition = 'transform 0.3s ease-out'
+    setCarouselPosition()
+    
+    // 处理循环逻辑
+    isTransitioning.value = true
+    
+    // 等待过渡结束后检查是否需要重置位置
     setTimeout(() => {
-      hasMoved.value = false
-    }, 500)
-  }, 300)
-
+      isTransitioning.value = false
+      
+      if (carouselRef.value) {
+        // 如果滑动到了复制的第一张（也就是最后一个位置）
+        if (swiperCurrentIndex.value >= loopSwiperImages.value.length - 1) {
+          carouselRef.value.style.transition = 'none'
+          swiperCurrentIndex.value = 1
+          prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+          currentTranslate.value = prevTranslate.value
+          setCarouselPosition()
+        }
+        
+        // 如果滑动到了复制的最后一张（也就是第一个位置）
+        if (swiperCurrentIndex.value <= 0) {
+          carouselRef.value.style.transition = 'none'
+          swiperCurrentIndex.value = loopSwiperImages.value.length - 2
+          prevTranslate.value = -swiperCurrentIndex.value * slideWidth
+          currentTranslate.value = prevTranslate.value
+          setCarouselPosition()
+        }
+      }
+      
+      // 重置点击状态
+      nextTick(() => {
+        clickEnabled.value = true
+      })
+    }, 300)
+  }
+  
   // 恢复自动播放
   startAutoplay()
 }
@@ -248,20 +281,6 @@ const initCarousel = () => {
   }
 }
 
-// 在轮播图中点击跳转到详情页
-const goToVideoDetail = (id, event) => {
-  // 如果是拖动操作或有显著移动，不触发跳转
-  const clickDuration = Date.now() - clickStartTime.value
-  // 如果有明显的滑动或点击时长超过300ms(表示可能是长按或拖动)，不触发点击
-  if (hasMoved.value || clickDuration > 300) {
-    return
-  }
-  
-  if(id) {
-    router.push(`/video/${id}`)
-  }
-}
-
 onMounted(() => {
   startAutoplay()
   initCarousel()
@@ -302,8 +321,8 @@ watch(
         @mousemove="touchMove"
         @mouseup="touchEnd"
         @mouseleave="touchEnd"
-        @touchstart.prevent="touchStart"
-        @touchmove.prevent="touchMove"
+        @touchstart="touchStart"
+        @touchmove="touchMove"
         @touchend="touchEnd"
         @touchcancel="touchEnd"
       >
@@ -311,8 +330,9 @@ watch(
           v-for="(item, index) in loopSwiperImages"
           :key="`${item.id}-${index}`"
           class="carousel-slide"
-          @click="goToVideoDetail(item.id, $event)"
         >
+          <!-- 添加一个独立的点击区域按钮 -->
+          <div class="carousel-click-area" @click="handleBannerClick(item.id)"></div>
           <img 
             :src="handleImageUrl(item.url)" 
             class="carousel-image" 
@@ -353,6 +373,28 @@ watch(
   width: 100%;
   border-radius: 12px;
   position: relative;
+  -webkit-tap-highlight-color: transparent; /* 去除移动端点击高亮 */
+  touch-action: pan-y; /* 允许垂直滚动，但优化水平滑动体验 */
+}
+
+/* 添加点击区域样式 */
+.carousel-click-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  cursor: pointer;
+  background-color: transparent;
+  /* 针对移动设备的优化 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 增加活跃态样式，提高用户体验 */
+.carousel-click-area:active {
+  background-color: rgba(0, 0, 0, 0.05); /* 轻微的点击反馈 */
 }
 
 /* 轮播图加载占位符 */
@@ -483,8 +525,7 @@ watch(
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  /* 添加指针效果，表示可点击 */
-  cursor: pointer;
+  -webkit-tap-highlight-color: transparent; /* 去除移动端点击高亮 */
 }
 
 .carousel-image {
@@ -494,6 +535,7 @@ watch(
   display: block;
   -webkit-user-drag: none;
   user-select: none;
+  pointer-events: none; /* 防止图片被单独点击和拖动 */
 }
 
 .carousel-caption {
@@ -503,6 +545,8 @@ watch(
   width: 100%;
   padding: 16px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  pointer-events: none; /* 防止文字干扰点击事件 */
+  z-index: 5;
 }
 
 /* 添加媒体查询，在大屏幕上增加文字大小和内边距 */
