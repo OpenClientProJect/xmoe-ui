@@ -19,6 +19,16 @@ const loading = ref(false)
 const playHistoryList = ref([])
 const collectList = ref([])
 
+// 清除HTML标签的函数
+const removeHtmlTags = (html) => {
+  if (!html) return '';
+  // 先替换<p>标签为空字符串
+  let content = html.replace(/<\/?p>/g, '');
+  // 再替换其他可能存在的HTML标签
+  content = content.replace(/<[^>]*>/g, '');
+  return content;
+}
+
 // 初始化用户ID和激活标签
 onMounted(() => {
   // 检查是否有用户ID
@@ -69,7 +79,7 @@ const getPlayHistory = async () => {
       cover: '@/assets/gif/loading.gif',
       episode: item.vod_remarks || '全集',
       duration: item.duration || '',
-      content: item.vod_content || '' // 添加内容简介字段
+      content: removeHtmlTags(item.vod_content || '') // 添加内容简介字段，并清除HTML标签
     }))
   } finally {
     loading.value = false
@@ -92,7 +102,7 @@ const getCollectList = async () => {
       cover: '@/assets/gif/loading.gif',
       episode: item.vod_remarks || '全集',
       duration: item.duration || '',
-      content: item.vod_content || '' // 添加内容简介字段
+      content: removeHtmlTags(item.vod_content || '') // 添加内容简介字段，并清除HTML标签
     }))
   } finally {
     loading.value = false

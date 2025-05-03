@@ -6,6 +6,7 @@ import useUserInfoStore from "@/stores/userstores.js";
 
 import Loading from '@/assets/gif/loading.gif'
 import {getUserInfoService} from "@/api/user.js";
+import { ElMessage } from 'element-plus'
 
 const props = defineProps({
   activeTab: {
@@ -87,6 +88,20 @@ const goToSearch = () => {
   router.push('/search')
 }
 
+// 跳转到播放记录页面
+const goToHistory = () => {
+  // 检查用户是否登录
+  if (userStore.info && userStore.info.user_id) {
+    router.push({
+      path: `/history/${userStore.info.user_id}`,
+      query: { tab: 'history' }
+    });
+  } else {
+    ElMessage.warning('请先登录');
+    router.push('/login');
+  }
+}
+
 // 获取菜单列表
 const getMenuList = async () => {
   try {
@@ -116,7 +131,7 @@ onMounted(() => {
         <img src="../../../assets/icon/search.svg" class="search-icon" alt="search"/>
         <span class="placeholder-text">搜索</span>
       </div>
-      <img src="../../../assets/icon/Recording.svg" class="action-icon recording-icon" alt="recording"/>
+      <img src="../../../assets/icon/Recording.svg" @click="goToHistory" class="action-icon recording-icon" alt="recording"/>
     </div>
 
     <!-- 分类导航栏 -->
@@ -225,7 +240,11 @@ onMounted(() => {
 }
 
 .recording-icon {
-  opacity: 0.7;
+  width: 24px;
+  height: 24px;
+  margin-left: 12px;
+  cursor: pointer;
+  filter: brightness(0) invert(1); /* 将图标改为白色 */
 }
 
 .tab-container {

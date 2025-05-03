@@ -10,8 +10,11 @@ import AnimeList from '@/views/home/DramaList.vue'
 import BannerCarousel from '@/views/home/BannerCarousel.vue'
 import {getBannerListService, getDramaListService, getDramaScheduleService} from "@/api/home/anime.js";
 import { handleImageUrl, handleImageError } from '@/utils/imageUtils' // 导入图片工具类函数
+import useUserInfoStore from "@/stores/userstores.js"; // 导入用户信息store
+import { ElMessage } from 'element-plus' // 导入消息组件
 
 const router = useRouter()
+const userStore = useUserInfoStore()
 const activeTab = ref('推荐')
 
 // 添加番剧数据
@@ -168,6 +171,20 @@ const goToRankList = () => {
   router.push('/rank')
 }
 
+// 跳转到追番页面
+const goToFavorites = () => {
+  // 检查用户是否已登录
+  if (userStore.info && userStore.info.user_id) {
+    router.push({
+      path: `/history/${userStore.info.user_id}`,
+      query: { tab: 'collect' }
+    });
+  } else {
+    ElMessage.warning('请先登录');
+    router.push('/login');
+  }
+}
+
 // 排期表滚动控制
 const scheduleContainerRef = ref(null)
 
@@ -206,7 +223,7 @@ const scrollSchedule = (direction) => {
           <div class="category-btn category-btn-purple">
             <span>海贼王</span>
           </div>
-          <div class="category-btn category-btn-indigo">
+          <div class="category-btn category-btn-indigo" @click="goToFavorites">
             <span>追番</span>
           </div>
         </div>

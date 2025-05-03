@@ -245,7 +245,6 @@ const playVideo = async (episodeId) => {
     return proxyUrl
   } catch (error) {
     console.error('播放视频失败:', error)
-    ElMessage.error(`播放失败: ${error.message || '未知错误，请尝试其他线路'}`)
     return null
   }
 }
