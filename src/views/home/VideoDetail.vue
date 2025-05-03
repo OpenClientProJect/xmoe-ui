@@ -785,8 +785,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- 剧集列表 - 放在右侧信息区域 -->
-        <div class="sidebar-content" v-show="sidebarContent === 'episodes'">
+        <!-- 剧集列表 - 放在右侧信息区域 (仅在桌面端显示) -->
+        <div class="sidebar-content desktop-only" v-show="sidebarContent === 'episodes'">
           <!-- 线路选择 -->
           <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
             <div
@@ -1269,6 +1269,11 @@ onMounted(async () => {
   display: block;
 }
 
+/* 桌面端显示和移动端隐藏 */
+.desktop-only {
+  display: none;
+}
+
 /* 桌面端布局优化 */
 @media (min-width: 1024px) {
   .player-info-layout {
@@ -1320,6 +1325,10 @@ onMounted(async () => {
 
   .mobile-only {
     display: none;
+  }
+  
+  .desktop-only {
+    display: block;
   }
 
   /* 剧集和内容区域在桌面端的宽度限制 */
