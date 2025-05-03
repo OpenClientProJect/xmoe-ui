@@ -132,15 +132,15 @@ const initPlayer = (url) => {
   
   // 添加video-api前缀，使用代理转发
   let videoUrl = url
-  if (url.startsWith('http')) {
-    // 如果是完整URL，检查是否需要添加前缀
-    if (!url.includes('/video-api/') && !url.includes('/video-proxy/')) {
-      videoUrl = `/video-api${new URL(url).pathname}${new URL(url).search}`
-    }
-  } else {
-    // 如果是相对路径，直接添加前缀
-    videoUrl = `/video-api/${url}`
-  }
+  // if (url.startsWith('http')) {
+  //   // 如果是完整URL，检查是否需要添加前缀
+  //   if (!url.includes('/video-api/') && !url.includes('/video-proxy/')) {
+  //     videoUrl = `/video-api${new URL(url).pathname}${new URL(url).search}`
+  //   }
+  // } else {
+  //   // 如果是相对路径，直接添加前缀
+  //   videoUrl = `/video-api/${url}`
+  // }
   console.log('当前视频播放地址:', videoUrl)
 
   // 如果已经有播放器实例，先销毁
@@ -158,7 +158,6 @@ const initPlayer = (url) => {
     const danmukuOptions = {
       danmuku: props.danmaku || [],
       speed: 5, // 弹幕速度
-      opacity: 1, // 弹幕透明度
       fontSize: 25, // 弹幕字体大小
       color: '#FFFFFF', // 弹幕默认颜色
       mode: 0, // 弹幕默认模式 0-滚动 1-顶部 2-底部

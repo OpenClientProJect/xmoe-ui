@@ -108,7 +108,6 @@ const handlePlayerBack = () => {
 // 处理播放器事件
 const handlePlayerError = (error) => {
   console.error('播放器错误:', error)
-  ElMessage.error('视频播放失败，请尝试其他线路')
 }
 
 const handlePlayerPlay = () => {
@@ -200,44 +199,44 @@ const playVideo = async (episodeId) => {
     let proxyUrl = videoUrl
 
     // 判断是否是外部URL
-    if (videoUrl.startsWith('https') && !videoUrl.startsWith(window.location.origin)) {
-      try {
-        const urlObj = new URL(videoUrl)
-
-        // 如果是xmoe.video域名，使用video-proxy代理
-        if (urlObj.hostname === 'xmoe.video' || urlObj.hostname.endsWith('.xmoe.video')) {
-          // 特殊处理validate路径
-          if (urlObj.pathname === '/validate') {
-            // 提取link参数值，防止多次编码
-            let linkParam = '';
-            const linkMatch = urlObj.search.match(/[?&]link=([^&]+)/);
-            if (linkMatch && linkMatch[1]) {
-              linkParam = linkMatch[1];
-              // 使用专门的@格式代理 - 更可靠的方式处理长token
-              proxyUrl = `https://xmoe.video/validate?link=${linkParam}`;
-            } else {
-              // 如果无法提取link参数，使用完整的搜索字符串
-              proxyUrl = `/video-proxy/validate${urlObj.search}`;
-            }
-            console.log('使用validate专用代理URL:', proxyUrl);
-          } else {
-            // 其他xmoe.video路径
-            proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
-            console.log('使用xmoe代理URL:', proxyUrl)
-          }
-        }
-        // 为其他所有外部URL添加CORS代理
-        else {
-          // 使用通用的代理解决跨域问题
-          proxyUrl = `/cors-proxy?url=${encodeURIComponent(videoUrl)}`
-          console.log('使用CORS代理URL:', proxyUrl)
-        }
-      } catch (e) {
-        console.error('解析URL失败:', e)
-        // 直接使用原URL
-        console.log('URL解析失败，使用原始URL')
-      }
-    }
+    // if (videoUrl.startsWith('https') && !videoUrl.startsWith(window.location.origin)) {
+    //   try {
+    //     const urlObj = new URL(videoUrl)
+    //
+    //     // 如果是xmoe.video域名，使用video-proxy代理
+    //     if (urlObj.hostname === 'xmoe.video' || urlObj.hostname.endsWith('.xmoe.video')) {
+    //       // 特殊处理validate路径
+    //       if (urlObj.pathname === '/validate') {
+    //         // 提取link参数值，防止多次编码
+    //         let linkParam = '';
+    //         const linkMatch = urlObj.search.match(/[?&]link=([^&]+)/);
+    //         if (linkMatch && linkMatch[1]) {
+    //           linkParam = linkMatch[1];
+    //           // 使用专门的@格式代理 - 更可靠的方式处理长token
+    //           proxyUrl = `https://xmoe.video/validate?link=${linkParam}`;
+    //         } else {
+    //           // 如果无法提取link参数，使用完整的搜索字符串
+    //           proxyUrl = `/video-proxy/validate${urlObj.search}`;
+    //         }
+    //         console.log('使用validate专用代理URL:', proxyUrl);
+    //       } else {
+    //         // 其他xmoe.video路径
+    //         proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
+    //         console.log('使用xmoe代理URL:', proxyUrl)
+    //       }
+    //     }
+    //     // 为其他所有外部URL添加CORS代理
+    //     else {
+    //       // 使用通用的代理解决跨域问题
+    //       proxyUrl = `/cors-proxy?url=${encodeURIComponent(videoUrl)}`
+    //       console.log('使用CORS代理URL:', proxyUrl)
+    //     }
+    //   } catch (e) {
+    //     console.error('解析URL失败:', e)
+    //     // 直接使用原URL
+    //     console.log('URL解析失败，使用原始URL')
+    //   }
+    // }
 
     // 更新当前播放的视频URL
     currentVideoUrl.value = proxyUrl
