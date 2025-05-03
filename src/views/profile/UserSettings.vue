@@ -190,9 +190,9 @@ onMounted(() => {
       ></div>
       
       <!-- 抽屉内容 -->
-      <div class="fixed bottom-0 left-0 w-full bg-white rounded-t-xl z-50 animate-slide-up">
+      <div class="fixed bottom-0 left-0 w-full bg-white rounded-t-xl z-50 animate-slide-up max-h-[80vh] overflow-hidden flex flex-col">
         <!-- 抽屉头部 -->
-        <div class="flex justify-between items-center px-4 py-3 border-b">
+        <div class="flex justify-between items-center px-4 py-4 border-b">
           <h3 class="text-lg font-medium">选择头像</h3>
           <button @click="closeAvatarDrawer" class="text-gray-500 h-8 w-8 flex items-center justify-center">
             <span class="text-xl">×</span>
@@ -200,18 +200,18 @@ onMounted(() => {
         </div>
         
         <!-- 头像列表 -->
-        <div class="p-4 grid grid-cols-3 gap-4">
+        <div class="p-4 py-6 grid grid-cols-3 gap-6 overflow-y-auto flex-grow">
           <div 
             v-for="(avatar, index) in avatarOptions" 
             :key="index"
-            class="avatar-item flex justify-center"
+            class="avatar-item flex justify-center mb-4"
           >
             <img 
               :src="avatar"
-              class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 hover:border-red-500 transition-all cursor-pointer animate-fade-in"
+              class="w-28 h-28 rounded-full object-cover border-2 border-gray-200 hover:border-red-500 transition-all cursor-pointer animate-fade-in"
               :style="`animation-delay: ${100 + index * 50}ms`"
               @click="selectAvatar(avatar)"
-             alt=""/>
+              alt=""/>
           </div>
         </div>
         
@@ -259,12 +259,34 @@ input {
   }
 }
 
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-slide-up {
   animation: slideUp 0.3s ease-out forwards;
 }
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
+}
+
+.avatar-item img {
+  animation: zoomIn 0.3s ease-out forwards;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.avatar-item img:hover {
+  transform: scale(1.05);
+  border-color: #ff6665;
+  box-shadow: 0 3px 10px rgba(255, 102, 101, 0.2);
 }
 
 /* 安全区域 - 用于iPhone X及以上机型底部黑条 */
