@@ -746,8 +746,6 @@ onMounted(async () => {
 
       <!-- 右侧信息区域容器 -->
       <div class="sidebar-wrapper" v-show="showSidebar">
-
-
         <!-- 侧边栏内容选择标签页 -->
         <div class="sidebar-tabs">
           <div
@@ -766,8 +764,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- 剧集列表 - 放在右侧信息区域 (仅在桌面端显示) -->
-        <div class="sidebar-content desktop-only" v-show="sidebarContent === 'episodes'">
+        <!-- 剧集页面内容 -->
+        <div v-if="sidebarContent === 'episodes'" class="sidebar-content desktop-only">
           <!-- 视频信息 - 添加到剧集选项中 -->
           <div class="sidebar-video-info">
             <h2 class="sidebar-video-title">{{ videoInfo.title }}</h2>
@@ -866,8 +864,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- 评论区域 - 在侧边栏中 -->
-        <div class="sidebar-content comment-sidebar" v-show="sidebarContent === 'comments'">
+        <!-- 评论页面内容（仅在桌面端显示） -->
+        <div v-if="sidebarContent === 'comments'" class="sidebar-content comment-sidebar desktop-only">
           <!-- 评论列表 -->
           <div v-if="comments.lists && comments.lists.length > 0" class="comment-list">
             <div v-for="commentItem in comments.lists"
@@ -882,14 +880,6 @@ onMounted(async () => {
                   <div class="comment-date">{{ formatDate(commentItem.comment_time) }}</div>
                 </div>
                 <div class="comment-text">{{ commentItem.comment_content }}</div>
-                <!--                <div class="comment-actions">-->
-                <!--                  <div class="action-btn reply-btn" @click="startReply(commentItem)">-->
-                <!--                    <el-icon size="14">-->
-                <!--                      <ChatDotRound/>-->
-                <!--                    </el-icon>-->
-                <!--                    <span>回复</span>-->
-                <!--                  </div>-->
-                <!--                </div>-->
 
                 <!-- 回复列表 -->
                 <div v-if="commentItem.rp_lists && commentItem.rp_lists.length > 0" class="reply-list">
@@ -908,14 +898,6 @@ onMounted(async () => {
                         <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
                         {{ reply.comment_content }}
                       </div>
-                      <!--                      <div class="reply-actions">-->
-                      <!--                        <div class="action-btn reply-btn" @click="startReply(reply)">-->
-                      <!--                          <el-icon size="12">-->
-                      <!--                            <ChatDotRound/>-->
-                      <!--                          </el-icon>-->
-                      <!--                          <span>回复</span>-->
-                      <!--                        </div>-->
-                      <!--                      </div>-->
                     </div>
                   </div>
                 </div>
@@ -952,8 +934,8 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 在移动端显示的剧集列表 -->
-    <div class="episodes-section mobile-only">
+    <!-- 在移动端显示的剧集列表，仅在剧集页面显示 -->
+    <div class="episodes-section mobile-only" v-if="sidebarContent === 'episodes'">
       <div class="episodes-header">
         <h3 class="section-title">剧集</h3>
         <div class="episode-count">
@@ -1000,8 +982,8 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="video-info-wrapper mobile-only">
-        <!-- 视频信息 - 只在移动端显示简略信息 -->
+      <div class="video-info-wrapper mobile-only" v-if="sidebarContent === 'episodes'">
+        <!-- 视频信息 - 只在移动端剧集页面显示简略信息 -->
         <div class="video-info">
           <h1 class="video-title">{{ videoInfo.title }}</h1>
           <div class="video-stats">
@@ -1009,6 +991,74 @@ onMounted(async () => {
             <!-- 添加详情按钮 -->
             <span class="detail-button" @click="openDetailDrawer">详情</span>
           </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 移动端评论区域，仅在评论页面显示 -->
+    <div class="comments-section mobile-only" v-if="sidebarContent === 'comments'">
+      <!-- 评论列表 -->
+      <div v-if="comments.lists && comments.lists.length > 0" class="mobile-comment-list">
+        <div v-for="commentItem in comments.lists"
+             :key="commentItem.comment_id"
+             class="comment-item">
+          <div class="comment-avatar">
+            <img :src="commentItem.user_pic || Loading" alt="用户头像">
+          </div>
+          <div class="comment-content">
+            <div class="comment-header">
+              <div class="comment-author">{{ commentItem.comment_name }}</div>
+              <div class="comment-date">{{ formatDate(commentItem.comment_time) }}</div>
+            </div>
+            <div class="comment-text">{{ commentItem.comment_content }}</div>
+
+            <!-- 回复列表 -->
+            <div v-if="commentItem.rp_lists && commentItem.rp_lists.length > 0" class="reply-list">
+              <div v-for="reply in commentItem.rp_lists"
+                   :key="reply.comment_id"
+                   class="reply-item">
+                <div class="reply-avatar">
+                  <img :src="reply.user_pic || Loading" alt="用户头像">
+                </div>
+                <div class="reply-content">
+                  <div class="reply-header">
+                    <div class="reply-author">{{ reply.comment_name }}</div>
+                    <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
+                  </div>
+                  <div class="reply-text">
+                    <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
+                    {{ reply.comment_content }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 无评论时显示 -->
+      <div v-else class="comment-placeholder">
+        <el-icon :size="32" class="mb-2">
+          <ChatDotRound/>
+        </el-icon>
+        <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
+      </div>
+
+      <!-- 评论输入区域 -->
+      <div class="comment-input-area">
+        <div v-if="replyMode" class="reply-indicator">
+          回复{{ replyTo?.comment_name }}
+          <el-button type="text" class="cancel-reply" @click="cancelReply">取消</el-button>
+        </div>
+        <div class="comment-input-container">
+          <el-input
+              v-model="comment"
+              type="text"
+              :placeholder="replyPlaceholder"
+              class="comment-input"
+          />
+          <el-button type="primary" @click="sendComment" :disabled="!comment.trim()" class="send-button">发表
+          </el-button>
         </div>
       </div>
     </div>
@@ -1752,6 +1802,42 @@ onMounted(async () => {
   background-color: white;
   padding: 16px;
   border-radius: 4px;
+}
+
+/* 移动端评论区域样式 */
+.comments-section {
+  background-color: white;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.mobile-comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* 确保在移动端和桌面端正确显示的辅助类 */
+@media (min-width: 1024px) {
+  .mobile-only {
+    display: none !important;
+  }
+  
+  .desktop-only {
+    display: block !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
 }
 
 .episodes-header {

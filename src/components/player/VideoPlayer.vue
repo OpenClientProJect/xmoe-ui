@@ -530,12 +530,11 @@ const toggleSidebar = () => {
   >
     <div ref="artRef" class="video-player-content"></div>
     
-    <!-- 返回按钮 - 添加动态显示控制 -->
+    <!-- 返回按钮 - 移除动态显示控制 -->
     <div 
       v-if="showBackButton" 
       class="back-button" 
       @click="goBack"
-      :class="{ 'visible': isControlsVisible }"
     >
       <el-icon><ArrowLeft /></el-icon>
     </div>
@@ -575,34 +574,21 @@ const toggleSidebar = () => {
 /* 返回按钮样式 */
 .back-button {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  width: 36px;
-  height: 36px;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
+  top: 0;
+  left: 0;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: white;
-  font-size: 18px;
-  z-index: 10;
-  transition: all 0.3s;
-  /* 默认状态 - 隐藏 */
-  opacity: 0;
-  visibility: hidden;
-}
-
-/* 可见状态 */
-.back-button.visible {
-  opacity: 1;
-  visibility: visible;
+  font-size: 24px;
+  z-index: 100;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 0 5px rgba(0, 0, 0, 0.7);
 }
 
 .back-button:hover {
-  background-color: rgba(0, 0, 0, 0.7);
-  transform: scale(1.05);
+  color: #dc2626;
 }
 
 .back-button:active {

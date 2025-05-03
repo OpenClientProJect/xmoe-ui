@@ -1,6 +1,6 @@
 <script setup>
 import
-{ref, onMounted, computed} from 'vue'
+{ref, onMounted, computed, onBeforeUnmount} from 'vue'
 import {useRouter} from 'vue-router'
 import localLoginImg from '../assets/image/localhlogin.jpg'
 import {getHistoryService, getUserInfoService} from "@/api/user.js";
@@ -224,108 +224,188 @@ const goToUserHistory = (tab) => {
   });
 }
 
+// 控制页面滚动
+const disableScroll = () => {
+  // 保存原来的滚动位置
+  const scrollY = window.scrollY;
+  
+  // 添加样式到body
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.overflow = 'hidden';
+  
+  // 添加一个类，可以用于CSS选择器
+  document.body.classList.add('no-scroll');
+  
+  // 设置html样式
+  document.documentElement.style.overflow = 'hidden';
+  document.documentElement.style.height = '100%';
+}
+
+// 恢复滚动
+const enableScroll = () => {
+  // 从fixed定位恢复
+  const scrollY = document.body.style.top;
+  document.body.style.position = '';
+  document.body.style.width = '';
+  document.body.style.top = '';
+  document.body.style.overflow = '';
+  
+  // 移除类
+  document.body.classList.remove('no-scroll');
+  
+  // 恢复html样式
+  document.documentElement.style.overflow = '';
+  document.documentElement.style.height = '';
+  
+  // 恢复滚动位置
+  window.scrollTo(0, parseInt(scrollY || '0') * -1);
+}
+
 onMounted(() => {
   getUserHistory()
   getUserFavorites()
   checkLoginStatus()
   getUserInfo()
+  
+  // 禁用页面滚动
+  disableScroll();
+})
+
+// 组件销毁前恢复滚动
+onBeforeUnmount(() => {
+  // 恢复滚动
+  enableScroll();
 })
 </script>
 
 <template>
-  <div class="profile-container bg-gray-100 min-h-screen pb-20">
-    <!-- 顶部用户信息区域 -->
-    <div class="pt-10 pb-6 px-4 relative">
-      <div class="flex items-center">
-        <div class="relative">
-          <img
-              :src="userInfo.avatar"
-              class="w-20 h-20 rounded-full border-4 border-white shadow-sm cursor-pointer"
-              alt="avatar"
-              @click="!isLoggedIn && goToLogin()"
-          />
-        </div>
-        <div class="ml-4">
-          <h2
-              class="text-xl font-bold text-gray-800 cursor-pointer"
-              @click="!isLoggedIn && goToLogin()"
-          >
-            {{ userInfo.username }}
-          </h2>
-          <p class="text-sm text-gray-500 mt-1" v-if="isLoggedIn">注册时间：{{ formatDate(userInfo.registerTime) }}</p>
+  <div class="profile-container bg-gray-100 h-screen overflow-hidden">
+    <!-- 内容滚动区域 -->
+    <div class="profile-content h-full overflow-auto pb-20">
+      <!-- 顶部用户信息区域 -->
+      <div class="pt-10 pb-6 px-4 relative">
+        <div class="flex items-center">
+          <div class="relative">
+            <img
+                :src="userInfo.avatar"
+                class="w-20 h-20 rounded-full border-4 border-white shadow-sm cursor-pointer"
+                alt="avatar"
+                @click="!isLoggedIn && goToLogin()"
+            />
+          </div>
+          <div class="ml-4">
+            <h2
+                class="text-xl font-bold text-gray-800 cursor-pointer"
+                @click="!isLoggedIn && goToLogin()"
+            >
+              {{ userInfo.username }}
+            </h2>
+            <p class="text-sm text-gray-500 mt-1" v-if="isLoggedIn">注册时间：{{ formatDate(userInfo.registerTime) }}</p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 用户统计信息 -->
-    <div class="bg-white flex justify-between p-5 text-center">
-      <div
-          class="flex-1 cursor-pointer"
-          @click="isLoggedIn ? goToUserHistory('history') : goToLogin()"
-      >
-        <div class="text-lg font-bold">{{ historys.history }}</div>
-        <div class="text-gray-500 text-sm">播放记录</div>
-      </div>
-      <div
-          class="flex-1 cursor-pointer"
-          @click="isLoggedIn ? goToUserHistory('collect') : goToLogin()"
-      >
-        <div class="text-lg font-bold">{{ historys.favorites }}</div>
-        <div class="text-gray-500 text-sm">我的追剧</div>
-      </div>
-      <div class="flex-1">
-        <div class="text-lg font-bold">{{ userInfo.coins }}</div>
-        <div class="text-gray-500 text-sm">我的积分</div>
-      </div>
-    </div>
-
-    <!-- 邀请码区域 -->
-    <div v-if="isLoggedIn && userInfo.inviteCode"
-         class="mt-3 mx-3 p-4 bg-gradient-to-r from-green-400 to-blue-400 rounded-lg text-white">
-      <div class="flex justify-between items-center">
-        <div>
-          <div class="font-medium text-base">我的邀请码：{{ userInfo.inviteCode }}</div>
-          <div class="text-sm mt-1 opacity-90">成功邀请1人，可获取300积分，已邀请0人</div>
-        </div>
-        <div @click="copyInviteCode">
-          <el-icon :size="24">
-            <Copy/>
-          </el-icon>
-        </div>
-      </div>
-    </div>
-
-    <!-- 合并后的菜单区域 -->
-    <div class="bg-white rounded-md mx-3 mt-3 p-3">
-      <div class="grid grid-cols-6 gap-2 flex-wrap sm:grid-cols-5 xs:grid-cols-4">
+      <!-- 用户统计信息 -->
+      <div class="bg-white flex justify-between p-5 text-center">
         <div
-            v-for="item in allMenuItems"
-            :key="item.id"
-            class="flex flex-col items-center mb-3"
-            @click="isLoggedIn ? handleMenuClick(item) : goToLogin()"
+            class="flex-1 cursor-pointer"
+            @click="isLoggedIn ? goToUserHistory('history') : goToLogin()"
         >
-          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
-            <el-icon :size="20" class="text-gray-600">
-              <component :is="item.icon"/>
+          <div class="text-lg font-bold">{{ historys.history }}</div>
+          <div class="text-gray-500 text-sm">播放记录</div>
+        </div>
+        <div
+            class="flex-1 cursor-pointer"
+            @click="isLoggedIn ? goToUserHistory('collect') : goToLogin()"
+        >
+          <div class="text-lg font-bold">{{ historys.favorites }}</div>
+          <div class="text-gray-500 text-sm">我的追剧</div>
+        </div>
+        <div class="flex-1">
+          <div class="text-lg font-bold">{{ userInfo.coins }}</div>
+          <div class="text-gray-500 text-sm">我的积分</div>
+        </div>
+      </div>
+
+      <!-- 邀请码区域 -->
+      <div v-if="isLoggedIn && userInfo.inviteCode"
+           class="mt-3 mx-3 p-4 bg-gradient-to-r from-green-400 to-blue-400 rounded-lg text-white">
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="font-medium text-base">我的邀请码：{{ userInfo.inviteCode }}</div>
+            <div class="text-sm mt-1 opacity-90">成功邀请1人，可获取300积分，已邀请0人</div>
+          </div>
+          <div @click="copyInviteCode">
+            <el-icon :size="24">
+              <Copy/>
             </el-icon>
           </div>
-          <span class="text-xs text-center">{{ item.name }}</span>
         </div>
       </div>
-    </div>
 
-    <!-- 退出登录按钮 -->
-    <div class="mx-3 mt-5 flex justify-center" v-if="isLoggedIn">
-      <button @click="logout" class="bg-red-500 text-white py-3 px-10 rounded-md text-center">
-        退出登录
-      </button>
+      <!-- 合并后的菜单区域 -->
+      <div class="bg-white rounded-md mx-3 mt-3 p-3">
+        <div class="grid grid-cols-6 gap-2 flex-wrap sm:grid-cols-5 xs:grid-cols-4">
+          <div
+              v-for="item in allMenuItems"
+              :key="item.id"
+              class="flex flex-col items-center mb-3"
+              @click="isLoggedIn ? handleMenuClick(item) : goToLogin()"
+          >
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
+              <el-icon :size="20" class="text-gray-600">
+                <component :is="item.icon"/>
+              </el-icon>
+            </div>
+            <span class="text-xs text-center">{{ item.name }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 退出登录按钮 -->
+      <div class="mx-3 mt-5 flex justify-center" v-if="isLoggedIn">
+        <button @click="logout" class="bg-red-500 text-white py-3 px-10 rounded-md text-center">
+          退出登录
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .profile-container {
-  padding-bottom: 60px; /* 为底部导航留出空间 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.profile-content {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  height: 100%;
+  padding-bottom: 70px; /* 为底部导航留出空间 */
+}
+
+.profile-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0 !important;
+}
+
+/* 添加全局样式，防止滚动条 */
+:deep(body),
+:deep(html) {
+  overflow: hidden !important;
+  margin: 0;
+  padding: 0;
+  height: 100% !important;
+  width: 100% !important;
 }
 
 /* 动画定义 */
