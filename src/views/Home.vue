@@ -9,6 +9,7 @@ import AnimeList from '@/views/home/DramaList.vue'
 // 导入轮播图组件
 import BannerCarousel from '@/views/home/BannerCarousel.vue'
 import {getBannerListService, getDramaListService, getDramaScheduleService} from "@/api/home/anime.js";
+import { handleImageUrl, handleImageError } from '@/utils/imageUtils' // 导入图片工具类函数
 
 const router = useRouter()
 const activeTab = ref('推荐')
@@ -264,7 +265,13 @@ const scrollSchedule = (direction) => {
                 class="flex-shrink-0 relative mr-3 w-64 rounded-lg overflow-hidden transform transition-transform hover:translate-y-[-5px]"
                 @click="goToVideoDetail(anime.id)"
               >
-                <img :src="anime.cover || ''" class="w-full h-56 object-cover rounded-lg" alt="动漫封面" draggable="false"/>
+                <img 
+                  :src="handleImageUrl(anime.cover || '')" 
+                  class="w-full h-56 object-cover rounded-lg" 
+                  alt="动漫封面" 
+                  draggable="false"
+                  @error="handleImageError"
+                />
                 <div class="absolute top-2 left-2 px-2 py-1 text-xs text-white rounded-md"
                      :class="{'bg-green-500': index % 3 === 0, 'bg-pink-500': index % 3 === 1, 'bg-red-500': index % 3 === 2}">
                   {{ anime.year || '2025' }}
@@ -312,10 +319,15 @@ const scrollSchedule = (direction) => {
                 @click="goToVideoDetail(anime.id)"
             >
               <div class="relative">
-                <img :src="anime.cover" class="w-full aspect-video object-cover" alt="封面"/>
-                <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">{{
-                    anime.episode
-                  }}</span>
+                <img 
+                  :src="handleImageUrl(anime.cover)" 
+                  class="w-full aspect-video object-cover" 
+                  alt="封面"
+                  @error="handleImageError"
+                />
+                <span class="absolute bottom-1 right-1 text-xs text-white bg-black/50 px-1 rounded">
+                  {{ anime.episode }}
+                </span>
               </div>
               <div class="p-2">
                 <h3 class="text-sm font-medium line-clamp-1 mb-1">{{ anime.title }}</h3>

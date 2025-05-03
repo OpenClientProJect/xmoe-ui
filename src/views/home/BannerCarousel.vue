@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { handleImageUrl, handleImageError } from '@/utils/imageUtils' // 导入图片工具类函数
 
 // 接收轮播图数据作为props
 const props = defineProps({
@@ -312,7 +313,12 @@ watch(
           class="carousel-slide"
           @click="goToVideoDetail(item.id, $event)"
         >
-          <img :src="item.url" class="carousel-image" alt="carousel" draggable="false" />
+          <img 
+            :src="handleImageUrl(item.url)" 
+            class="carousel-image" 
+            alt="carousel" 
+            draggable="false" 
+            @error="handleImageError" />
           <div class="carousel-caption">
             <p class="carousel-title">{{ item.title }}</p>
             <p v-if="item.subtitle" class="carousel-subtitle">{{ item.subtitle }}</p>

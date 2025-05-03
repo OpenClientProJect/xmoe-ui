@@ -10,7 +10,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/sk-api': {
-        target: 'http://api.xmoe.asia/',
+        target: 'https://api.xmoe.asia/',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/sk-api/, '')
       },

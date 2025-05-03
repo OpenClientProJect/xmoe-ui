@@ -154,10 +154,10 @@ const initPlayer = (url) => {
       theme: '#DC2626' // 输入框主题色
     }
 
-    // 播放器配置 - 优化性能
+    // 播放器配置
     const options = {
       container: artRef.value,
-      url: url,
+      url: 'https://xmoe.video/validate?link=e129106aeff877ddb7133c69e80603d4119d0aba3f800ec7428fbc9bb861c68a76c5a6166ece5e36a192f370f2a1c91e',
       poster: props.poster,
       title: props.title,
       volume: 0.7,
