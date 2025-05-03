@@ -28,14 +28,27 @@ const userInfo = ref({
 
 //获取追番
 const getUserFavorites = async () => {
+  // 检查用户是否登录
+  if (!isLoggedIn.value || !userStore.info || !userStore.info.user_id) {
+    historys.value.favorites = 0;
+    return;
+  }
+  
   const res = await getHistoryService({
     user_id: userStore.info.user_id,
     ulog_type: 2
   })
   historys.value.favorites = res.data
 }
-//获取追番
+
+//获取播放记录
 const getUserHistory = async () => {
+  // 检查用户是否登录
+  if (!isLoggedIn.value || !userStore.info || !userStore.info.user_id) {
+    historys.value.history = 0;
+    return;
+  }
+  
   const res = await getHistoryService({
     user_id: userStore.info.user_id,
     ulog_type: 4
@@ -162,6 +175,10 @@ const logout = () => {
     avatar: localLoginImg,
     coins: 0
   }
+  
+  // 重置历史记录数据
+  historys.value.history = 0;
+  historys.value.favorites = 0;
 }
 
 // 复制邀请码
@@ -264,10 +281,12 @@ const enableScroll = () => {
 }
 
 onMounted(() => {
+  // 先检查登录状态
+  checkLoginStatus()
+  // 再获取用户信息和历史记录
+  getUserInfo()
   getUserHistory()
   getUserFavorites()
-  checkLoginStatus()
-  getUserInfo()
   
   // 禁用页面滚动
   disableScroll();

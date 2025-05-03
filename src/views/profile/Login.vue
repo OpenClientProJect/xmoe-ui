@@ -1,5 +1,5 @@
 <script setup>
-import {ref, reactive, onUnmounted} from 'vue'
+import {ref, reactive, onUnmounted, onMounted} from 'vue'
 import {useRouter} from 'vue-router'
 import localLoginImg from '../../assets/image/login.jpg'
 import {registerService, sendCodeService, loginService} from "@/api/login.js";
@@ -14,6 +14,32 @@ const showConfirmPassword = ref(false)
 const isLoading = ref(false) // 添加loading状态
 const countdown = ref(0) // 倒计时秒数
 let timer = null // 计时器
+
+// 保存原始样式的变量
+let originalOverflow
+let originalHeight
+
+// 组件挂载时设置样式
+onMounted(() => {
+  // 保存原始样式
+  originalOverflow = document.body.style.overflow
+  originalHeight = document.body.style.height
+  
+  // 设置新样式
+  document.body.style.overflow = 'hidden'
+  document.body.style.height = '100%'
+  document.documentElement.style.overflow = 'hidden'
+  document.documentElement.style.height = '100%'
+})
+
+// 组件卸载时恢复样式和清除计时器
+onUnmounted(() => {
+  document.body.style.overflow = originalOverflow
+  document.body.style.height = originalHeight
+  document.documentElement.style.overflow = ''
+  document.documentElement.style.height = ''
+  clearInterval(timer)
+})
 
 // 表单数据
 const formData = reactive({
@@ -68,11 +94,6 @@ const startCountdown = () => {
     }
   }, 1000)
 }
-
-// 组件卸载时清除计时器
-onUnmounted(() => {
-  clearInterval(timer)
-})
 
 // 提交表单
 const submitForm = async () => {
@@ -305,6 +326,8 @@ const goBack = () => {
 <style scoped>
 .login-container {
   min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: linear-gradient(to bottom, #ff5e62, #ff2957);
   padding: 20px;
   position: relative;
@@ -312,6 +335,7 @@ const goBack = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .back-button {
