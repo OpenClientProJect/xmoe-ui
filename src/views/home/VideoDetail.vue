@@ -200,15 +200,31 @@ const playVideo = async (episodeId) => {
     let proxyUrl = videoUrl
 
     // 判断是否是外部URL
-    if (videoUrl.startsWith('http') && !videoUrl.startsWith(window.location.origin)) {
+    if (videoUrl.startsWith('https') && !videoUrl.startsWith(window.location.origin)) {
       try {
         const urlObj = new URL(videoUrl)
 
         // 如果是xmoe.video域名，使用video-proxy代理
         if (urlObj.hostname === 'xmoe.video' || urlObj.hostname.endsWith('.xmoe.video')) {
-          // 处理所有的xmoe.video域名请求，包括带有validate参数的
-          proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
-          console.log('使用代理URL:', proxyUrl)
+          // 特殊处理validate路径
+          if (urlObj.pathname === '/validate') {
+            // 提取link参数值，防止多次编码
+            let linkParam = '';
+            const linkMatch = urlObj.search.match(/[?&]link=([^&]+)/);
+            if (linkMatch && linkMatch[1]) {
+              linkParam = linkMatch[1];
+              // 使用专门的@格式代理 - 更可靠的方式处理长token
+              proxyUrl = `https://xmoe.video/validate?link=${linkParam}`;
+            } else {
+              // 如果无法提取link参数，使用完整的搜索字符串
+              proxyUrl = `/video-proxy/validate${urlObj.search}`;
+            }
+            console.log('使用validate专用代理URL:', proxyUrl);
+          } else {
+            // 其他xmoe.video路径
+            proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
+            console.log('使用xmoe代理URL:', proxyUrl)
+          }
         }
         // 为其他所有外部URL添加CORS代理
         else {

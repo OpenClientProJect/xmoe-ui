@@ -69,6 +69,8 @@ let resizeTimeout = null
 const isControlsVisible = ref(false)
 // 控制延迟隐藏的定时器
 let hideControlsTimer = null
+// 当前视频URL
+const currentVideoUrl = ref('')
 
 // 显示控制栏
 const showControls = () => {
@@ -121,8 +123,13 @@ const initPlayer = (url) => {
   if (!url) {
     console.error('播放URL为空')
     ElMessage.error('播放地址无效')
+    emit('error', new Error('播放地址无效'))
     return
   }
+
+  // 保存当前URL供调试
+  currentVideoUrl.value = url
+  console.log('当前视频播放地址:', url)
 
   // 如果已经有播放器实例，先销毁
   if (artInstance.value) {
@@ -157,7 +164,7 @@ const initPlayer = (url) => {
     // 播放器配置
     const options = {
       container: artRef.value,
-      url: 'https://xmoe.video/validate?link=e129106aeff877ddb7133c69e80603d4119d0aba3f800ec7428fbc9bb861c68a76c5a6166ece5e36a192f370f2a1c91e',
+      url: url,
       poster: props.poster,
       title: props.title,
       volume: 0.7,
@@ -199,68 +206,115 @@ const initPlayer = (url) => {
       customType: {
         // 添加对m3u8格式的支持
         m3u8: function(video, url) {
-          if (window.Hls && window.Hls.isSupported()) {
-            const hls = new window.Hls({
-              debug: false,
-              enableWorker: true,
-              lowLatencyMode: false,
-              maxBufferLength: 60,
-              maxMaxBufferLength: 120,
-              maxBufferSize: 20 * 1000 * 1000, // 20MB
-              maxRetryCount: 5,
-              // 设置XHR请求配置
-              xhrSetup: function(xhr, url) {
-                // 不发送凭证，避免CORS预检请求
-                xhr.withCredentials = false
-                // 设置请求头
-                xhr.setRequestHeader('Accept', '*/*')
-                xhr.setRequestHeader('Origin', window.location.origin)
-                console.log('HLS请求:', url)
-              }
-            })
-
-            // 添加错误处理
-            hls.on(window.Hls.Events.ERROR, function(event, data) {
-              console.error('HLS错误:', data)
-              if (data.fatal) {
-                switch(data.type) {
-                  case window.Hls.ErrorTypes.NETWORK_ERROR:
-                    hls.startLoad()
-                    break
-                  case window.Hls.ErrorTypes.MEDIA_ERROR:
-                    hls.recoverMediaError()
-                    break
-                  default:
-                    console.error('无法恢复的HLS错误:', data)
-                    ElMessage.error('视频加载失败，请尝试其他线路')
-                    break
+          try {
+            if (window.Hls && window.Hls.isSupported()) {
+              const hls = new window.Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: false,
+                maxBufferLength: 60,
+                maxMaxBufferLength: 120,
+                maxBufferSize: 20 * 1000 * 1000, // 20MB
+                maxRetryCount: 5,
+                // 设置XHR请求配置
+                xhrSetup: function(xhr, url) {
+                  // 不发送凭证，避免CORS预检请求
+                  xhr.withCredentials = false
+                  // 设置请求头
+                  xhr.setRequestHeader('Accept', '*/*')
+                  xhr.setRequestHeader('Origin', window.location.origin)
+                  console.log('HLS请求:', url)
                 }
+              })
+
+              // 添加错误处理
+              hls.on(window.Hls.Events.ERROR, function(event, data) {
+                console.error('HLS错误:', data)
+                if (data.fatal) {
+                  switch(data.type) {
+                    case window.Hls.ErrorTypes.NETWORK_ERROR:
+                      console.log('HLS网络错误，尝试重新加载')
+                      hls.startLoad()
+                      break
+                    case window.Hls.ErrorTypes.MEDIA_ERROR:
+                      console.log('HLS媒体错误，尝试恢复')
+                      hls.recoverMediaError()
+                      break
+                    default:
+                      console.error('无法恢复的HLS错误:', data)
+                      ElMessage.error('视频加载失败，请尝试其他线路')
+                      
+                      // 清理资源并触发错误事件
+                      try {
+                        hls.destroy()
+                      } catch (e) {
+                        console.error('销毁HLS实例失败:', e)
+                      }
+                      
+                      // 创建一个自定义错误事件并分发
+                      if (video) {
+                        const errorEvent = new Event('error')
+                        video.dispatchEvent(errorEvent)
+                      }
+                      break
+                  }
+                }
+              })
+
+              // 添加成功事件
+              hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
+                console.log('HLS清单解析成功，准备播放')
+                try {
+                  video.play().catch(e => {
+                    console.error('自动播放失败:', e)
+                  })
+                } catch (e) {
+                  console.error('播放HLS视频失败:', e)
+                }
+              })
+
+              try {
+                hls.loadSource(url)
+                hls.attachMedia(video)
+
+                // 保存hls实例以便后续清理
+                artInstance.value.$hls = hls
+              } catch (e) {
+                console.error('HLS加载/附加失败:', e)
+                ElMessage.error('视频加载失败，请尝试其他线路')
               }
-            })
-
-            // 添加成功事件
-            hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
-              video.play().catch(e => {
-                console.error('自动播放失败:', e)
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+              // 对于Safari等原生支持HLS的浏览器
+              console.log('使用浏览器原生HLS支持')
+              video.src = url
+              video.addEventListener('loadedmetadata', function() {
+                try {
+                  video.play().catch(e => {
+                    console.error('自动播放失败:', e)
+                  })
+                } catch (e) {
+                  console.error('播放HLS视频失败(原生):', e)
+                }
               })
-            })
-
-            hls.loadSource(url)
-            hls.attachMedia(video)
-
-            // 保存hls实例以便后续清理
-            artInstance.value.$hls = hls
-          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // 对于Safari等原生支持HLS的浏览器
-            video.src = url
-            video.addEventListener('loadedmetadata', function() {
-              video.play().catch(e => {
-                console.error('自动播放失败:', e)
-              })
-            })
-          } else {
-            console.warn('当前浏览器不支持HLS播放')
-            ElMessage.error('您的浏览器不支持此视频格式，请使用Chrome或Edge浏览器')
+            } else {
+              console.warn('当前浏览器不支持HLS播放')
+              ElMessage.error('您的浏览器不支持此视频格式，请使用Chrome或Edge浏览器')
+              
+              // 创建一个自定义错误事件并分发
+              if (video) {
+                const errorEvent = new Event('error')
+                video.dispatchEvent(errorEvent)
+              }
+            }
+          } catch (error) {
+            console.error('HLS初始化失败:', error)
+            ElMessage.error('视频加载失败，请尝试其他线路')
+            
+            // 创建一个自定义错误事件并分发
+            if (video) {
+              const errorEvent = new Event('error')
+              video.dispatchEvent(errorEvent)
+            }
           }
         }
       }
@@ -269,10 +323,25 @@ const initPlayer = (url) => {
     // 创建播放器实例
     artInstance.value = new Artplayer(options)
 
-    // 最小化播放器事件监听，只保留必要的事件
+    // 增强错误处理
     artInstance.value.on('error', (error) => {
-      console.error('播放器错误:', error)
-      emit('error', error)
+      console.error('播放器错误详情:', {
+        error: error || '未捕获到具体错误',
+        currentUrl: currentVideoUrl.value,
+        message: error && error.message ? error.message : '未知错误',
+        code: error && error.code ? error.code : 'unknown',
+        mediaError: artInstance.value && artInstance.value.$video ? artInstance.value.$video.error : null
+      })
+      
+      // 显示错误信息和当前URL，帮助调试
+      let errorMessage = '视频加载失败';
+      if (error && error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      ElMessage.error(`${errorMessage}, 请尝试其他线路`);
+      
+      // 传递错误给父组件
+      emit('error', error || new Error('未知播放器错误'))
     })
 
     // 播放事件
@@ -300,6 +369,20 @@ const initPlayer = (url) => {
       emit('timeupdate', currentTime)
     }, 5000)) // 5秒内只执行一次，减少存储操作
 
+    // 添加video元素错误事件监听
+    if (artInstance.value.$video) {
+      artInstance.value.$video.onerror = function(e) {
+        console.error('视频元素错误:', {
+          event: e,
+          error: this.error,
+          src: this.src,
+          currentSrc: this.currentSrc,
+          readyState: this.readyState,
+          networkState: this.networkState
+        });
+      };
+    }
+
     // 尝试恢复播放进度
     if (props.videoId) {
       const savedTime = localStorage.getItem(`video_progress_${props.videoId}`)
@@ -320,6 +403,7 @@ const initPlayer = (url) => {
     return artInstance.value
   } catch (error) {
     console.error('初始化播放器失败:', error)
+    ElMessage.error(`播放器初始化失败: ${error.message || '未知错误'}`);
     emit('error', error)
     return null
   }
@@ -327,18 +411,11 @@ const initPlayer = (url) => {
 
 // 监听URL变化，重新初始化播放器
 watch(() => props.url, (newUrl) => {
+  console.log('URL发生变化:', newUrl);
   if (newUrl) {
     initPlayer(newUrl)
   }
 })
-
-// // 监听弹幕数据变化
-// watch(() => props.danmaku, (newDanmaku) => {
-//   if (artInstance.value) {
-//     // 更新弹幕数据
-//       newDanmaku || []
-//   }
-// }, { deep: true })
 
 // 组件挂载时初始化播放器
 onMounted(() => {
@@ -347,23 +424,31 @@ onMounted(() => {
   }
 
   // 初始化ResizeObserver来处理缩放事件
-  if (window.ResizeObserver) {
-    resizeObserver = new ResizeObserver(throttle(entries => {
-      // 使用节流函数减少回调频率
-      // 在缩放结束后才调整播放器
-      clearTimeout(resizeTimeout)
-      resizeTimeout = setTimeout(() => {
-        if (artInstance.value && artRef.value) {
-          // 通知播放器调整大小
-          artInstance.value.resize()
-        }
-      }, 200)
-    }, 200))
+  try {
+    if (window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(throttle(entries => {
+        // 使用节流函数减少回调频率
+        // 在缩放结束后才调整播放器
+        clearTimeout(resizeTimeout)
+        resizeTimeout = setTimeout(() => {
+          if (artInstance.value && artRef.value && typeof artInstance.value.resize === 'function') {
+            // 确保resize方法存在后再调用
+            try {
+              artInstance.value.resize()
+            } catch (e) {
+              console.error('播放器resize失败:', e)
+            }
+          }
+        }, 200)
+      }, 200))
 
-    // 监听播放器容器的大小变化
-    if (artRef.value) {
-      resizeObserver.observe(artRef.value)
+      // 监听播放器容器的大小变化
+      if (artRef.value) {
+        resizeObserver.observe(artRef.value)
+      }
     }
+  } catch (error) {
+    console.error('设置ResizeObserver失败:', error)
   }
 })
 
@@ -371,13 +456,21 @@ onMounted(() => {
 onUnmounted(() => {
   // 销毁播放器
   if (artInstance.value) {
-    artInstance.value.destroy()
+    try {
+      artInstance.value.destroy()
+    } catch (e) {
+      console.error('销毁播放器失败:', e)
+    }
     artInstance.value = null
   }
 
   // 清理ResizeObserver
   if (resizeObserver) {
-    resizeObserver.disconnect()
+    try {
+      resizeObserver.disconnect()
+    } catch (e) {
+      console.error('断开ResizeObserver失败:', e)
+    }
     resizeObserver = null
   }
 
