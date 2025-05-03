@@ -116,7 +116,7 @@ const goToVideoDetail = (id) => {
 
 // 返回上一页
 const goBack = () => {
-  router.back()
+  router.push('/profile')
 }
 
 // 格式化时长显示

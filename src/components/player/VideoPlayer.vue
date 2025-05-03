@@ -194,7 +194,7 @@ const initPlayer = (url) => {
       fullscreen: true,
       fullscreenWeb: true,
       subtitleOffset: true,
-      miniProgressBar: true,
+      miniProgressBar: false, // 关闭迷你进度条
       mutex: true,
       backdrop: true,
       playsInline: true,
