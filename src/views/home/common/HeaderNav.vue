@@ -2,30 +2,63 @@
 import {onMounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {getMenuListService} from "@/api/home/anime.js";
+import useUserInfoStore from "@/stores/userstores.js";
+
+import Loading from '@/assets/gif/loading.gif'
+import {getUserInfoService} from "@/api/user.js";
 
 const props = defineProps({
   activeTab: {
     type: String,
     default: '推荐'
-  },
-  userAvatar: {
-    type: String,
-    default: 'https://avatars.githubusercontent.com/u/156616301?v=4'
   }
 })
 
 const emit = defineEmits(['tab-change'])
 
 const router = useRouter()
+const userStore = useUserInfoStore()
 const menuList = ref([])
 const subMenuList = ref([])
 const isLoading = ref(false)
 const showSubMenu = ref(false)
+const userAvatar = ref(Loading) // 默认使用Loading图片作为头像
+
+// 获取用户信息
+const getUserInfo = async () => {
+  try {
+    // 检查用户是否已登录
+    if (userStore.info && userStore.info.user_id) {
+      const res = await getUserInfoService(userStore.info.user_id)
+        // 如果接口返回了用户头像，则使用返回的头像
+        if (res.data.user_portrait) {
+          userAvatar.value = res.data.user_portrait
+        }
+    } else {
+      // 未登录时使用默认头像
+      userAvatar.value = Loading
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    // 出错时使用默认头像
+    userAvatar.value = Loading
+  }
+}
+
+// 点击头像处理
+const handleAvatarClick = () => {
+  // 已登录则跳转到个人主页，未登录则跳转到登录页
+  if (userStore.info && userStore.info.user_id) {
+    router.push('/profile')
+  } else {
+    router.push('/login')
+  }
+}
 
 // 切换标签
 const changeTab = (tab) => {
   emit('tab-change', tab)
-  
+
   // 根据标签名称跳转到对应路由
   if (tab === '推荐') {
     router.push('/')
@@ -55,7 +88,7 @@ const getMenuList = async () => {
   try {
     isLoading.value = true
     const res = await getMenuListService()
-      menuList.value = res.data
+    menuList.value = res.data
   } finally {
     isLoading.value = false // 结束加载
   }
@@ -63,6 +96,7 @@ const getMenuList = async () => {
 
 onMounted(() => {
   getMenuList()
+  getUserInfo() // 组件挂载时获取用户信息
 })
 </script>
 
@@ -70,7 +104,7 @@ onMounted(() => {
   <div class="header-nav">
     <!-- 顶部搜索栏 -->
     <div class="search-bar">
-      <div class="avatar-container">
+      <div class="avatar-container" @click="handleAvatarClick">
         <img :src="userAvatar" class="avatar-img" alt="avatar"/>
       </div>
 
@@ -108,7 +142,7 @@ onMounted(() => {
         加载中...
       </div>
     </div>
-    
+
     <!-- 子分类导航栏 -->
     <div v-if="showSubMenu && subMenuList.length > 0" class="sub-menu-container">
       <div
