@@ -12,6 +12,7 @@ import {getBannerListService, getDramaListService, getDramaScheduleService} from
 import { handleImageUrl, handleImageError } from '@/utils/imageUtils' // 导入图片工具类函数
 import useUserInfoStore from "@/stores/userstores.js"; // 导入用户信息store
 import { ElMessage } from 'element-plus' // 导入消息组件
+import Loading from '@/assets/gif/loading.gif'
 
 const router = useRouter()
 const userStore = useUserInfoStore()
@@ -45,6 +46,8 @@ const currentDayAnimes = computed(() => {
 // 切换选中的日期
 const switchDay = (dayIndex) => {
   activeDay.value = dayIndex
+  // 切换日期后重新获取该日期的排期数据
+  getDramaSchedule()
 }
 
 // 模拟四月新番数据
@@ -83,9 +86,16 @@ const getNewAnimes = async () => {
 }
 
 //排期表
+const loadingSchedule = ref(false)
 const getDramaSchedule = async () => {
+  loadingSchedule.value = true
   try {
-    const res = await getDramaScheduleService()
+    // 定义周几的映射数组
+    const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    // 获取当前选中的周几作为typeKey参数
+    const typeKey = weekdays[activeDay.value]
+    // 调用API时传递typeKey参数
+    const res = await getDramaScheduleService(typeKey)
 
     if (res && res.code === 200 && res.data && res.data.length > 0) {
       // 确保每个日期的数组都被初始化
@@ -136,6 +146,8 @@ const getDramaSchedule = async () => {
     }
   } catch (error) {
     console.error('获取排期表数据失败:', error)
+  } finally {
+    loadingSchedule.value = false
   }
 }
 
@@ -299,8 +311,13 @@ const scrollSchedule = (direction) => {
                 </div>
               </div>
               
+              <!-- 加载状态 -->
+              <div v-if="loadingSchedule" class="w-full flex justify-center items-center py-8">
+                <img :src="Loading" class="w-20 h-30" alt="加载中" />
+              </div>
+              
               <!-- 当没有数据时显示提示 -->
-              <div v-if="currentDayAnimes.length === 0" class="w-full flex justify-center items-center py-8 text-gray-400">
+              <div v-else-if="currentDayAnimes.length === 0" class="w-full flex justify-center items-center py-8 text-gray-400">
                 当天暂无更新的番剧，请查看其他日期
               </div>
               

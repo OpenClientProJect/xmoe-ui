@@ -13,11 +13,12 @@ export const getDramaListService = () => {
     })
 }
 //排期表
-export const getDramaScheduleService = () => {
+export const getDramaScheduleService = (typeKey) => {
     return request({
         url: '/sk-api/vod/list',
         method: 'get',
         params: {
+            typeKey: typeKey,
             page: '1',
             limit: '18',
             type: 'RiliDetail',
