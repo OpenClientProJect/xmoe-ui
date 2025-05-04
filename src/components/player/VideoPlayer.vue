@@ -1,13 +1,15 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import {ref, onMounted, onUnmounted, watch} from 'vue'
 import Artplayer from 'artplayer'
 import artplayerPluginDanmuku from 'artplayer-plugin-danmuku'
-import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
+import {ElMessage} from 'element-plus'
+import {ArrowLeft} from '@element-plus/icons-vue'
+import {useRouter} from 'vue-router'
 
+import Next from '@/assets/icon/Next.svg'
 import Loading from '@/assets/gif/loading.gif'
-
+import Left from '@/assets/icon/left.svg'
+import Right from '@/assets/icon/right.svg'
 // 获取路由实例
 const router = useRouter()
 
@@ -75,12 +77,12 @@ const currentVideoUrl = ref('')
 // 显示控制栏
 const showControls = () => {
   isControlsVisible.value = true;
-  
+
   // 清除现有的隐藏定时器
   if (hideControlsTimer) {
     clearTimeout(hideControlsTimer);
   }
-  
+
   // 设置延迟隐藏定时器
   hideControlsTimer = setTimeout(() => {
     isControlsVisible.value = false;
@@ -129,7 +131,7 @@ const initPlayer = (url) => {
 
   // 保存当前URL供调试
   currentVideoUrl.value = url
-  
+
   // 添加video-api前缀，使用代理转发
   let videoUrl = url
   // if (url.startsWith('http')) {
@@ -216,7 +218,7 @@ const initPlayer = (url) => {
       },
       customType: {
         // 添加对m3u8格式的支持
-        m3u8: function(video, url) {
+        m3u8: function (video, url) {
           try {
             if (window.Hls && window.Hls.isSupported()) {
               const hls = new window.Hls({
@@ -228,7 +230,7 @@ const initPlayer = (url) => {
                 maxBufferSize: 20 * 1000 * 1000, // 20MB
                 maxRetryCount: 5,
                 // 设置XHR请求配置
-                xhrSetup: function(xhr, url) {
+                xhrSetup: function (xhr, url) {
                   // 不发送凭证，避免CORS预检请求
                   xhr.withCredentials = false
                   // 设置请求头
@@ -239,10 +241,10 @@ const initPlayer = (url) => {
               })
 
               // 添加错误处理
-              hls.on(window.Hls.Events.ERROR, function(event, data) {
+              hls.on(window.Hls.Events.ERROR, function (event, data) {
                 console.error('HLS错误:', data)
                 if (data.fatal) {
-                  switch(data.type) {
+                  switch (data.type) {
                     case window.Hls.ErrorTypes.NETWORK_ERROR:
                       console.log('HLS网络错误，尝试重新加载')
                       hls.startLoad()
@@ -254,14 +256,14 @@ const initPlayer = (url) => {
                     default:
                       console.error('无法恢复的HLS错误:', data)
                       ElMessage.error('视频加载失败，请尝试其他线路')
-                      
+
                       // 清理资源并触发错误事件
                       try {
                         hls.destroy()
                       } catch (e) {
                         console.error('销毁HLS实例失败:', e)
                       }
-                      
+
                       // 创建一个自定义错误事件并分发
                       if (video) {
                         const errorEvent = new Event('error')
@@ -273,7 +275,7 @@ const initPlayer = (url) => {
               })
 
               // 添加成功事件
-              hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
+              hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
                 console.log('HLS清单解析成功，准备播放')
                 try {
                   video.play().catch(e => {
@@ -298,7 +300,7 @@ const initPlayer = (url) => {
               // 对于Safari等原生支持HLS的浏览器
               console.log('使用浏览器原生HLS支持')
               video.src = url
-              video.addEventListener('loadedmetadata', function() {
+              video.addEventListener('loadedmetadata', function () {
                 try {
                   video.play().catch(e => {
                     console.error('自动播放失败:', e)
@@ -310,7 +312,7 @@ const initPlayer = (url) => {
             } else {
               console.warn('当前浏览器不支持HLS播放')
               ElMessage.error('您的浏览器不支持此视频格式，请使用Chrome或Edge浏览器')
-              
+
               // 创建一个自定义错误事件并分发
               if (video) {
                 const errorEvent = new Event('error')
@@ -320,7 +322,7 @@ const initPlayer = (url) => {
           } catch (error) {
             console.error('HLS初始化失败:', error)
             ElMessage.error('视频加载失败，请尝试其他线路')
-            
+
             // 创建一个自定义错误事件并分发
             if (video) {
               const errorEvent = new Event('error')
@@ -342,7 +344,7 @@ const initPlayer = (url) => {
         errorMessage += `: ${error.message}`;
       }
       ElMessage.error(`${errorMessage}, 请尝试其他线路`);
-      
+
       // 传递错误给父组件
       emit('error', error || new Error('未知播放器错误'))
     })
@@ -374,7 +376,7 @@ const initPlayer = (url) => {
 
     // 添加video元素错误事件监听
     if (artInstance.value.$video) {
-      artInstance.value.$video.onerror = function(e) {
+      artInstance.value.$video.onerror = function (e) {
         console.error('视频元素错误:', {
           event: e,
           error: this.error,
@@ -482,7 +484,7 @@ onUnmounted(() => {
     clearTimeout(resizeTimeout)
     resizeTimeout = null
   }
-  
+
   // 清理控制栏隐藏定时器
   if (hideControlsTimer) {
     clearTimeout(hideControlsTimer)
@@ -521,30 +523,35 @@ const toggleSidebar = () => {
 </script>
 
 <template>
-  <div 
-    class="video-player" 
-    @mousemove="showControls" 
-    @mouseleave="hideControls"
-    @touchstart="showControls"
+  <div
+      class="video-player"
+      @mousemove="showControls"
+      @mouseleave="hideControls"
+      @touchstart="showControls"
   >
     <div ref="artRef" class="video-player-content"></div>
-    
+
     <!-- 返回按钮 - 移除动态显示控制 -->
-    <div 
-      v-if="showBackButton" 
-      class="back-button" 
-      @click="goBack"
+    <div
+        v-if="showBackButton"
+        class="back-button"
+        @click="goBack"
     >
-      <el-icon><ArrowLeft /></el-icon>
+      <el-icon>
+        <ArrowLeft/>
+      </el-icon>
     </div>
-    
+
     <!-- 侧边栏切换按钮 - 添加动态显示控制 -->
-    <div 
-      class="sidebar-toggle" 
-      @click="toggleSidebar"
-      :class="{ 'visible': isControlsVisible, 'expanded': showSidebar }"
+    <div
+        class="sidebar-toggle"
+        @click="toggleSidebar"
+        :class="{ 'visible': isControlsVisible, 'expanded': showSidebar }"
     >
-      <div class="toggle-icon">{{ showSidebar ? '>' : '<' }}</div>
+      <div class="toggle-icon">
+        <img v-if="showSidebar" :src='Left' alt="Left"/>
+        <img v-else :src="Right" alt="Right"/>
+      </div>
     </div>
   </div>
 </template>
