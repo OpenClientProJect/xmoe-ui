@@ -54,11 +54,16 @@ const props = defineProps({
   danmaku: {
     type: Array,
     default: () => []
+  },
+  // 下一集按钮点击回调
+  onNextEpisode: {
+    type: Function,
+    default: null
   }
 })
 
 // 定义事件
-const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back', 'toggleSidebar'])
+const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back', 'toggleSidebar', 'next'])
 
 // 播放器容器引用
 const artRef = ref(null)
@@ -117,6 +122,14 @@ function throttle(fn, delay) {
     }
     lastCall = now
     return fn(...args)
+  }
+}
+
+// 处理下一集按钮点击事件
+const handleNextEpisode = () => {
+  emit('next')
+  if (typeof props.onNextEpisode === 'function') {
+    props.onNextEpisode()
   }
 }
 
@@ -210,9 +223,21 @@ const initPlayer = (url) => {
       icons: {
         loading: `<img src="${Loading}" alt="加载中" style="width: 60px; height: 70px;">`,
       },
+      controls: [
+        {
+          position: 'left',
+          index: 20,
+          name: 'next-episode',
+          tooltip: '下一集',
+          html: '<img src="' + Next + '" alt="下一集" style="width: 19px; height: 19px;">',
+          click: function() {
+            handleNextEpisode();
+          },
+        },
+      ],
       moreVideoAttr: {
         crossOrigin: 'anonymous',
-        preload: 'metadata', // 只预加载元数据以提高性能
+        preload: 'metadata',
         'webkit-playsinline': true,
         playsinline: true,
       },
@@ -549,8 +574,8 @@ const toggleSidebar = () => {
         :class="{ 'visible': isControlsVisible, 'expanded': showSidebar }"
     >
       <div class="toggle-icon">
-        <img v-if="showSidebar" :src='Left' alt="Left"/>
-        <img v-else :src="Right" alt="Right"/>
+        <img v-if="showSidebar" :src='Right' alt="Left"/>
+        <img v-else :src="Left" alt="Right"/>
       </div>
     </div>
   </div>
@@ -644,5 +669,16 @@ const toggleSidebar = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 添加下一集按钮样式 */
+:deep(.art-control-next-episode) {
+  opacity: 0.9;
+  transition: all 0.2s ease;
+}
+
+:deep(.art-control-next-episode:hover) {
+  opacity: 1;
+  transform: scale(1.1);
 }
 </style>
