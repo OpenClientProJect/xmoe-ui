@@ -724,7 +724,6 @@ onMounted(async () => {
       if (!result && videoInfo.value.sources && videoInfo.value.sources.length > 1) {
         // 如果播放失败，尝试切换到第二个线路
         console.log('第一条线路播放失败，尝试切换线路')
-        ElMessage.info('尝试切换到备用线路')
         switchSource(1)
         // 等待线路切换完成
         setTimeout(async () => {
