@@ -120,7 +120,8 @@ const handlePlayerPause = () => {
 
 const handlePlayerEnded = () => {
   console.log('播放结束')
-  // 可以在这里添加自动播放下一集的逻辑
+  // 自动播放下一集
+  handleNextEpisode()
 }
 
 const handlePlayerTimeUpdate = (currentTime) => {
@@ -516,13 +517,10 @@ const getRelatedDrama = async () => {
     let relatedData = [];
 
     if (Array.isArray(res.data)) {
-      // 新的响应格式，直接是数组
       relatedData = res.data;
-      console.log('获取到相关推荐(新格式):', relatedData);
     } else if (res.data && res.data.list) {
       // 旧的响应格式，有list属性
       relatedData = res.data.list;
-      console.log('获取到相关推荐(旧格式):', relatedData);
     }
 
     // 处理相关推荐数据
@@ -680,6 +678,37 @@ const sendComment = async () => {
   }
 }
 
+// 处理下一集按钮点击
+const handleNextEpisode = () => {
+  if (!currentEpisode.value || !episodes.value.length) {
+    ElMessage.info('没有下一集了')
+    return
+  }
+
+  // 查找当前剧集在列表中的索引
+  const currentIndex = episodes.value.findIndex(ep => ep.id === currentEpisode.value.id)
+  
+  // 如果找不到当前剧集或已经是最后一集，则提示
+  if (currentIndex === -1 || currentIndex >= episodes.value.length - 1) {
+    ElMessage.info('已经是最后一集了')
+    return
+  }
+
+  // 获取下一集的信息
+  const nextEpisode = episodes.value[currentIndex + 1]
+  
+  // 播放下一集
+  playVideo(nextEpisode.id)
+  
+  // 滚动到对应的剧集项
+  setTimeout(() => {
+    const episodeElement = document.querySelector(`.episode-item[data-episode-id="${nextEpisode.id}"]`)
+    if (episodeElement) {
+      episodeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, 300)
+}
+
 onMounted(async () => {
   await getVideoDetail()
   await checkIsFollowing()
@@ -732,6 +761,7 @@ onMounted(async () => {
             :video-id="videoId"
             :show-back-button="true"
             :show-sidebar="showSidebar"
+            :on-next-episode="handleNextEpisode"
             @error="handlePlayerError"
             @play="handlePlayerPlay"
             @pause="handlePlayerPause"
@@ -848,7 +878,8 @@ onMounted(async () => {
                 'current-episode': currentEpisode && episode.id === currentEpisode.id,
                 'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
               }"
-                @click="playVideo(episode.id)"
+              :data-episode-id="episode.id"
+              @click="playVideo(episode.id)"
             >
               <div class="episode-title">{{ episode.title }}</div>
               <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
@@ -967,6 +998,7 @@ onMounted(async () => {
             'current-episode': currentEpisode && episode.id === currentEpisode.id,
             'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
           }"
+            :data-episode-id="episode.id"
             @click="playVideo(episode.id)"
         >
           <div class="episode-title">{{ episode.title }}</div>

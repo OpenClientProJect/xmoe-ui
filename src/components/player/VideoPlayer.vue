@@ -127,10 +127,40 @@ function throttle(fn, delay) {
 
 // 处理下一集按钮点击事件
 const handleNextEpisode = () => {
+  console.log('点击了下一集按钮')
   emit('next')
   if (typeof props.onNextEpisode === 'function') {
     props.onNextEpisode()
   }
+}
+
+// 初始化播放器后，添加视频结束事件监听
+const setupEventListeners = (art) => {
+  // 监听视频结束事件
+  art.on('video:ended', () => {
+    console.log('视频播放结束，触发ended事件')
+    emit('ended')
+  })
+
+  // 播放事件
+  art.on('play', () => {
+    emit('play')
+  })
+  
+  // 暂停事件
+  art.on('pause', () => {
+    emit('pause')
+  })
+  
+  // 时间更新事件，用于记录播放进度
+  art.on('video:timeupdate', throttle(() => {
+    // 保存播放进度
+    const currentTime = art.currentTime
+    if (props.videoId) {
+      localStorage.setItem(`video_progress_${props.videoId}`, currentTime.toString())
+    }
+    emit('timeupdate', currentTime)
+  }, 5000)) // 5秒内只执行一次，减少存储操作
 }
 
 // 初始化播放器
@@ -226,10 +256,10 @@ const initPlayer = (url) => {
       controls: [
         {
           position: 'left',
-          index: 20,
+          index: 20, // 设置为2，确保在暂停按钮之后
           name: 'next-episode',
           tooltip: '下一集',
-          html: '<img src="' + Next + '" alt="下一集" style="width: 19px; height: 19px;">',
+          html: '<div class="next-episode-btn"><img src="' + Next + '" alt="下一集" style="width: 20px; height: 18px;"></div>',
           click: function() {
             handleNextEpisode();
           },
@@ -252,7 +282,6 @@ const initPlayer = (url) => {
                 lowLatencyMode: false,
                 maxBufferLength: 60,
                 maxMaxBufferLength: 120,
-                maxBufferSize: 20 * 1000 * 1000, // 20MB
                 maxRetryCount: 5,
                 // 设置XHR请求配置
                 xhrSetup: function (xhr, url) {
@@ -360,7 +389,27 @@ const initPlayer = (url) => {
 
     // 创建播放器实例
     artInstance.value = new Artplayer(options)
-
+    
+    // 设置事件监听器
+    setupEventListeners(artInstance.value)
+    
+    console.log('播放器初始化成功:', artInstance.value)
+    
+    // 恢复播放进度
+    if (props.videoId) {
+      const savedTime = localStorage.getItem(`video_progress_${props.videoId}`)
+      if (savedTime) {
+        const timeToSeek = parseFloat(savedTime)
+        if (!isNaN(timeToSeek) && timeToSeek > 0) {
+          // 等待一点时间确保视频加载完毕
+          setTimeout(() => {
+            artInstance.value.seek = timeToSeek
+            console.log('恢复播放进度到:', timeToSeek)
+          }, 1000)
+        }
+      }
+    }
+    
     // 增强错误处理
     artInstance.value.on('error', (error) => {
       // 显示错误信息和当前URL，帮助调试
@@ -373,31 +422,6 @@ const initPlayer = (url) => {
       // 传递错误给父组件
       emit('error', error || new Error('未知播放器错误'))
     })
-
-    // 播放事件
-    artInstance.value.on('play', () => {
-      emit('play')
-    })
-
-    // 暂停事件
-    artInstance.value.on('pause', () => {
-      emit('pause')
-    })
-
-    // 结束事件
-    artInstance.value.on('ended', () => {
-      emit('ended')
-    })
-
-    // 添加缓存控制，使用节流函数减少回调频率
-    artInstance.value.on('video:timeupdate', throttle(() => {
-      // 保存播放进度
-      const currentTime = artInstance.value.currentTime
-      if (props.videoId) {
-        localStorage.setItem(`video_progress_${props.videoId}`, currentTime.toString())
-      }
-      emit('timeupdate', currentTime)
-    }, 5000)) // 5秒内只执行一次，减少存储操作
 
     // 添加video元素错误事件监听
     if (artInstance.value.$video) {
@@ -413,27 +437,9 @@ const initPlayer = (url) => {
       };
     }
 
-    // 尝试恢复播放进度
-    if (props.videoId) {
-      const savedTime = localStorage.getItem(`video_progress_${props.videoId}`)
-      if (savedTime) {
-        const time = parseFloat(savedTime)
-        if (!isNaN(time) && time > 0) {
-          // 等待播放器准备好后设置时间
-          artInstance.value.on('ready', () => {
-            setTimeout(() => {
-              artInstance.value.seek = time
-              console.log('恢复播放进度:', time)
-            }, 500)
-          })
-        }
-      }
-    }
-
     return artInstance.value
   } catch (error) {
-    console.error('初始化播放器失败:', error)
-    ElMessage.error(`播放器初始化失败: ${error.message || '未知错误'}`);
+    console.error('播放器初始化失败:', error)
     emit('error', error)
     return null
   }
@@ -673,12 +679,31 @@ const toggleSidebar = () => {
 
 /* 添加下一集按钮样式 */
 :deep(.art-control-next-episode) {
-  opacity: 0.9;
+  opacity: 0.95;
   transition: all 0.2s ease;
+  margin-left: 5px; /* 添加左边距 */
+  padding: 5px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 :deep(.art-control-next-episode:hover) {
   opacity: 1;
   transform: scale(1.1);
+}
+
+:deep(.art-control-next-episode img) {
+  width: 20px;
+  height: 20px;
+  min-width: 20px; /* 确保图标不会被压缩 */
+}
+
+.next-episode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 </style>
