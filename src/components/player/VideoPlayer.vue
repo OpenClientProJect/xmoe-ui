@@ -85,9 +85,21 @@ let hideControlsTimer = null
 // 当前视频URL
 const currentVideoUrl = ref('')
 
+const isFullScreen = ref(false)
+
+// 检测全屏状态变化
+const checkFullscreenStatus = () => {
+  const fullscreenElement = document.fullscreenElement || 
+                            document.webkitFullscreenElement || 
+                            document.mozFullScreenElement || 
+                            document.msFullscreenElement
+  isFullScreen.value = !!fullscreenElement
+}
+
 // 显示控制栏
 const showControls = () => {
   isControlsVisible.value = true;
+  checkFullscreenStatus(); // 检查全屏状态
 
   // 清除现有的隐藏定时器
   if (hideControlsTimer) {
@@ -458,6 +470,12 @@ onMounted(() => {
     initPlayer(props.url)
   }
 
+  // 监听全屏变化事件
+  document.addEventListener('fullscreenchange', checkFullscreenStatus)
+  document.addEventListener('webkitfullscreenchange', checkFullscreenStatus)
+  document.addEventListener('mozfullscreenchange', checkFullscreenStatus)
+  document.addEventListener('MSFullscreenChange', checkFullscreenStatus)
+
   // 初始化ResizeObserver来处理缩放事件
   try {
     if (window.ResizeObserver) {
@@ -520,6 +538,12 @@ onUnmounted(() => {
     clearTimeout(hideControlsTimer)
     hideControlsTimer = null
   }
+
+  // 移除全屏事件监听
+  document.removeEventListener('fullscreenchange', checkFullscreenStatus)
+  document.removeEventListener('webkitfullscreenchange', checkFullscreenStatus)
+  document.removeEventListener('mozfullscreenchange', checkFullscreenStatus)
+  document.removeEventListener('MSFullscreenChange', checkFullscreenStatus)
 })
 
 // 暴露方法给父组件
@@ -583,10 +607,11 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
       </div>
     </div>
 
-    <!-- 返回按钮 - 移除动态显示控制 -->
+    <!-- 返回按钮 - 始终显示，添加全屏模式样式 -->
     <div
         v-if="showBackButton"
         class="back-button"
+        :class="{ 'fullscreen-visible': isFullScreen }"
         @click="goBack"
     >
       <el-icon>
@@ -594,11 +619,11 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
       </el-icon>
     </div>
 
-    <!-- 侧边栏切换按钮 - 添加动态显示控制 -->
+    <!-- 侧边栏切换按钮 -->
     <div
         class="sidebar-toggle"
         @click="toggleSidebar"
-        :class="{ 'visible': isControlsVisible, 'expanded': showSidebar }"
+        :class="{ 'visible': isControlsVisible, 'expanded': showSidebar, 'fullscreen-hidden': isFullScreen }"
     >
       <div class="toggle-icon">
         <img v-if="showSidebar" :src='Right' alt="Left"/>
@@ -632,25 +657,43 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 /* 返回按钮样式 */
 .back-button {
   position: absolute;
-  top: 0;
-  left: 0;
-  padding: 12px;
+  top: 10px;
+  left: 10px;
+  padding: 10px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: white;
   font-size: 24px;
-  z-index: 100;
+  z-index: 101; /* 增加z-index确保在全屏模式下显示在最上层 */
   text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 0 5px rgba(0, 0, 0, 0.7);
+}
+
+/* 全屏模式下的返回按钮样式 */
+.back-button.fullscreen-visible {
+  top: env(safe-area-inset-top, 10px);
+  left: env(safe-area-inset-left, 10px);
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .back-button:hover {
   color: #dc2626;
+  background-color: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
 }
 
 .back-button:active {
-  transform: scale(0.95);
+  transform: scale(1);
+}
+
+/* 全屏模式下隐藏侧边栏按钮 */
+.sidebar-toggle.fullscreen-hidden {
+  display: none;
 }
 
 /* 侧边栏切换按钮样式 */
@@ -800,17 +843,21 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .login-title {
-    font-size: 18px;
+  .back-button {
+    top: 15px;
+    left: 15px;
+    width: 36px;
+    height: 36px;
+    padding: 8px;
   }
   
-  .login-desc {
-    font-size: 14px;
-  }
-  
-  .login-button {
-    padding: 8px 20px;
-    font-size: 14px;
+  .back-button.fullscreen-visible {
+    top: env(safe-area-inset-top, 15px);
+    left: env(safe-area-inset-left, 15px);
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    opacity: 0.95;
   }
 }
 </style>

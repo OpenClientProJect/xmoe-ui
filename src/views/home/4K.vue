@@ -210,6 +210,7 @@ watch(() => movieList.value, (newVal) => {
           />
           <div class="image-loading-overlay"></div>
           <span class="anime-episodes">{{ movie.vod_remarks || '' }}</span>
+          <span class="quality-badge">4K</span>
         </div>
         <div class="anime-title-container">
           <div class="anime-title">{{ movie.title || movie.vod_name }}</div>
@@ -290,7 +291,6 @@ watch(() => movieList.value, (newVal) => {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   padding: 10px;
-  background: white;
   min-height: 300px; /* 最小高度，防止闪烁 */
 }
 
@@ -377,11 +377,10 @@ watch(() => movieList.value, (newVal) => {
 
 /* 添加统一的高度控制 */
 .anime-title-container {
-  padding: 6px 4px;
+  padding: 4px 3px;
   display: flex;
   flex-direction: column;
   background-color: white;
-  flex-grow: 1;
 }
 
 .anime-title {

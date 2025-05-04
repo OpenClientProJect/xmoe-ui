@@ -291,7 +291,6 @@ watch(() => resourceList.value, (newVal) => {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   padding: 10px;
-  background: white;
   min-height: 300px; /* 最小高度，防止闪烁 */
 }
 
@@ -378,11 +377,10 @@ watch(() => resourceList.value, (newVal) => {
 
 /* 添加统一的高度控制 */
 .anime-title-container {
-  padding: 6px 4px;
+  padding: 2px 3px;
   display: flex;
   flex-direction: column;
   background-color: white;
-  flex-grow: 1;
 }
 
 .anime-title {
