@@ -28,6 +28,12 @@ const routes = [
         name: '4K',
         component: () => import('../views/home/4K.vue'),
         meta: { showTabBar: true }
+      },
+      {
+        path: 'resources',
+        name: 'Resources',
+        component: () => import('../views/home/Resources.vue'),
+        meta: { showTabBar: true }
       }
     ]
   },

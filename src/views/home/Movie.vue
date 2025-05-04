@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getDramaListService } from '@/api/Drama.js'
 import { getSubMenuListService } from '@/api/home/anime.js'
 import { handleImageUrl, handleImageError } from '@/utils/imageUtils.js'
+import Loading from '@/assets/gif/loading.gif'
 
 const route = useRoute()
 const router = useRouter()
@@ -292,7 +293,7 @@ watch(() => movieList.value, (newVal) => {
     
     <!-- 加载状态 -->
     <div v-if="isLoading" class="loading-container">
-      <div class="loading-spinner"></div>
+      <img :src="Loading" alt="加载中" class="loading-img">
       <p>加载中...</p>
     </div>
 
@@ -628,19 +629,10 @@ watch(() => movieList.value, (newVal) => {
   padding: 40px 0;
 }
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #076AFF;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.loading-img {
+  width: 60px;
+  height: 80px;
   margin-bottom: 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 .retry-button:hover {

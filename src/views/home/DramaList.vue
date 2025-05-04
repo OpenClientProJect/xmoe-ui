@@ -4,6 +4,7 @@ import {useRouter, useRoute} from 'vue-router'
 import {getDramaListService} from "@/api/Drama.js";
 import {getSubMenuListService} from "@/api/home/anime.js";
 import {handleImageUrl} from '@/utils/imageUtils.js';
+import Loading from '@/assets/gif/loading.gif'
 
 const emit = defineEmits(['tab-change'])
 
@@ -329,7 +330,7 @@ watch(() => route.query.typeId, (newTypeId) => {
 
     <!-- 加载状态 -->
     <div v-if="isLoading" class="loading-container">
-      <div class="loading-spinner"></div>
+      <img :src="Loading" alt="加载中" class="loading-img">
       <p>加载中...</p>
     </div>
 
@@ -347,13 +348,15 @@ watch(() => route.query.typeId, (newTypeId) => {
     <!-- 番剧列表 -->
     <div v-else class="anime-list">
       <div 
-        v-for="anime in DramaList"
+        v-for="(anime, index) in DramaList"
         :key="anime.vod_id"
         class="anime-card"
+        :style="`animation-delay: ${index * 30}ms`"
         @click="goToAnimeDetail(anime.vod_id)"
       >
         <div class="anime-cover">
           <img :src="handleImageUrl(anime.vod_pic)" alt="anime cover" class="anime-img" />
+          <div class="image-loading-overlay"></div>
           <span class="anime-episodes">{{ anime.vod_remarks || '更新中' }}</span>
         </div>
         <div class="anime-title">{{ anime.vod_name }}</div>
@@ -392,7 +395,7 @@ watch(() => route.query.typeId, (newTypeId) => {
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 0 12px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -473,7 +476,7 @@ watch(() => route.query.typeId, (newTypeId) => {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   padding: 12px;
-  background: #f5f5f5;
+  background: white;
 }
 
 @media screen and (min-width: 640px) {
@@ -503,23 +506,53 @@ watch(() => route.query.typeId, (newTypeId) => {
 .anime-card {
   display: flex;
   flex-direction: column;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  animation: fadeInUp 0.5s ease forwards;
+  opacity: 0;
+  transform: translateY(20px);
+  height: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: white;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.anime-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.anime-card:hover .anime-img {
+  transform: scale(1.05);
 }
 
 .anime-cover {
   position: relative;
   width: 100%;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   aspect-ratio: 3/4;
+  background-color: #f0f0f0;
 }
 
 .anime-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
 }
-
 .anime-episodes {
   position: absolute;
   bottom: 0;
@@ -565,19 +598,10 @@ watch(() => route.query.typeId, (newTypeId) => {
   padding: 40px 0;
 }
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #076AFF;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.loading-img {
+  width: 60px;
+  height: 80px;
   margin-bottom: 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 /* 错误和空数据容器 */

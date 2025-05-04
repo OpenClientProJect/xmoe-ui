@@ -4,19 +4,20 @@ import { useRoute, useRouter } from 'vue-router'
 import { getDramaListService } from '@/api/Drama.js'
 import { handleImageUrl, handleImageError } from '@/utils/imageUtils.js'
 import Loading from '@/assets/gif/loading.gif'
+
 const route = useRoute()
 const router = useRouter()
 
 // 状态变量
-const movieList = ref([])
+const resourceList = ref([])
 const isLoading = ref(false)
 const isEmpty = ref(false)
-const activeTab = ref('4K')
+const activeTab = ref('资源')
 
 // 排序选项
 const sortOptions = [
   { label: '时间', value: 'updateTime' },
-  { label: '播放', value: 'hot' },
+  { label: '热度', value: 'hot' },
   { label: '评分', value: 'score' }
 ]
 
@@ -36,15 +37,15 @@ const handleImageLoading = (event) => {
   event.target.classList.add('loading')
 }
 
-// 获取4K视频列表数据
-const get4KList = async (params = {}) => {
+// 获取资源列表数据
+const getResourceList = async (params = {}) => {
   try {
     isLoading.value = true
     isEmpty.value = false
     
     // 合并默认参数和传入的参数
     const queryParams = {
-      typeId: params.typeId || 3, // 假设4K视频的typeId为3
+      typeId: params.typeId || 4, // 假设资源的typeId为4
       page: 1,
       pageSize: 20,
       ...params
@@ -53,19 +54,19 @@ const get4KList = async (params = {}) => {
     const res = await getDramaListService(queryParams)
     
     if (res.code === 200 && Array.isArray(res.data)) {
-      // 处理4K视频数据，确保图片URL正确
-      movieList.value = res.data.map(movie => ({
-        ...movie,
+      // 处理资源数据，确保图片URL正确
+      resourceList.value = res.data.map(resource => ({
+        ...resource,
         // 使用handleImageUrl处理图片URL防盗链问题
-        processedCover: handleImageUrl(movie.cover || movie.vod_pic)
+        processedCover: handleImageUrl(resource.cover || resource.vod_pic)
       }))
       isEmpty.value = res.data.length === 0
     } else {
-      console.error('获取4K视频列表失败:', res.message || '未知错误')
+      console.error('获取资源列表失败:', res.message || '未知错误')
       isEmpty.value = true
     }
   } catch (error) {
-    console.error('获取4K视频列表错误:', error)
+    console.error('获取资源列表错误:', error)
     isEmpty.value = true
   } finally {
     isLoading.value = false
@@ -84,7 +85,7 @@ const emit = defineEmits(['tab-change'])
 
 // 监听路由参数变化，重新获取数据
 watch(() => route.query.typeId, (newTypeId) => {
-  get4KList({ typeId: newTypeId || 3 }) // 如果没有typeId参数，使用默认值3
+  getResourceList({ typeId: newTypeId || 4 }) // 如果没有typeId参数，使用默认值4
 }, { immediate: true })
 
 // 获取排序参数值
@@ -103,17 +104,17 @@ const selectSort = (sortLabel) => {
   }
   
   // 调用API重新获取数据
-  get4KList(params)
+  getResourceList(params)
 }
 
 onMounted(() => {
   // 组件挂载时获取数据
   if (!route.query.typeId) {
-    get4KList({ typeId: 3 }) // 默认使用4K视频的typeId
+    getResourceList({ typeId: 4 }) // 默认使用资源的typeId
   }
   
   // 向父组件发送tab-change事件
-  emit('tab-change', '4K')
+  emit('tab-change', '资源')
   
   // 为浏览器添加resize事件监听器，优化图片加载
   window.addEventListener('resize', optimizeImageLoading)
@@ -153,8 +154,8 @@ const optimizeImageLoading = () => {
   })
 }
 
-// 监听movieList变化，当数据加载完成后初始化懒加载
-watch(() => movieList.value, (newVal) => {
+// 监听resourceList变化，当数据加载完成后初始化懒加载
+watch(() => resourceList.value, (newVal) => {
   if (newVal.length > 0) {
     // 数据加载完成，初始化懒加载
     optimizeImageLoading()
@@ -163,7 +164,7 @@ watch(() => movieList.value, (newVal) => {
 </script>
 
 <template>
-  <div class="movie-content">
+  <div class="resource-content">
     <!-- 排序选项 -->
     <div class="sort-container">
       <div class="sort-scroll-container">
@@ -187,33 +188,33 @@ watch(() => movieList.value, (newVal) => {
 
     <!-- 空状态 -->
     <div v-else-if="isEmpty" class="empty-container">
-      <p>暂无4K内容</p>
+      <p>暂无资源内容</p>
     </div>
     
-    <!-- 4K视频列表 -->
+    <!-- 资源列表 -->
     <div v-else class="anime-list">
       <div 
-        v-for="(movie, index) in movieList" 
-        :key="movie.id || movie.vod_id"
+        v-for="(resource, index) in resourceList" 
+        :key="resource.id || resource.vod_id"
         class="anime-card"
         :style="`animation-delay: ${index * 30}ms`"
-        @click="router.push(`/video/${movie.id || movie.vod_id}`)"
+        @click="router.push(`/video/${resource.id || resource.vod_id}`)"
       >
         <div class="anime-cover">
           <img 
-            :src="movie.processedCover" 
-            :alt="movie.title || movie.vod_name" 
+            :src="resource.processedCover" 
+            :alt="resource.title || resource.vod_name" 
             class="anime-img" 
             @error="handleImageError" 
             @load="handleImageLoaded"
             loading="lazy"
           />
           <div class="image-loading-overlay"></div>
-          <span class="anime-episodes">{{ movie.vod_remarks || '' }}</span>
+          <span class="anime-episodes">{{ resource.vod_remarks || '' }}</span>
         </div>
         <div class="anime-title-container">
-          <div class="anime-title">{{ movie.title || movie.vod_name }}</div>
-          <div class="anime-sub" v-if="movie.score || movie.vod_score">{{ movie.score || movie.vod_score }}分</div>
+          <div class="anime-title">{{ resource.title || resource.vod_name }}</div>
+          <div class="anime-sub" v-if="resource.score || resource.vod_score">{{ resource.score || resource.vod_score }}分</div>
         </div>
       </div>
     </div>
@@ -221,8 +222,8 @@ watch(() => movieList.value, (newVal) => {
 </template>
 
 <style scoped>
-/* 视频内容区域 */
-.movie-content {
+/* 资源内容区域 */
+.resource-content {
   padding: 0 0 80px;
   margin-top: 0; 
 }
@@ -354,7 +355,7 @@ watch(() => movieList.value, (newVal) => {
   width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  aspect-ratio: 3/4; /* 修改为竖向海报比例 */
+  aspect-ratio: 3/4; /* 竖向海报比例 */
   background-color: #f0f0f0;
 }
 
@@ -460,12 +461,12 @@ watch(() => movieList.value, (newVal) => {
   text-align: center;
 }
 
-/* 4K质量标签 */
-.quality-badge {
+/* 资源标签 */
+.resource-badge {
   position: absolute;
   top: 4px;
   right: 4px;
-  background-color: #f59e0b;
+  background-color: #10b981; /* 绿色标签，区别于4K的黄色 */
   color: white;
   font-size: 10px;
   font-weight: bold;

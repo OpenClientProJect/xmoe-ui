@@ -75,6 +75,9 @@ const changeTab = (tab) => {
   } else if (tab === '4K') {
     router.push('/4k')
     showSubMenu.value = false
+  } else if (tab === '待添加') {
+    router.push('/resources')
+    showSubMenu.value = false
   } else {
     // 其他动态菜单项，暂时跳转到首页
     router.push('/')
@@ -143,6 +146,42 @@ onMounted(() => {
           @click="changeTab('推荐')"
       >
         推荐
+      </div>
+
+      <!-- 固定的"番剧"选项 -->
+      <div
+          class="tab-item"
+          :class="{'active-tab': activeTab === '番剧'}"
+          @click="changeTab('番剧')"
+      >
+        番剧
+      </div>
+
+      <!-- 固定的"剧场版"选项 -->
+      <div
+          class="tab-item"
+          :class="{'active-tab': activeTab === '剧场版'}"
+          @click="changeTab('剧场版')"
+      >
+        剧场版
+      </div>
+
+      <!-- 固定的"4K"选项 -->
+      <div
+          class="tab-item"
+          :class="{'active-tab': activeTab === '4K'}"
+          @click="changeTab('4K')"
+      >
+        4K
+      </div>
+
+      <!-- 固定的"待添加"选项 -->
+      <div
+          class="tab-item"
+          :class="{'active-tab': activeTab === '待添加'}"
+          @click="changeTab('待添加')"
+      >
+        待添加
       </div>
 
       <!-- 动态加载的菜单项 -->
