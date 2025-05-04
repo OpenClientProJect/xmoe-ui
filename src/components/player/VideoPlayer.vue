@@ -10,6 +10,7 @@ import Next from '@/assets/icon/Next.svg'
 import Loading from '@/assets/gif/loading.gif'
 import Left from '@/assets/icon/left.svg'
 import Right from '@/assets/icon/right.svg'
+import Return from '@/assets/icon/return.svg'
 // 获取路由实例
 const router = useRouter()
 
@@ -59,11 +60,16 @@ const props = defineProps({
   onNextEpisode: {
     type: Function,
     default: null
+  },
+  // 用户是否已登录
+  isLoggedIn: {
+    type: Boolean,
+    default: false
   }
 })
 
 // 定义事件
-const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back', 'toggleSidebar', 'next'])
+const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back', 'toggleSidebar', 'next', 'login'])
 
 // 播放器容器引用
 const artRef = ref(null)
@@ -174,6 +180,16 @@ const initPlayer = (url) => {
 
   // 保存当前URL供调试
   currentVideoUrl.value = url
+
+  // 如果用户未登录，不初始化播放器，显示登录提示层
+  if (!props.isLoggedIn) {
+    console.log('用户未登录，不初始化播放器')
+    // 清空容器以便显示登录提示层
+    if (artRef.value) {
+      artRef.value.innerHTML = ''
+    }
+    return null
+  }
 
   // 添加video-api前缀，使用代理转发
   let videoUrl = url
@@ -309,7 +325,6 @@ const initPlayer = (url) => {
                       break
                     default:
                       console.error('无法恢复的HLS错误:', data)
-                      ElMessage.error('视频加载失败，请尝试其他线路')
 
                       // 清理资源并触发错误事件
                       try {
@@ -348,7 +363,6 @@ const initPlayer = (url) => {
                 artInstance.value.$hls = hls
               } catch (e) {
                 console.error('HLS加载/附加失败:', e)
-                ElMessage.error('视频加载失败，请尝试其他线路')
               }
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
               // 对于Safari等原生支持HLS的浏览器
@@ -375,7 +389,6 @@ const initPlayer = (url) => {
             }
           } catch (error) {
             console.error('HLS初始化失败:', error)
-            ElMessage.error('视频加载失败，请尝试其他线路')
 
             // 创建一个自定义错误事件并分发
             if (video) {
@@ -409,20 +422,6 @@ const initPlayer = (url) => {
         }
       }
     }
-    
-    // 增强错误处理
-    artInstance.value.on('error', (error) => {
-      // 显示错误信息和当前URL，帮助调试
-      let errorMessage = '视频加载失败';
-      if (error && error.message) {
-        errorMessage += `: ${error.message}`;
-      }
-      ElMessage.error(`${errorMessage}, 请尝试其他线路`);
-
-      // 传递错误给父组件
-      emit('error', error || new Error('未知播放器错误'))
-    })
-
     // 添加video元素错误事件监听
     if (artInstance.value.$video) {
       artInstance.value.$video.onerror = function (e) {
@@ -551,6 +550,21 @@ defineExpose({
 const toggleSidebar = () => {
   emit('toggleSidebar')
 }
+
+// 处理登录按钮点击
+const handleLogin = () => {
+  console.log('点击登录按钮')
+  emit('login')
+}
+
+// 监听登录状态变化
+watch(() => props.isLoggedIn, (newIsLoggedIn) => {
+  if (newIsLoggedIn && props.url) {
+    // 如果用户登录，且有URL，初始化播放器
+    console.log('用户已登录，初始化播放器')
+    initPlayer(props.url)
+  }
+})
 </script>
 
 <template>
@@ -561,6 +575,13 @@ const toggleSidebar = () => {
       @touchstart="showControls"
   >
     <div ref="artRef" class="video-player-content"></div>
+
+    <!-- 未登录提示层 -->
+    <div v-if="!isLoggedIn" class="login-overlay">
+      <div class="login-content">
+        <p class="login-desc">登录后即可观看完整视频内容</p>
+      </div>
+    </div>
 
     <!-- 返回按钮 - 移除动态显示控制 -->
     <div
@@ -705,5 +726,91 @@ const toggleSidebar = () => {
   justify-content: center;
   width: 100%;
   height: 100%;
+}
+
+/* 添加登录提示层样式 */
+.login-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(3px);
+}
+
+.login-content {
+  text-align: center;
+  color: white;
+  padding: 30px;
+  max-width: 80%;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.login-icon {
+  margin: 0 auto 20px;
+  width: 60px;
+  height: 60px;
+  background-color: rgba(220, 38, 38, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+}
+
+.login-title {
+  font-size: 22px;
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+
+.login-desc {
+  font-size: 16px;
+  opacity: 0.8;
+  margin: 0 0 24px;
+}
+
+.login-button {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.login-button:hover {
+  background-color: #ef4444;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+}
+
+.login-button:active {
+  transform: translateY(0);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .login-title {
+    font-size: 18px;
+  }
+  
+  .login-desc {
+    font-size: 14px;
+  }
+  
+  .login-button {
+    padding: 8px 20px;
+    font-size: 14px;
+  }
 }
 </style>

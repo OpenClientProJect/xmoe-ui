@@ -11,7 +11,7 @@ const route = useRoute()
 const userStore = useUserInfoStore()
 
 // 获取用户ID，从路由参数中获取或使用当前登录用户的ID
-const userId = ref(route.params.userId || (userStore.info ? userStore.info.user_id : null))
+const userId = ref( userStore.info ? userStore.info.user_id : null)
 
 // 数据
 const activeTab = ref('history') // 默认显示播放历史

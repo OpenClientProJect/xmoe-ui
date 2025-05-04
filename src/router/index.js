@@ -68,7 +68,7 @@ const routes = [
     meta: { showTabBar: true }
   },
   {
-    path: '/history/:userId',
+    path: '/history',
     name: 'UserHistory',
     component: () => import('../views/profile/UserHistory.vue'),
     meta: { showTabBar: true }

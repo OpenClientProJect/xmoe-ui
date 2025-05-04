@@ -234,9 +234,9 @@ const goToUserHistory = (tab) => {
     return;
   }
 
-  // 跳转到用户历史记录页面，并传入用户ID和默认激活的标签
+  // 跳转到用户历史记录页面，不再包含用户ID，仅使用查询参数传递标签
   router.push({
-    path: `/history/${userStore.info.user_id}`,
+    path: `/history`, // 移除路径中的用户ID
     query: {tab}
   });
 }

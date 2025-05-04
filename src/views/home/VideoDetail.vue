@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted, onUnmounted, ref} from 'vue'
+import {onMounted, onUnmounted, ref, computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {getDramaDetailService, getRelatedDramaService, getVideoUrlService} from '@/api/Drama.js'
 import {ArrowDown, ArrowUp, ChatDotRound, Share} from "@element-plus/icons-vue"
@@ -85,6 +85,10 @@ const formatDate = (timestamp) => {
 // 控制简介内容的显示/隐藏
 const showFullDescription = ref(false)
 
+// 检查用户是否登录
+const isUserLoggedIn = computed(() => {
+  return !!(userStore.info && userStore.info.user_id);
+});
 
 //  处理订阅按钮点击事件
 const toggleSubscribe = () => {
@@ -103,6 +107,15 @@ const switchSidebarContent = (content) => {
 const handlePlayerBack = () => {
   console.log('播放器返回按钮点击');
   router.push('/'); // 返回首页
+}
+
+// 处理登录事件
+const handleLogin = () => {
+  // 保存当前路径，登录后可以返回
+  localStorage.setItem('loginRedirectUrl', window.location.pathname);
+
+  // 跳转到登录页面
+  router.push('/login');
 }
 
 // 处理播放器事件
@@ -159,7 +172,7 @@ const playVideo = async (episodeId) => {
 
     // 调用API获取视频地址
     const res = await getVideoUrlService(episode.sourceId)
-    
+
     // 检查响应状态
     if (res.code !== 200 || !res.data) {
       throw new Error(res.message || '获取视频地址失败')
@@ -426,7 +439,7 @@ const getVideoDetail = async () => {
         isSubscribed: true
       }
       console.log('设置后的videoInfo:', videoInfo.value)
-      
+
       // 存储不同线路的剧集数据
       allEpisodes.value = {}
 
@@ -687,7 +700,7 @@ const handleNextEpisode = () => {
 
   // 查找当前剧集在列表中的索引
   const currentIndex = episodes.value.findIndex(ep => ep.id === currentEpisode.value.id)
-  
+
   // 如果找不到当前剧集或已经是最后一集，则提示
   if (currentIndex === -1 || currentIndex >= episodes.value.length - 1) {
     ElMessage.info('已经是最后一集了')
@@ -696,15 +709,15 @@ const handleNextEpisode = () => {
 
   // 获取下一集的信息
   const nextEpisode = episodes.value[currentIndex + 1]
-  
+
   // 播放下一集
   playVideo(nextEpisode.id)
-  
+
   // 滚动到对应的剧集项
   setTimeout(() => {
     const episodeElement = document.querySelector(`.episode-item[data-episode-id="${nextEpisode.id}"]`)
     if (episodeElement) {
-      episodeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      episodeElement.scrollIntoView({behavior: 'smooth', block: 'nearest'})
     }
   }, 300)
 }
@@ -714,13 +727,13 @@ onMounted(async () => {
   await checkIsFollowing()
   await getRelatedDrama()
   await getComments()
-  
+
   // 尝试自动播放第一集
   if (episodes.value && episodes.value.length > 0) {
     try {
       console.log('尝试播放第一集视频')
       const result = await playVideo(episodes.value[0].id)
-      
+
       if (!result && videoInfo.value.sources && videoInfo.value.sources.length > 1) {
         // 如果播放失败，尝试切换到第二个线路
         console.log('第一条线路播放失败，尝试切换线路')
@@ -761,13 +774,16 @@ onMounted(async () => {
             :show-back-button="true"
             :show-sidebar="showSidebar"
             :on-next-episode="handleNextEpisode"
+            :is-logged-in="isUserLoggedIn"
             @error="handlePlayerError"
             @play="handlePlayerPlay"
             @pause="handlePlayerPause"
             @ended="handlePlayerEnded"
             @timeupdate="handlePlayerTimeUpdate"
             @back="handlePlayerBack"
-            @toggle-sidebar="toggleSidebar"
+            @toggleSidebar="toggleSidebar"
+            @next="handleNextEpisode"
+            @login="handleLogin"
         />
       </div>
 
@@ -802,7 +818,7 @@ onMounted(async () => {
               <span>{{ videoInfo.releaseDate }}/</span>
               <span>{{ videoInfo.vodClass }}</span>
             </div>
-            
+
             <!-- 标签列表 -->
             <div class="sidebar-tag-list">
               <span
@@ -813,7 +829,7 @@ onMounted(async () => {
                 {{ tag }}
               </span>
             </div>
-            
+
             <!-- 简介区域 -->
             <div class="sidebar-description-section">
               <div class="description" :class="{ 'collapsed': !showFullDescription }">
@@ -822,8 +838,8 @@ onMounted(async () => {
               <div class="show-more" @click="showFullDescription = !showFullDescription">
                 {{ showFullDescription ? '收起' : '展开' }}
                 <el-icon>
-                  <ArrowDown v-if="!showFullDescription" />
-                  <ArrowUp v-else />
+                  <ArrowDown v-if="!showFullDescription"/>
+                  <ArrowUp v-else/>
                 </el-icon>
               </div>
             </div>
@@ -877,8 +893,8 @@ onMounted(async () => {
                 'current-episode': currentEpisode && episode.id === currentEpisode.id,
                 'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
               }"
-              :data-episode-id="episode.id"
-              @click="playVideo(episode.id)"
+                :data-episode-id="episode.id"
+                @click="playVideo(episode.id)"
             >
               <div class="episode-title">{{ episode.title }}</div>
               <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
@@ -971,6 +987,18 @@ onMounted(async () => {
         </div>
       </div>
 
+      <div class="video-info-wrapper mobile-only" v-if="sidebarContent === 'episodes'">
+        <!-- 视频信息 - 只在移动端剧集页面显示简略信息 -->
+        <div class="video-info">
+          <h1 class="video-title">{{ videoInfo.title }}</h1>
+          <div class="video-stats">
+            <span class="stat-item">{{ videoInfo.views }}次观看</span>
+            <!-- 添加详情按钮 -->
+            <span class="detail-button" @click="openDetailDrawer">详情</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 线路选择 -->
       <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
         <div
@@ -1011,19 +1039,9 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="video-info-wrapper mobile-only" v-if="sidebarContent === 'episodes'">
-        <!-- 视频信息 - 只在移动端剧集页面显示简略信息 -->
-        <div class="video-info">
-          <h1 class="video-title">{{ videoInfo.title }}</h1>
-          <div class="video-stats">
-            <span class="stat-item">{{ videoInfo.views }}次观看</span>
-            <!-- 添加详情按钮 -->
-            <span class="detail-button" @click="openDetailDrawer">详情</span>
-          </div>
-        </div>
-      </div>
+
     </div>
-    
+
     <!-- 移动端评论区域，仅在评论页面显示 -->
     <div class="comments-section mobile-only" v-if="sidebarContent === 'comments'">
       <!-- 评论列表 -->
@@ -1361,7 +1379,6 @@ onMounted(async () => {
 
 /* 视频信息样式 */
 .video-info {
-  padding: 12px 16px;
 }
 
 .video-title {
@@ -1513,7 +1530,7 @@ onMounted(async () => {
   .mobile-only {
     display: none;
   }
-  
+
   .desktop-only {
     display: block;
   }
@@ -1853,7 +1870,7 @@ onMounted(async () => {
   .mobile-only {
     display: none !important;
   }
-  
+
   .desktop-only {
     display: block !important;
   }
@@ -1863,7 +1880,7 @@ onMounted(async () => {
   .mobile-only {
     display: block !important;
   }
-  
+
   .desktop-only {
     display: none !important;
   }
@@ -1872,8 +1889,7 @@ onMounted(async () => {
 .episodes-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  height: 30px;
 }
 
 .section-title {
@@ -1940,7 +1956,7 @@ onMounted(async () => {
   width: 100%;
   z-index: 100;
   /* 隐藏顶部导航栏，但保留容器结构 */
-  height: 0; 
+  height: 0;
   overflow: hidden;
 }
 

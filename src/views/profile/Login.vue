@@ -159,7 +159,7 @@ const submitForm = async () => {
 
 // 返回上一页
 const goBack = () => {
-  router.back()
+  router.push('/profile')
 }
 </script>
 
