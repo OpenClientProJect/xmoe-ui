@@ -2,7 +2,6 @@
 import { ref, onMounted, watch, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getDramaListService } from '@/api/Drama.js'
-import { getSubMenuListService } from '@/api/home/anime.js'
 import { handleImageUrl, handleImageError } from '@/utils/imageUtils.js'
 
 const route = useRoute()
@@ -10,22 +9,9 @@ const router = useRouter()
 
 // 状态变量
 const movieList = ref([])
-const originalMovieList = ref([]) // 用于本地筛选的原始数据
 const isLoading = ref(false)
 const isEmpty = ref(false)
-const activeTab = ref('剧场版')
-
-// 分类标签数据
-const tagData = ref({})
-
-// 当前选中的标签值（每行一个）
-const selectedTags = ref({
-  0: '全部', // 类型
-  1: '全部', // 地区
-  2: '全部', // 语言
-  3: '全部', // 年份
-  4: '时间'  // 排序（默认按时间）
-})
+const activeTab = ref('4K')
 
 // 排序选项
 const sortOptions = [
@@ -34,39 +20,8 @@ const sortOptions = [
   { label: '评分', value: 'score' }
 ]
 
-// 标签行配置
-const tagRows = computed(() => [
-  { 
-    id: 0, 
-    type: 'class', 
-    title: '类型',
-    tags: tagData.value.class ? ['全部', ...tagData.value.class.split(',')] : ['全部']
-  },
-  { 
-    id: 1, 
-    type: 'area', 
-    title: '地区',
-    tags: tagData.value.area ? ['全部', ...tagData.value.area.split(',')] : ['全部']
-  },
-  {
-    id: 2,
-    type: 'lang',
-    title: '语言',
-    tags: tagData.value.lang ? ['全部', ...tagData.value.lang.split(',')] : ['全部']
-  },
-  { 
-    id: 3, 
-    type: 'year', 
-    title: '年份',
-    tags: tagData.value.year ? ['全部', ...tagData.value.year.split(',')] : ['全部']
-  },
-  {
-    id: 4,
-    type: 'sort',
-    title: '排序',
-    tags: sortOptions.map(option => option.label)
-  }
-])
+// 当前选中的排序方式
+const selectedSort = ref('时间')  // 排序（默认按时间）
 
 // 处理图片加载完成事件
 const handleImageLoaded = (event) => {
@@ -81,15 +36,15 @@ const handleImageLoading = (event) => {
   event.target.classList.add('loading')
 }
 
-// 获取剧场版列表数据
-const getMovieList = async (params = {}) => {
+// 获取4K视频列表数据
+const get4KList = async (params = {}) => {
   try {
     isLoading.value = true
     isEmpty.value = false
     
     // 合并默认参数和传入的参数
     const queryParams = {
-      typeId: params.typeId || 2, // 默认使用剧场版的typeId
+      typeId: params.typeId || 3, // 假设4K视频的typeId为3
       page: 1,
       pageSize: 20,
       ...params
@@ -98,20 +53,19 @@ const getMovieList = async (params = {}) => {
     const res = await getDramaListService(queryParams)
     
     if (res.code === 200 && Array.isArray(res.data)) {
-      // 处理电影数据，确保图片URL正确
+      // 处理4K视频数据，确保图片URL正确
       movieList.value = res.data.map(movie => ({
         ...movie,
         // 使用handleImageUrl处理图片URL防盗链问题
         processedCover: handleImageUrl(movie.cover || movie.vod_pic)
       }))
-      originalMovieList.value = [...movieList.value] // 保存原始数据用于本地筛选
       isEmpty.value = res.data.length === 0
     } else {
-      console.error('获取剧场版列表失败:', res.message || '未知错误')
+      console.error('获取4K视频列表失败:', res.message || '未知错误')
       isEmpty.value = true
     }
   } catch (error) {
-    console.error('获取剧场版列表错误:', error)
+    console.error('获取4K视频列表错误:', error)
     isEmpty.value = true
   } finally {
     isLoading.value = false
@@ -130,7 +84,7 @@ const emit = defineEmits(['tab-change'])
 
 // 监听路由参数变化，重新获取数据
 watch(() => route.query.typeId, (newTypeId) => {
-  getMovieList({ typeId: newTypeId || 2 }) // 如果没有typeId参数，使用默认值2
+  get4KList({ typeId: newTypeId || 3 }) // 如果没有typeId参数，使用默认值3
 }, { immediate: true })
 
 // 获取排序参数值
@@ -139,86 +93,27 @@ const getSortValue = (sortLabel) => {
   return option ? option.value : 'updateTime'
 }
 
-// 选择标签
-const selectTag = (rowId, tag) => {
-  selectedTags.value[rowId] = tag
+// 选择排序方式
+const selectSort = (sortLabel) => {
+  selectedSort.value = sortLabel
   
   // 构建查询参数
-  const params = {}
-  
-  // 类型筛选
-  if (rowId === 0) {
-    if (tag === '全部') {
-      // 重置为原始列表
-      movieList.value = [...originalMovieList.value]
-    } else {
-      // 本地筛选vod_class包含所选标签的剧场版
-      movieList.value = originalMovieList.value.filter(movie => {
-        if (!movie.vod_class) return false
-        const classes = movie.vod_class.split(',')
-        return classes.includes(tag)
-      })
-    }
-    return
+  const params = {
+    type: getSortValue(sortLabel)
   }
   
-  // 地区筛选
-  if (rowId === 1 && tag !== '全部') {
-    params.area = tag
-  }
-  
-  // 语言筛选
-  if (rowId === 2 && tag !== '全部') {
-    params.lang = tag
-  }
-  
-  // 年份筛选
-  if (rowId === 3 && tag !== '全部') {
-    params.year = tag
-  }
-  
-  // 排序选项
-  if (rowId === 4) {
-    params.type = getSortValue(tag)
-  }
-  
-  // 如果有筛选参数，则调用API重新获取数据
-  if (Object.keys(params).length > 0) {
-    getMovieList(params)
-  }
-}
-
-// 获取子分类标签
-const getMovieTags = async () => {
-  try {
-    // 获取剧场版的子分类数据（typeId为2表示剧场版）
-    const res = await getSubMenuListService(2)
-    if (typeof res.data === 'object' && res.data !== null) {
-      // 更新标签数据
-      tagData.value = res.data
-      console.log('剧场版子分类数据:', tagData.value)
-    }
-  } catch (error) {
-    console.error('获取剧场版子分类数据失败:', error)
-    // 初始化默认标签数据
-    tagData.value = {
-      class: '',
-      area: '',
-      lang: '',
-      year: ''
-    }
-  }
+  // 调用API重新获取数据
+  get4KList(params)
 }
 
 onMounted(() => {
   // 组件挂载时获取数据
   if (!route.query.typeId) {
-    getMovieList({ typeId: 2 }) // 默认使用剧场版的typeId
+    get4KList({ typeId: 3 }) // 默认使用4K视频的typeId
   }
-  // 获取子分类标签
-  getMovieTags()
+  
   // 向父组件发送tab-change事件
-  emit('tab-change', '剧场版')
+  emit('tab-change', '4K')
   
   // 为浏览器添加resize事件监听器，优化图片加载
   window.addEventListener('resize', optimizeImageLoading)
@@ -269,23 +164,17 @@ watch(() => movieList.value, (newVal) => {
 
 <template>
   <div class="movie-content">
-    <!-- 分类标签行 -->
-    <div class="category-container bg-black text-white">
-      <div 
-        v-for="row in tagRows" 
-        :key="row.id" 
-        class="tag-row"
-      >
-        <div class="tag-scroll-container">
-          <div 
-            v-for="tag in row.tags" 
-            :key="tag"
-            class="tag-item"
-            :class="{'tag-active': selectedTags[row.id] === tag}"
-            @click="selectTag(row.id, tag)"
-          >
-            {{ tag }}
-          </div>
+    <!-- 排序选项 -->
+    <div class="sort-container">
+      <div class="sort-scroll-container">
+        <div 
+          v-for="option in sortOptions" 
+          :key="option.label"
+          class="sort-item"
+          :class="{'sort-active': selectedSort === option.label}"
+          @click="selectSort(option.label)"
+        >
+          {{ option.label }}
         </div>
       </div>
     </div>
@@ -298,10 +187,10 @@ watch(() => movieList.value, (newVal) => {
 
     <!-- 空状态 -->
     <div v-else-if="isEmpty" class="empty-container">
-      <p>暂无剧场版内容</p>
+      <p>暂无4K内容</p>
     </div>
     
-    <!-- 剧场版列表 -->
+    <!-- 4K视频列表 -->
     <div v-else class="anime-list">
       <div 
         v-for="(movie, index) in movieList" 
@@ -321,6 +210,7 @@ watch(() => movieList.value, (newVal) => {
           />
           <div class="image-loading-overlay"></div>
           <span class="anime-episodes">{{ movie.vod_remarks || '' }}</span>
+          <span class="quality-badge">4K</span>
         </div>
         <div class="anime-title-container">
           <div class="anime-title">{{ movie.title || movie.vod_name }}</div>
@@ -332,38 +222,28 @@ watch(() => movieList.value, (newVal) => {
 </template>
 
 <style scoped>
-/* 番剧内容区域 */
+/* 视频内容区域 */
 .movie-content {
   padding: 0 0 80px;
   margin-top: 0; 
 }
 
-/* 分类标签容器 */
-.category-container {
-  padding: 0 0 8px;
+/* 排序选项容器 */
+.sort-container {
   background-color: white;
   border-bottom: 1px solid #eee;
   position: sticky;
   top: 60px; /* 根据您的导航栏高度调整 */
   z-index: 10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* 标签行 */
-.tag-row {
-  padding: 4px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.tag-row:last-child {
-  border-bottom: none;
-}
-
-/* 标签滚动容器 */
-.tag-scroll-container {
+/* 排序选项滚动容器 */
+.sort-scroll-container {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 16px;
+  padding: 8px 16px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -372,13 +252,13 @@ watch(() => movieList.value, (newVal) => {
 }
 
 /* 隐藏滚动条 */
-.tag-scroll-container::-webkit-scrollbar {
+.sort-scroll-container::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
 
-/* 标签项 */
-.tag-item {
-  padding: 4px 16px;
+/* 排序选项 */
+.sort-item {
+  padding: 6px 20px;
   font-size: 14px;
   color: var(--el-text-color-regular);
   border-radius: 20px;
@@ -386,97 +266,59 @@ watch(() => movieList.value, (newVal) => {
   cursor: pointer;
   white-space: nowrap;
   flex: 0 0 auto;
+  border: 1px solid #eee;
 }
 
-/* 针对窄屏设备优化标签 */
-@media screen and (max-width: 360px) {
-  .tag-item {
-    padding: 4px 12px;
-    font-size: 13px;
-  }
-  
-  .tag-scroll-container {
-    gap: 6px;
-    padding: 6px 10px;
-  }
-}
-
-/* 针对宽屏设备优化标签布局 */
-@media screen and (min-width: 768px) {
-  .tag-scroll-container {
-    flex-wrap: wrap;
-    padding: 8px 24px;
-    gap: 12px;
-    overflow-x: visible;
-  }
-  
-  .tag-item {
-    padding: 4px 20px;
-  }
-}
-
-/* 确保标签名称过长时能够正确显示 */
-.tag-item {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
-}
-
-.tag-item:hover {
+.sort-item:hover {
   color: var(--el-text-color-primary);
-  opacity: 0.9;
+  background-color: #f9f9f9;
 }
 
-.tag-active {
+.sort-active {
   color: var(--el-color-white);
   background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
   font-weight: 500;
 }
 
-.tag-active:hover {
-  opacity: 1;
-  background-color: var(--el-color-primary-dark-2);
+.sort-active:hover {
+  opacity: 0.9;
 }
 
-/* 番剧列表 */
+/* 视频列表 */
 .anime-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  padding: 16px;
-  background: #f5f5f5;
+  gap: 10px;
+  padding: 10px;
+  background: white;
   min-height: 300px; /* 最小高度，防止闪烁 */
 }
 
-@media screen and (min-width: 640px) {
+@media screen and (min-width: 540px) {
   .anime-list {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
-@media screen and (min-width: 768px) {
+@media screen and (min-width: 720px) {
   .anime-list {
     grid-template-columns: repeat(5, 1fr);
-    gap: 20px;
+    gap: 12px;
+    padding: 12px;
   }
 }
 
-@media screen and (min-width: 1024px) {
+@media screen and (min-width: 960px) {
   .anime-list {
     grid-template-columns: repeat(6, 1fr);
-  }
-}
-
-@media screen and (min-width: 1280px) {
-  .anime-list {
-    grid-template-columns: repeat(7, 1fr);
   }
 }
 
 .anime-card {
   display: flex;
   flex-direction: column;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   cursor: pointer;
   transition: all 0.25s ease;
   animation: fadeInUp 0.5s ease forwards;
@@ -500,8 +342,8 @@ watch(() => movieList.value, (newVal) => {
 }
 
 .anime-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .anime-card:hover .anime-img {
@@ -511,9 +353,9 @@ watch(() => movieList.value, (newVal) => {
 .anime-cover {
   position: relative;
   width: 100%;
-  border-radius: 8px 8px 0 0; /* 只设置顶部圆角 */
+  border-radius: 4px;
   overflow: hidden;
-  aspect-ratio: 3/4; /* 固定长宽比为3:4，适合电影海报 */
+  aspect-ratio: 3/4; /* 修改为竖向海报比例 */
   background-color: #f0f0f0;
 }
 
@@ -521,7 +363,7 @@ watch(() => movieList.value, (newVal) => {
   width: 100%;
   height: 100%;
   object-fit: cover; /* 保持图片比例，裁剪超出部分 */
-  object-position: center top; /* 优先显示图片上部分，因为电影海报重要信息通常在上方 */
+  object-position: center; /* 居中显示图片 */
   transition: opacity 0.3s ease, transform 0.3s ease;
   opacity: 0;
 }
@@ -536,7 +378,7 @@ watch(() => movieList.value, (newVal) => {
 
 /* 添加统一的高度控制 */
 .anime-title-container {
-  padding: 8px 8px;
+  padding: 6px 4px;
   display: flex;
   flex-direction: column;
   background-color: white;
@@ -544,9 +386,9 @@ watch(() => movieList.value, (newVal) => {
 }
 
 .anime-title {
-  font-size: 13px;
-  font-weight: 500;
-  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 4px;
   text-align: center;
   line-height: 1.3;
   overflow: hidden;
@@ -619,6 +461,20 @@ watch(() => movieList.value, (newVal) => {
   text-align: center;
 }
 
+/* 4K质量标签 */
+.quality-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: #f59e0b;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 /* 加载中状态 */
 .loading-container {
   display: flex;
@@ -643,7 +499,13 @@ watch(() => movieList.value, (newVal) => {
   100% { transform: rotate(360deg); }
 }
 
-.retry-button:hover {
-  background-color: #0055cc;
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  color: #666;
+  font-size: 14px;
 }
-</style>
+</style> 

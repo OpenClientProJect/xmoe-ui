@@ -1,5 +1,6 @@
 <script setup>
 import { defineProps, defineEmits } from 'vue';
+import Loading from '@/assets/gif/loading.gif';
 
 const props = defineProps({
   // 推荐视频列表
@@ -24,6 +25,9 @@ const props = defineProps({
   }
 });
 
+// 导出Loading图片给模板使用
+const loadingGif = Loading;
+
 const emit = defineEmits(['itemClick']);
 
 // 点击视频项
@@ -42,13 +46,9 @@ const handleVideoClick = (videoId) => {
     <h3 v-if="showTitle" class="section-title">{{ title }}</h3>
 
     <!-- 加载状态 -->
-    <div v-if="loading" class="no-recommendations">
-      加载推荐中...
-    </div>
-
-    <!-- 空状态 -->
-    <div v-else-if="videos.length === 0" class="no-recommendations">
-      暂无相关推荐
+    <div v-if="loading" class="loading-container">
+      <img :src="loadingGif" alt="加载中" class="loading-img">
+      <h5>加载中...</h5>
     </div>
 
     <!-- 推荐列表 -->
@@ -100,6 +100,20 @@ const handleVideoClick = (videoId) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* 加载动画样式 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+  min-height: 150px;
+}
+
+.loading-img {
+  width: 60px;
+  height: 80px;
 }
 
 .recommendation-item {

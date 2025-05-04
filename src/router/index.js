@@ -26,7 +26,7 @@ const routes = [
       {
         path: '4k',
         name: '4K',
-        component: () => import('../views/Home.vue'),
+        component: () => import('../views/home/4K.vue'),
         meta: { showTabBar: true }
       }
     ]

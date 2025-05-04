@@ -301,10 +301,6 @@ const scrollSchedule = (direction) => {
                   draggable="false"
                   @error="handleImageError"
                 />
-                <div class="absolute top-2 left-2 px-2 py-1 text-xs text-white rounded-md"
-                     :class="{'bg-green-500': index % 3 === 0, 'bg-pink-500': index % 3 === 1, 'bg-red-500': index % 3 === 2}">
-                  {{ anime.year || '2025' }}
-                </div>
                 <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
                   <h3 class="text-white font-medium mb-1 line-clamp-1">{{ anime.title || '未知标题' }}</h3>
                   <div class="text-gray-300 text-sm">{{ anime.episode || '暂无更新' }}</div>
