@@ -1889,7 +1889,7 @@ onMounted(async () => {
 .episodes-header {
   display: flex;
   justify-content: space-between;
-  height: 30px;
+  height: 35px;
 }
 
 .section-title {
