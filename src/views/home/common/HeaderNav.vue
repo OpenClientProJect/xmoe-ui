@@ -64,25 +64,21 @@ const handleAvatarClick = () => {
 const changeTab = (tab) => {
   emit('tab-change', tab)
 
-  // 根据标签名称跳转到对应路由
-  if (tab === '推荐') {
-    router.push('/')
-    showSubMenu.value = false
-  } else if (tab === '番剧') {
-    router.push('/anime')
-  } else if (tab === '剧场版') {
-    router.push('/movie')
-  } else if (tab === '4K') {
-    router.push('/4k')
-    showSubMenu.value = false
-  } else if (tab === '待添加') {
-    router.push('/resources')
-    showSubMenu.value = false
-  } else {
-    // 其他动态菜单项，暂时跳转到首页
-    router.push('/')
-    showSubMenu.value = false
+  // 使用路由映射，简化路由跳转逻辑
+  const routeMap = {
+    '推荐': '/',
+    '番剧': '/anime',
+    '剧场版': '/movie',
+    '4K': '/4k',
+    '待添加': '/resources'
   }
+
+  // 使用映射或默认跳转到首页
+  const route = routeMap[tab] || '/'
+  router.push(route)
+  
+  // 只在番剧和剧场版显示子菜单
+  showSubMenu.value = tab === '番剧' || tab === '剧场版'
 }
 
 
@@ -110,7 +106,19 @@ const getMenuList = async () => {
   try {
     isLoading.value = true
     const res = await getMenuListService()
-    menuList.value = res.data
+    
+    // 确保推荐页面始终存在于菜单中，如果API返回的数据中没有推荐，则添加它
+    const hasRecommend = res.data.some(item => item.type_name === '推荐')
+    if (!hasRecommend) {
+      // 添加推荐页面作为第一个菜单项
+      menuList.value = [
+        { type_id: 'recommend', type_name: '推荐' },
+        ...res.data
+      ]
+    } else {
+      // 如果API已返回推荐页面，则直接使用API返回的数据
+      menuList.value = res.data
+    }
   } finally {
     isLoading.value = false // 结束加载
   }
@@ -139,51 +147,6 @@ onMounted(() => {
 
     <!-- 分类导航栏 -->
     <div class="tab-container">
-      <!-- 固定的"推荐"选项 -->
-      <div
-          class="tab-item"
-          :class="{'active-tab': activeTab === '推荐'}"
-          @click="changeTab('推荐')"
-      >
-        推荐
-      </div>
-
-      <!-- 固定的"番剧"选项 -->
-      <div
-          class="tab-item"
-          :class="{'active-tab': activeTab === '番剧'}"
-          @click="changeTab('番剧')"
-      >
-        番剧
-      </div>
-
-      <!-- 固定的"剧场版"选项 -->
-      <div
-          class="tab-item"
-          :class="{'active-tab': activeTab === '剧场版'}"
-          @click="changeTab('剧场版')"
-      >
-        剧场版
-      </div>
-
-      <!-- 固定的"4K"选项 -->
-      <div
-          class="tab-item"
-          :class="{'active-tab': activeTab === '4K'}"
-          @click="changeTab('4K')"
-      >
-        4K
-      </div>
-
-      <!-- 固定的"待添加"选项 -->
-      <div
-          class="tab-item"
-          :class="{'active-tab': activeTab === '待添加'}"
-          @click="changeTab('待添加')"
-      >
-        待添加
-      </div>
-
       <!-- 动态加载的菜单项 -->
       <div
           v-for="item in menuList"

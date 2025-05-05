@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {getMenuListService, searchService} from '@/api/home/anime.js'
+import { searchService } from '@/api/home/anime.js'
 import { handleImageUrl } from '@/utils/imageUtils'
 import { ElLoading } from 'element-plus'
 
@@ -10,10 +10,6 @@ const route = useRoute()
 const searchKeyword = ref('')
 const historySearches = ref(['海贼王', '间谍过家家', '名侦探柯南', '鬼灭之刃'])
 const isLoading = ref(false)
-
-// 顶部菜单相关
-const menuList = ref([])
-const activeMenuId = ref(-1) // 默认选择"全部"
 
 // 搜索结果
 const searchResults = ref([])
@@ -44,34 +40,6 @@ watch(() => route.query.keyword, (newKeyword) => {
   }
 })
 
-// 获取顶部菜单
-const getMenuList = async () => {
-  try {
-    const res = await getMenuListService()
-    if (res.code === 200 && Array.isArray(res.data)) {
-      // 在最左侧添加"全部"选项
-      const allOption = {
-        type_id: -1,
-        type_name: '全部',
-        type_en: 'all',
-        type_sort: 0,
-        type_pid: 0
-      }
-      menuList.value = [allOption, ...res.data]
-    } else {
-      console.error('获取菜单失败:', res.message || '未知错误')
-    }
-  } catch (error) {
-    console.error('获取菜单错误:', error)
-  }
-}
-
-// 切换菜单
-const handleMenuChange = (menuId) => {
-  activeMenuId.value = menuId
-  // 切换菜单时不自动搜索
-}
-
 const goBack = () => {
   router.push('/')
 }
@@ -88,8 +56,7 @@ const handleSearch = async () => {
     })
     
     const res = await searchService({
-      keyword: searchKeyword.value,
-      typeId: activeMenuId.value // 使用当前选中的type_id
+      keyword: searchKeyword.value
     })
     
     if (res.code === 200 && res.data) {
@@ -186,8 +153,6 @@ const loadSearchHistory = () => {
 onMounted(async () => {
   // 加载搜索历史
   loadSearchHistory()
-  // 获取顶部菜单
-  await getMenuList()
   // 从路由获取搜索关键词
   getSearchFromRoute()
 })
@@ -212,21 +177,6 @@ onMounted(async () => {
         </el-icon>
       </div>
       <div class="search-button" @click="handleSearch">搜索</div>
-    </div>
-    
-    <!-- 顶部菜单 -->
-    <div class="menu-container">
-      <div class="menu-tabs">
-        <div 
-          v-for="menu in menuList" 
-          :key="menu.type_id"
-          class="menu-tab"
-          :class="{ 'active-menu': activeMenuId === menu.type_id }"
-          @click="handleMenuChange(menu.type_id)"
-        >
-          {{ menu.type_name }}
-        </div>
-      </div>
     </div>
     
     <!-- 搜索内容区域 -->
@@ -388,70 +338,14 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-/* 顶部菜单样式 */
-.menu-container {
-  position: fixed;
-  top: 56px; /* 搜索头部高度 */
-  left: 0;
-  width: 100%;
-  z-index: 99;
-  background-color: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
-}
-
-.menu-tabs {
-  display: flex;
-  overflow-x: auto;
-  white-space: nowrap;
-  padding: 0 16px;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
-  height: 44px;
-  align-items: center;
-}
-
-.menu-tabs::-webkit-scrollbar {
-  display: none; /* Chrome/Safari/Opera */
-}
-
-.menu-tab {
-  padding: 8px 16px;
-  font-size: 14px;
-  color: #6b7280;
-  cursor: pointer;
-  position: relative;
-  flex-shrink: 0;
-  transition: color 0.3s;
-}
-
-.active-menu {
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.active-menu::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  background-color: #dc2626;
-  border-radius: 2px;
-}
-
 /* 内容区域样式 */
 .search-content {
-  padding-top: 110px; /* 搜索头部 + 菜单高度 + 额外空间 */
+  padding-top: 60px; /* 搜索头部高度 + 额外空间 */
   padding-left: 16px;
   padding-right: 16px;
   padding-bottom: 24px;
   background-color: #fafafa;
-  min-height: calc(100vh - 110px);
+  min-height: calc(100vh - 60px);
 }
 
 /* 区域标题样式 */
