@@ -101,11 +101,23 @@ const submitForm = async () => {
 // 打开头像选择抽屉
 const openAvatarDrawer = () => {
   showAvatarDrawer.value = true
+  // 禁止底层页面滚动
+  document.body.style.overflow = 'hidden'
+  document.body.style.position = 'fixed'
+  document.body.style.width = '100%'
+  document.body.style.top = `-${window.scrollY}px`
 }
 
 // 关闭头像选择抽屉
 const closeAvatarDrawer = () => {
   showAvatarDrawer.value = false
+  // 恢复底层页面滚动
+  const scrollY = document.body.style.top
+  document.body.style.overflow = ''
+  document.body.style.position = ''
+  document.body.style.width = ''
+  document.body.style.top = ''
+  window.scrollTo(0, parseInt(scrollY || '0') * -1)
 }
 
 // 选择头像
@@ -238,6 +250,14 @@ input {
   width: 100%;
   height: 100%;
   z-index: 40;
+  overscroll-behavior: contain; /* 阻止滚动传递到下层元素 */
+  touch-action: none; /* 禁止触摸操作传递 */
+}
+
+/* 抽屉内容区域样式 */
+.avatar-drawer-container .fixed.bottom-0 {
+  overscroll-behavior: contain; /* 防止过度滚动影响外层 */
+  -webkit-overflow-scrolling: touch; /* 平滑滚动 */
 }
 
 /* 动画定义 */
