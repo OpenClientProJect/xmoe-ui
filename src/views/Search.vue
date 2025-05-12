@@ -270,7 +270,6 @@ onMounted(async () => {
 <style scoped>
 .search-container {
   min-height: 100vh;
-  background-color: white;
   position: relative;
   overflow-x: hidden;
 }
@@ -340,11 +339,8 @@ onMounted(async () => {
 
 /* 内容区域样式 */
 .search-content {
-  padding-top: 60px; /* 搜索头部高度 + 额外空间 */
-  padding-left: 16px;
-  padding-right: 16px;
-  padding-bottom: 24px;
-  background-color: #fafafa;
+  /* 搜索头部高度 + 额外空间 */
+  padding: 60px 16px 24px;
   min-height: calc(100vh - 60px);
 }
 
