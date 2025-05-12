@@ -617,12 +617,25 @@ const showDetailDrawer = ref(false)
 // 打开详情抽屉
 const openDetailDrawer = () => {
   showDetailDrawer.value = true
+  // 禁止底层页面滚动
+  document.body.style.overflow = 'hidden'
+  document.body.style.position = 'fixed'
+  document.body.style.width = '100%'
+  document.body.style.top = `-${window.scrollY}px`
 }
 
 // 关闭详情抽屉
 const closeDetailDrawer = () => {
   showDetailDrawer.value = false
+  // 恢复底层页面滚动
+  const scrollY = document.body.style.top
+  document.body.style.overflow = ''
+  document.body.style.position = ''
+  document.body.style.width = ''
+  document.body.style.top = ''
+  window.scrollTo(0, parseInt(scrollY || '0') * -1)
 }
+
 // 添加评论输入变量
 const comment = ref('')
 
@@ -753,400 +766,75 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="video-detail-container">
-    <!-- 顶部导航栏 -->
-    <div class="header-container">
-      <HeaderNav
-          :hide-in-video-detail="true"
-      />
-    </div>
-
-    <!-- 视频播放区域和信息区域的布局容器 -->
-    <div class="player-info-layout" :class="{'sidebar-hidden': !showSidebar}">
-      <!-- 视频播放器区域 -->
-      <div class="player-wrapper">
-        <VideoPlayer
-            ref="playerRef"
-            :url="currentVideoUrl"
-            :title="currentEpisode?.title || videoInfo.title"
-            :poster="videoInfo.cover"
-            :video-id="videoId"
-            :show-back-button="true"
-            :show-sidebar="showSidebar"
-            :on-next-episode="handleNextEpisode"
-            :is-logged-in="isUserLoggedIn"
-            @error="handlePlayerError"
-            @play="handlePlayerPlay"
-            @pause="handlePlayerPause"
-            @ended="handlePlayerEnded"
-            @timeupdate="handlePlayerTimeUpdate"
-            @back="handlePlayerBack"
-            @toggleSidebar="toggleSidebar"
-            @next="handleNextEpisode"
-            @login="handleLogin"
+  <div class="video-detail-page-wrapper">
+    <div class="video-detail-container">
+      <!-- 顶部导航栏 -->
+      <div class="header-container">
+        <HeaderNav
+            :hide-in-video-detail="true"
         />
       </div>
 
-      <!-- 右侧信息区域容器 -->
-      <div class="sidebar-wrapper" v-show="showSidebar">
-        <!-- 侧边栏内容选择标签页 -->
-        <div class="sidebar-tabs">
-          <div
-              class="sidebar-tab"
-              :class="{ active: sidebarContent === 'episodes' }"
-              @click="switchSidebarContent('episodes')"
-          >
-            剧集 ({{ episodes.length }})
-          </div>
-          <div
-              class="sidebar-tab"
-              :class="{ active: sidebarContent === 'comments' }"
-              @click="switchSidebarContent('comments')"
-          >
-            评论 ({{ comments.count || 0 }})
-          </div>
-        </div>
-
-        <!-- 剧集页面内容 -->
-        <div v-if="sidebarContent === 'episodes'" class="sidebar-content desktop-only">
-          <!-- 视频信息 - 添加到剧集选项中 -->
-          <div class="sidebar-video-info">
-            <h2 class="sidebar-video-title">{{ videoInfo.title }}</h2>
-            <div class="video-stats">
-              <span class="stat-item">{{ videoInfo.views }}次观看</span>
-              <span>{{ videoInfo.vodArea }}/</span>
-              <span>{{ videoInfo.releaseDate }}/</span>
-              <span>{{ videoInfo.vodClass }}</span>
-            </div>
-
-            <!-- 标签列表 -->
-            <div class="sidebar-tag-list">
-              <span
-                  v-for="tag in videoInfo.tags"
-                  :key="tag"
-                  class="tag"
-              >
-                {{ tag }}
-              </span>
-            </div>
-
-            <!-- 简介区域 -->
-            <div class="sidebar-description-section">
-              <div class="description" :class="{ 'collapsed': !showFullDescription }">
-                {{ videoInfo.description }}
-              </div>
-              <div class="show-more" @click="showFullDescription = !showFullDescription">
-                {{ showFullDescription ? '收起' : '展开' }}
-                <el-icon>
-                  <ArrowDown v-if="!showFullDescription"/>
-                  <ArrowUp v-else/>
-                </el-icon>
-              </div>
-            </div>
-
-            <!-- 操作栏 -->
-            <div class="sidebar-action-bar">
-              <div class="action-btn" :class="{'following': isFollowing}" @click="toggleCollect">
-                <el-icon size="18">
-                  <img :src="Collection" alt="">
-                </el-icon>
-                <span class="action-text">{{ isFollowing ? '已追番' : '追番' }}</span>
-              </div>
-              <div class="action-btn" @click="toggleSubscribe">
-                <el-icon size="18">
-                  <img :src="Ringtones" alt="">
-                </el-icon>
-                <span class="action-text">催更</span>
-              </div>
-              <div class="action-btn" @click="copyCurrentUrl">
-                <el-icon size="18">
-                  <Share/>
-                </el-icon>
-                <span class="action-text">分享</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 线路选择 -->
-          <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
-            <div
-                v-for="source in videoInfo.sources"
-                :key="source.id"
-                class="source-tab"
-                :class="{'active-source': currentSource === source.id}"
-                @click="switchSource(source.id)"
-            >
-              {{ source.name }} ({{ source.count }}集)
-            </div>
-          </div>
-
-          <div v-if="episodes.length === 0" class="no-episodes">
-            加载剧集中...
-          </div>
-
-          <div v-else class="episodes-grid-sidebar">
-            <div
-                v-for="episode in episodes"
-                :key="`${currentSource}-${episode.id}`"
-                class="episode-item"
-                :class="{
-                'current-episode': currentEpisode && episode.id === currentEpisode.id,
-                'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
-              }"
-                :data-episode-id="episode.id"
-                @click="playVideo(episode.id)"
-            >
-              <div class="episode-title">{{ episode.title }}</div>
-              <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
-              <div
-                  v-if="episode.watched"
-                  class="progress-bar"
-              >
-                <div class="progress-fill"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 评论页面内容（仅在桌面端显示） -->
-        <div v-if="sidebarContent === 'comments'" class="sidebar-content comment-sidebar desktop-only">
-          <!-- 评论列表 -->
-          <div v-if="comments.lists && comments.lists.length > 0" class="comment-list">
-            <div v-for="commentItem in comments.lists"
-                 :key="commentItem.comment_id"
-                 class="comment-item">
-              <div class="comment-avatar">
-                <img :src="commentItem.user_pic || Loading" alt="用户头像">
-              </div>
-              <div class="comment-content">
-                <div class="comment-header">
-                  <div class="comment-author">{{ commentItem.comment_name }}</div>
-                  <div class="comment-date">{{ formatDate(commentItem.comment_time) }}</div>
-                </div>
-                <div class="comment-text">{{ commentItem.comment_content }}</div>
-
-                <!-- 回复列表 -->
-                <div v-if="commentItem.rp_lists && commentItem.rp_lists.length > 0" class="reply-list">
-                  <div v-for="reply in commentItem.rp_lists"
-                       :key="reply.comment_id"
-                       class="reply-item">
-                    <div class="reply-avatar">
-                      <img :src="reply.user_pic || Loading" alt="用户头像">
-                    </div>
-                    <div class="reply-content">
-                      <div class="reply-header">
-                        <div class="reply-author">{{ reply.comment_name }}</div>
-                        <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
-                      </div>
-                      <div class="reply-text">
-                        <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
-                        {{ reply.comment_content }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 无评论时显示 -->
-          <div v-else class="comment-placeholder">
-            <el-icon :size="32" class="mb-2">
-              <ChatDotRound/>
-            </el-icon>
-            <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
-          </div>
-
-          <!-- 评论输入区域 -->
-          <div class="comment-input-area">
-            <div v-if="replyMode" class="reply-indicator">
-              回复{{ replyTo?.comment_name }}
-              <el-button type="text" class="cancel-reply" @click="cancelReply">取消</el-button>
-            </div>
-            <div class="comment-input-container">
-              <el-input
-                  v-model="comment"
-                  type="text"
-                  :placeholder="replyPlaceholder"
-                  class="comment-input"
-              />
-              <el-button type="primary" @click="sendComment" :disabled="!comment.trim()" class="send-button">发表
-              </el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 在移动端显示的剧集列表，仅在剧集页面显示 -->
-    <div class="episodes-section mobile-only" v-if="sidebarContent === 'episodes'">
-      <div class="episodes-header">
-        <h3 class="section-title">剧集</h3>
-        <div class="episode-count">
-          共{{ episodes.length }}集，{{ videoInfo.episode }}
-        </div>
-      </div>
-
-      <div class="video-info-wrapper mobile-only" v-if="sidebarContent === 'episodes'">
-        <!-- 视频信息 - 只在移动端剧集页面显示简略信息 -->
-        <div class="video-info">
-          <h1 class="video-title">{{ videoInfo.title }}</h1>
-          <div class="video-stats">
-            <span class="stat-item">{{ videoInfo.views }}次观看</span>
-            <!-- 添加详情按钮 -->
-            <span class="detail-button" @click="openDetailDrawer">详情</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 线路选择 -->
-      <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
-        <div
-            v-for="source in videoInfo.sources"
-            :key="source.id"
-            class="source-tab"
-            :class="{'active-source': currentSource === source.id}"
-            @click="switchSource(source.id)"
-        >
-          {{ source.name }} ({{ source.count }}集)
-        </div>
-      </div>
-
-      <div v-if="episodes.length === 0" class="no-episodes">
-        加载剧集中...
-      </div>
-
-      <div v-else class="episodes-grid">
-        <div
-            v-for="episode in episodes"
-            :key="`mobile-${currentSource}-${episode.id}`"
-            class="episode-item"
-            :class="{
-            'current-episode': currentEpisode && episode.id === currentEpisode.id,
-            'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
-          }"
-            :data-episode-id="episode.id"
-            @click="playVideo(episode.id)"
-        >
-          <div class="episode-title">{{ episode.title }}</div>
-          <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
-          <div
-              v-if="episode.watched"
-              class="progress-bar"
-          >
-            <div class="progress-fill"></div>
-          </div>
-        </div>
-      </div>
-
-
-    </div>
-
-    <!-- 移动端评论区域，仅在评论页面显示 -->
-    <div class="comments-section mobile-only" v-if="sidebarContent === 'comments'">
-      <!-- 评论列表 -->
-      <div v-if="comments.lists && comments.lists.length > 0" class="mobile-comment-list">
-        <div v-for="commentItem in comments.lists"
-             :key="commentItem.comment_id"
-             class="comment-item">
-          <div class="comment-avatar">
-            <img :src="commentItem.user_pic || Loading" alt="用户头像">
-          </div>
-          <div class="comment-content">
-            <div class="comment-header">
-              <div class="comment-author">{{ commentItem.comment_name }}</div>
-              <div class="comment-date">{{ formatDate(commentItem.comment_time) }}</div>
-            </div>
-            <div class="comment-text">{{ commentItem.comment_content }}</div>
-
-            <!-- 回复列表 -->
-            <div v-if="commentItem.rp_lists && commentItem.rp_lists.length > 0" class="reply-list">
-              <div v-for="reply in commentItem.rp_lists"
-                   :key="reply.comment_id"
-                   class="reply-item">
-                <div class="reply-avatar">
-                  <img :src="reply.user_pic || Loading" alt="用户头像">
-                </div>
-                <div class="reply-content">
-                  <div class="reply-header">
-                    <div class="reply-author">{{ reply.comment_name }}</div>
-                    <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
-                  </div>
-                  <div class="reply-text">
-                    <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
-                    {{ reply.comment_content }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 无评论时显示 -->
-      <div v-else class="comment-placeholder">
-        <el-icon :size="32" class="mb-2">
-          <ChatDotRound/>
-        </el-icon>
-        <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
-      </div>
-
-      <!-- 评论输入区域 -->
-      <div class="comment-input-area">
-        <div v-if="replyMode" class="reply-indicator">
-          回复{{ replyTo?.comment_name }}
-          <el-button type="text" class="cancel-reply" @click="cancelReply">取消</el-button>
-        </div>
-        <div class="comment-input-container">
-          <el-input
-              v-model="comment"
-              type="text"
-              :placeholder="replyPlaceholder"
-              class="comment-input"
+      <!-- 视频播放区域和信息区域的布局容器 -->
+      <div class="player-info-layout" :class="{'sidebar-hidden': !showSidebar}">
+        <!-- 视频播放器区域 -->
+        <div class="player-wrapper">
+          <VideoPlayer
+              ref="playerRef"
+              :url="currentVideoUrl"
+              :title="currentEpisode?.title || videoInfo.title"
+              :poster="videoInfo.cover"
+              :video-id="videoId"
+              :show-back-button="true"
+              :show-sidebar="showSidebar"
+              :on-next-episode="handleNextEpisode"
+              :is-logged-in="isUserLoggedIn"
+              @error="handlePlayerError"
+              @play="handlePlayerPlay"
+              @pause="handlePlayerPause"
+              @ended="handlePlayerEnded"
+              @timeupdate="handlePlayerTimeUpdate"
+              @back="handlePlayerBack"
+              @toggleSidebar="toggleSidebar"
+              @next="handleNextEpisode"
+              @login="handleLogin"
           />
-          <el-button type="primary" @click="sendComment" :disabled="!comment.trim()" class="send-button">发表
-          </el-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 相关推荐组件 -->
-    <RelatedRecommend
-        :videos="relatedVideos"
-        :title="'相关推荐'"
-        :loading="isRelatedLoading"
-        @itemClick="goToVideoDetail"
-        class="related-recommendations"
-    />
-
-    <!-- 详情抽屉弹窗 -->
-    <div class="detail-drawer-container" v-show="showDetailDrawer" @click.self="closeDetailDrawer">
-      <div class="detail-drawer" :class="{ 'open': showDetailDrawer }">
-        <div class="drawer-header">
-          <h2 class="drawer-title">{{ videoInfo.title }}</h2>
-          <div class="close-btn" @click="closeDetailDrawer">×</div>
         </div>
 
-        <div class="drawer-content">
-          <!-- 顶部信息区域：左侧封面 + 右侧基本信息 -->
-          <div class="drawer-top-info">
-            <!-- 封面图片 -->
-            <div class="cover-image-container">
-              <img :src="videoInfo.cover" alt="视频封面" class="cover-image"/>
+        <!-- 右侧信息区域容器 -->
+        <div class="sidebar-wrapper" v-show="showSidebar">
+          <!-- 侧边栏内容选择标签页 -->
+          <div class="sidebar-tabs">
+            <div
+                class="sidebar-tab"
+                :class="{ active: sidebarContent === 'episodes' }"
+                @click="switchSidebarContent('episodes')"
+            >
+              剧集 ({{ episodes.length }})
             </div>
+            <div
+                class="sidebar-tab"
+                :class="{ active: sidebarContent === 'comments' }"
+                @click="switchSidebarContent('comments')"
+            >
+              评论 ({{ comments.count || 0 }})
+            </div>
+          </div>
 
-            <!-- 右侧基本信息 -->
-            <div class="info-container">
-              <!-- 更新信息 -->
-              <div class="update-info">{{ videoInfo.episode }}</div>
-
-              <!-- 演员表 -->
-              <div class="actors-list" v-if="videoInfo.actors && videoInfo.actors.length">
-                <div class="actors-line">{{ videoInfo.actors.join(' ') }}</div>
+          <!-- 剧集页面内容 -->
+          <div v-if="sidebarContent === 'episodes'" class="sidebar-content desktop-only">
+            <!-- 视频信息 - 添加到剧集选项中 -->
+            <div class="sidebar-video-info">
+              <h2 class="sidebar-video-title">{{ videoInfo.title }}</h2>
+              <div class="video-stats">
+                <span class="stat-item">{{ videoInfo.views }}次观看</span>
+                <span>{{ videoInfo.vodArea }}/</span>
+                <span>{{ videoInfo.releaseDate }}/</span>
+                <span>{{ videoInfo.vodClass }}</span>
               </div>
 
               <!-- 标签列表 -->
-              <div class="tag-list">
+              <div class="sidebar-tag-list">
                 <span
                     v-for="tag in videoInfo.tags"
                     :key="tag"
@@ -1156,25 +844,350 @@ onMounted(async () => {
                 </span>
               </div>
 
-              <!-- 基本元数据 -->
-              <div class="meta-info">
-                <div class="meta-item" v-if="videoInfo.area">
-                  <span class="meta-value">{{ videoInfo.area }}</span>
+              <!-- 简介区域 -->
+              <div class="sidebar-description-section">
+                <div class="description" :class="{ 'collapsed': !showFullDescription }">
+                  {{ videoInfo.description }}
                 </div>
-                <div class="meta-item" v-if="videoInfo.year">
-                  <span class="meta-value">{{ videoInfo.year }}</span>
+                <div class="show-more" @click="showFullDescription = !showFullDescription">
+                  {{ showFullDescription ? '收起' : '展开' }}
+                  <el-icon>
+                    <ArrowDown v-if="!showFullDescription"/>
+                    <ArrowUp v-else/>
+                  </el-icon>
                 </div>
-                <div class="meta-item" v-if="videoInfo.weekday">
-                  <span class="meta-value">{{ videoInfo.weekday }}</span>
+              </div>
+
+              <!-- 操作栏 -->
+              <div class="sidebar-action-bar">
+                <div class="action-btn" :class="{'following': isFollowing}" @click="toggleCollect">
+                  <el-icon size="18">
+                    <img :src="Collection" alt="">
+                  </el-icon>
+                  <span class="action-text">{{ isFollowing ? '已追番' : '追番' }}</span>
+                </div>
+                <div class="action-btn" @click="toggleSubscribe">
+                  <el-icon size="18">
+                    <img :src="Ringtones" alt="">
+                  </el-icon>
+                  <span class="action-text">催更</span>
+                </div>
+                <div class="action-btn" @click="copyCurrentUrl">
+                  <el-icon size="18">
+                    <Share/>
+                  </el-icon>
+                  <span class="action-text">分享</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 线路选择 -->
+            <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
+              <div
+                  v-for="source in videoInfo.sources"
+                  :key="source.id"
+                  class="source-tab"
+                  :class="{'active-source': currentSource === source.id}"
+                  @click="switchSource(source.id)"
+              >
+                {{ source.name }} ({{ source.count }}集)
+              </div>
+            </div>
+
+            <div v-if="episodes.length === 0" class="no-episodes">
+              加载剧集中...
+            </div>
+
+            <div v-else class="episodes-grid-sidebar">
+              <div
+                  v-for="episode in episodes"
+                  :key="`${currentSource}-${episode.id}`"
+                  class="episode-item"
+                  :class="{
+                  'current-episode': currentEpisode && episode.id === currentEpisode.id,
+                  'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
+                }"
+                  :data-episode-id="episode.id"
+                  @click="playVideo(episode.id)"
+              >
+                <div class="episode-title">{{ episode.title }}</div>
+                <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
+                <div
+                    v-if="episode.watched"
+                    class="progress-bar"
+                >
+                  <div class="progress-fill"></div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 简介区域 -->
-          <div class="description-section">
-            <h3 class="section-title">影视简介</h3>
-            <p class="description drawer-description" v-html="videoInfo.description"></p>
+          <!-- 评论页面内容（仅在桌面端显示） -->
+          <div v-if="sidebarContent === 'comments'" class="sidebar-content comment-sidebar desktop-only">
+            <!-- 评论列表 -->
+            <div v-if="comments.lists && comments.lists.length > 0" class="comment-list">
+              <div v-for="commentItem in comments.lists"
+                   :key="commentItem.comment_id"
+                   class="comment-item">
+                <div class="comment-avatar">
+                  <img :src="commentItem.user_pic || Loading" alt="用户头像">
+                </div>
+                <div class="comment-content">
+                  <div class="comment-header">
+                    <div class="comment-author">{{ commentItem.comment_name }}</div>
+                    <div class="comment-date">{{ formatDate(commentItem.comment_time) }}</div>
+                  </div>
+                  <div class="comment-text">{{ commentItem.comment_content }}</div>
+
+                  <!-- 回复列表 -->
+                  <div v-if="commentItem.rp_lists && commentItem.rp_lists.length > 0" class="reply-list">
+                    <div v-for="reply in commentItem.rp_lists"
+                         :key="reply.comment_id"
+                         class="reply-item">
+                      <div class="reply-avatar">
+                        <img :src="reply.user_pic || Loading" alt="用户头像">
+                      </div>
+                      <div class="reply-content">
+                        <div class="reply-header">
+                          <div class="reply-author">{{ reply.comment_name }}</div>
+                          <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
+                        </div>
+                        <div class="reply-text">
+                          <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
+                          {{ reply.comment_content }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 无评论时显示 -->
+            <div v-else class="comment-placeholder">
+              <el-icon :size="32" class="mb-2">
+                <ChatDotRound/>
+              </el-icon>
+              <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
+            </div>
+
+            <!-- 评论输入区域 -->
+            <div class="comment-input-area">
+              <div v-if="replyMode" class="reply-indicator">
+                回复{{ replyTo?.comment_name }}
+                <el-button type="text" class="cancel-reply" @click="cancelReply">取消</el-button>
+              </div>
+              <div class="comment-input-container">
+                <el-input
+                    v-model="comment"
+                    type="text"
+                    :placeholder="replyPlaceholder"
+                    class="comment-input"
+                />
+                <el-button type="primary" @click="sendComment" :disabled="!comment.trim()" class="send-button">发表
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 在移动端显示的剧集列表，仅在剧集页面显示 -->
+      <div class="episodes-section mobile-only" v-if="sidebarContent === 'episodes'">
+        <div class="episodes-header">
+          <h3 class="section-title">剧集</h3>
+          <div class="episode-count">
+            共{{ episodes.length }}集，{{ videoInfo.episode }}
+          </div>
+        </div>
+
+        <div class="video-info-wrapper mobile-only" v-if="sidebarContent === 'episodes'">
+          <!-- 视频信息 - 只在移动端剧集页面显示简略信息 -->
+          <div class="video-info">
+            <h1 class="video-title">{{ videoInfo.title }}</h1>
+            <div class="video-stats">
+              <span class="stat-item">{{ videoInfo.views }}次观看</span>
+              <!-- 添加详情按钮 -->
+              <span class="detail-button" @click="openDetailDrawer">详情</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 线路选择 -->
+        <div v-if="videoInfo.sources && videoInfo.sources.length > 1" class="source-tabs">
+          <div
+              v-for="source in videoInfo.sources"
+              :key="source.id"
+              class="source-tab"
+              :class="{'active-source': currentSource === source.id}"
+              @click="switchSource(source.id)"
+          >
+            {{ source.name }} ({{ source.count }}集)
+          </div>
+        </div>
+
+        <div v-if="episodes.length === 0" class="no-episodes">
+          加载剧集中...
+        </div>
+
+        <div v-else class="episodes-grid">
+          <div
+              v-for="episode in episodes"
+              :key="`mobile-${currentSource}-${episode.id}`"
+              class="episode-item"
+              :class="{
+              'current-episode': currentEpisode && episode.id === currentEpisode.id,
+              'watched-episode': episode.watched && (!currentEpisode || episode.id !== currentEpisode.id)
+            }"
+              :data-episode-id="episode.id"
+              @click="playVideo(episode.id)"
+          >
+            <div class="episode-title">{{ episode.title }}</div>
+            <div class="episode-source-type" v-if="episode.sourceType">{{ episode.sourceType }}</div>
+            <div
+                v-if="episode.watched"
+                class="progress-bar"
+            >
+              <div class="progress-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 移动端评论区域，仅在评论页面显示 -->
+      <div class="comments-section mobile-only" v-if="sidebarContent === 'comments'">
+        <!-- 评论列表 -->
+        <div v-if="comments.lists && comments.lists.length > 0" class="mobile-comment-list">
+          <div v-for="commentItem in comments.lists"
+               :key="commentItem.comment_id"
+               class="comment-item">
+            <div class="comment-avatar">
+              <img :src="commentItem.user_pic || Loading" alt="用户头像">
+            </div>
+            <div class="comment-content">
+              <div class="comment-header">
+                <div class="comment-author">{{ commentItem.comment_name }}</div>
+                <div class="comment-date">{{ formatDate(commentItem.comment_time) }}</div>
+              </div>
+              <div class="comment-text">{{ commentItem.comment_content }}</div>
+
+              <!-- 回复列表 -->
+              <div v-if="commentItem.rp_lists && commentItem.rp_lists.length > 0" class="reply-list">
+                <div v-for="reply in commentItem.rp_lists"
+                     :key="reply.comment_id"
+                     class="reply-item">
+                  <div class="reply-avatar">
+                    <img :src="reply.user_pic || Loading" alt="用户头像">
+                  </div>
+                  <div class="reply-content">
+                    <div class="reply-header">
+                      <div class="reply-author">{{ reply.comment_name }}</div>
+                      <div class="reply-date">{{ formatDate(reply.comment_time) }}</div>
+                    </div>
+                    <div class="reply-text">
+                      <span v-if="reply.comment_name2" class="reply-to">@{{ reply.comment_name2 }}：</span>
+                      {{ reply.comment_content }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 无评论时显示 -->
+        <div v-else class="comment-placeholder">
+          <el-icon :size="32" class="mb-2">
+            <ChatDotRound/>
+          </el-icon>
+          <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
+        </div>
+
+        <!-- 评论输入区域 -->
+        <div class="comment-input-area">
+          <div v-if="replyMode" class="reply-indicator">
+            回复{{ replyTo?.comment_name }}
+            <el-button type="text" class="cancel-reply" @click="cancelReply">取消</el-button>
+          </div>
+          <div class="comment-input-container">
+            <el-input
+                v-model="comment"
+                type="text"
+                :placeholder="replyPlaceholder"
+                class="comment-input"
+            />
+            <el-button type="primary" @click="sendComment" :disabled="!comment.trim()" class="send-button">发表
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 相关推荐组件 -->
+      <RelatedRecommend
+          :videos="relatedVideos"
+          :title="'相关推荐'"
+          :loading="isRelatedLoading"
+          @itemClick="goToVideoDetail"
+          class="related-recommendations"
+      />
+
+      <!-- 详情抽屉弹窗 -->
+      <div class="detail-drawer-container" v-show="showDetailDrawer" @click.self="closeDetailDrawer">
+        <div class="detail-drawer" :class="{ 'open': showDetailDrawer }">
+          <div class="drawer-header">
+            <h2 class="drawer-title">{{ videoInfo.title }}</h2>
+            <div class="close-btn" @click="closeDetailDrawer">×</div>
+          </div>
+
+          <div class="drawer-content">
+            <!-- 顶部信息区域：左侧封面 + 右侧基本信息 -->
+            <div class="drawer-top-info">
+              <!-- 封面图片 -->
+              <div class="cover-image-container">
+                <img :src="videoInfo.cover" alt="视频封面" class="cover-image"/>
+              </div>
+
+              <!-- 右侧基本信息 -->
+              <div class="info-container">
+                <!-- 更新信息 -->
+                <div class="update-info">{{ videoInfo.episode }}</div>
+
+                <!-- 演员表 -->
+                <div class="actors-list" v-if="videoInfo.actors && videoInfo.actors.length">
+                  <div class="actors-line">{{ videoInfo.actors.join(' ') }}</div>
+                </div>
+
+                <!-- 标签列表 -->
+                <div class="tag-list">
+                  <span
+                      v-for="tag in videoInfo.tags"
+                      :key="tag"
+                      class="tag"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
+
+                <!-- 基本元数据 -->
+                <div class="meta-info">
+                  <div class="meta-item" v-if="videoInfo.area">
+                    <span class="meta-value">{{ videoInfo.area }}</span>
+                  </div>
+                  <div class="meta-item" v-if="videoInfo.year">
+                    <span class="meta-value">{{ videoInfo.year }}</span>
+                  </div>
+                  <div class="meta-item" v-if="videoInfo.weekday">
+                    <span class="meta-value">{{ videoInfo.weekday }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 简介区域 -->
+            <div class="description-section">
+              <h3 class="section-title">影视简介</h3>
+              <p class="description drawer-description" v-html="videoInfo.description"></p>
+            </div>
           </div>
         </div>
       </div>
@@ -1183,6 +1196,36 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* 最外层页面包装器 */
+.video-detail-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.video-detail-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto; /* 确保容器水平居中 */
+}
+
+/* 播放器和信息区域布局 */
+.player-info-layout {
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+  width: 100%;
+  /* 确保水平居中 */
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* 侧边栏标签页样式 */
 .sidebar-tabs {
   display: flex;
@@ -1349,6 +1392,7 @@ onMounted(async () => {
 /* 视频播放器和信息区域的布局容器 */
 .player-info-layout {
   display: flex;
+  justify-content: center;
   flex-direction: column;
   margin-top: 0; /* 移除顶部间距，让播放器直接占据顶部位置 */
   padding-top: 0; /* 移除顶部内边距 */
@@ -1437,7 +1481,7 @@ onMounted(async () => {
   color: #f06292;
 }
 
-/* 侧边栏剧集样式 */
+/* 剧集列表滚动容器样式 */
 .episodes-grid-sidebar {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1445,6 +1489,7 @@ onMounted(async () => {
   max-height: 400px;
   overflow-y: auto;
   scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 .episodes-grid-sidebar::-webkit-scrollbar {
@@ -1454,6 +1499,10 @@ onMounted(async () => {
 .episodes-grid-sidebar::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
+}
+
+.episodes-grid-sidebar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* 调整播放器样式，确保它填充其容器 */
@@ -1482,9 +1531,9 @@ onMounted(async () => {
 @media (min-width: 1024px) {
   .player-info-layout {
     flex-direction: row;
-    max-width: 100%; /* 让播放器容器可以占据整个宽度 */
-    margin-left: 0;
-    margin-right: 0;
+    max-width: 1440px; /* 与底部区域保持一致的宽度 */
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .player-wrapper {
@@ -1552,6 +1601,8 @@ onMounted(async () => {
   .content-container,
   .related-recommendations {
     max-width: 1600px; /* 在超大屏幕上进一步增加最大宽度 */
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .player-wrapper {
@@ -1905,6 +1956,23 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.episodes-grid::-webkit-scrollbar {
+  width: 4px;
+}
+
+.episodes-grid::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.episodes-grid::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .episode-item {
@@ -2111,6 +2179,8 @@ onMounted(async () => {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  overscroll-behavior: contain; /* 阻止滚动传递到下层元素 */
+  touch-action: none; /* 禁止触摸操作传递 */
 }
 
 .detail-drawer {
@@ -2128,6 +2198,8 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+  overscroll-behavior: contain; /* 防止过度滚动影响外层 */
+  -webkit-overflow-scrolling: touch; /* 平滑滚动 */
 }
 
 .detail-drawer.open {
