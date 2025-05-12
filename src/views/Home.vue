@@ -291,19 +291,19 @@ const scrollSchedule = (direction) => {
               <div 
                 v-for="(anime, index) in currentDayAnimes" 
                 :key="anime.id || index"
-                class="flex-shrink-0 relative mr-3 w-64 rounded-lg overflow-hidden transform transition-transform hover:translate-y-[-5px]"
+                class="flex-shrink-0 relative mr-2 w-48 rounded-lg overflow-hidden transform transition-transform hover:translate-y-[-5px]"
                 @click="goToVideoDetail(anime.id)"
               >
                 <img 
                   :src="handleImageUrl(anime.cover || '')" 
-                  class="w-full h-56 object-cover rounded-lg" 
+                  class="w-full aspect-[8/11] object-cover rounded-lg" 
                   alt="动漫封面" 
                   draggable="false"
                   @error="handleImageError"
                 />
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                  <h3 class="text-white font-medium mb-1 line-clamp-1">{{ anime.title || '未知标题' }}</h3>
-                  <div class="text-gray-300 text-sm">{{ anime.episode || '暂无更新' }}</div>
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                  <h3 class="text-white font-medium mb-1 line-clamp-1 text-sm">{{ anime.title || '未知标题' }}</h3>
+                  <div class="text-gray-300 text-xs">{{ anime.episode || '暂无更新' }}</div>
                 </div>
               </div>
               
