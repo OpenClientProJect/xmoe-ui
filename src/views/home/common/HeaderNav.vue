@@ -92,7 +92,7 @@ const goToHistory = () => {
   // 检查用户是否登录
   if (userStore.info && userStore.info.user_id) {
     router.push({
-      path: `/history/${userStore.info.user_id}`,
+      path: `/history`,
       query: { tab: 'history' }
     });
   } else {
