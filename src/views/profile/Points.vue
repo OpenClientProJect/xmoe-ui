@@ -97,14 +97,24 @@ const goBack = () => {
   router.push('/profile')
 }
 
+// 禁止页面滚动
+const disablePageScroll = () => {
+  document.body.style.overflow = 'hidden'
+  document.body.style.position = 'fixed'
+  document.body.style.width = '100%'
+  document.body.style.height = '100%'
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   getUserPointsRecord()
+  // 禁止页面滑动
+  disablePageScroll()
 })
 </script>
 
 <template>
-  <div class="points-container">
+  <div class="points-container fixed inset-0 bg-white overflow-hidden">
     <!-- 头部导航栏 -->
     <div class="header">
       <div class="header-left" @click="goBack">
@@ -116,50 +126,56 @@ onMounted(() => {
       <div class="header-right"></div>
     </div>
 
-    <!-- 积分记录列表 -->
-    <div v-if="loading" class="loading-container">
-      <el-icon class="loading-icon" size="32">
-        <Loading />
-      </el-icon>
-      <span>加载中...</span>
-    </div>
-
-    <div v-else-if="pointsData.records.length === 0" class="empty-records">
-      <div class="empty-icon">
-        <el-icon size="48">
-          <Wallet />
+    <!-- 内容区域 - 添加滚动容器 -->
+    <div class="content-scroll-area">
+      <!-- 积分记录列表 -->
+      <div v-if="loading" class="loading-container">
+        <el-icon class="loading-icon" size="32">
+          <Loading />
         </el-icon>
+        <span>加载中...</span>
       </div>
-      <div class="empty-text">暂无积分记录</div>
-    </div>
 
-    <div v-else class="points-records-list">
-      <div 
-        v-for="record in pointsData.records" 
-        :key="record.id"
-        class="record-item"
-      >
-        <div class="record-left">
-          <div class="record-title-row">
-            <div class="record-title">{{ record.description }}</div>
+      <div v-else-if="pointsData.records.length === 0" class="empty-records">
+        <div class="empty-icon">
+          <el-icon size="48">
+            <Wallet />
+          </el-icon>
+        </div>
+        <div class="empty-text">暂无积分记录</div>
+      </div>
 
+      <div v-else class="points-records-list">
+        <div 
+          v-for="record in pointsData.records" 
+          :key="record.id"
+          class="record-item"
+        >
+          <div class="record-left">
+            <div class="record-title-row">
+              <div class="record-title">{{ record.description }}</div>
+
+            </div>
+            <div class="record-time">{{ record.time }}</div>
           </div>
-          <div class="record-time">{{ record.time }}</div>
-        </div>
-        <div class="record-right" :class="{ 'positive': record.isPositive, 'negative': record.isConsumption }">
-          {{ record.isPositive ? '+' : '-' }}{{ Math.abs(record.points) }}
+          <div class="record-right" :class="{ 'positive': record.isPositive, 'negative': record.isConsumption }">
+            {{ record.isPositive ? '+' : '-' }}{{ Math.abs(record.points) }}
+          </div>
         </div>
       </div>
+      
+      <!-- 底部安全区域 -->
+      <div class="h-16 bg-white safe-area-bottom"></div>
     </div>
   </div>
 </template>
 
 <style scoped>
-
 .points-container {
-  min-height: 100vh;
-  background-color: white;
-  padding-bottom: 60px;
+  display: flex;
+  flex-direction: column;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 /* 头部导航栏 */
@@ -174,6 +190,7 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-shrink: 0;
 }
 
 .header-left {
@@ -191,6 +208,13 @@ onMounted(() => {
 
 .header-right {
   width: 40px;
+}
+
+/* 内容滚动区域 */
+.content-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 积分记录列表 */
@@ -311,5 +335,12 @@ onMounted(() => {
 
 .info-content p {
   margin: 8px 0;
+}
+
+/* 安全区域 - 用于iPhone X及以上机型底部黑条 */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 16px), 60px);
+  }
 }
 </style> 

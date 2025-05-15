@@ -210,7 +210,6 @@ watch(() => movieList.value, (newVal) => {
           />
           <div class="image-loading-overlay"></div>
           <span class="anime-episodes">{{ movie.vod_remarks || '' }}</span>
-          <span class="quality-badge">4K</span>
         </div>
         <div class="anime-title-container">
           <div class="anime-title">{{ movie.title || movie.vod_name }}</div>

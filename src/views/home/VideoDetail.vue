@@ -782,7 +782,7 @@ onMounted(async () => {
           <VideoPlayer
               ref="playerRef"
               :url="currentVideoUrl"
-              :title="currentEpisode?.title || videoInfo.title"
+              :title="videoInfo.title"
               :poster="videoInfo.cover"
               :video-id="videoId"
               :show-back-button="true"

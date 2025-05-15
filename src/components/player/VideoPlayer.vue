@@ -614,9 +614,10 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
         :class="{ 'fullscreen-visible': isFullScreen }"
         @click="goBack"
     >
-      <el-icon>
+      <el-icon class="back-icon">
         <ArrowLeft/>
       </el-icon>
+      <span class="back-title">{{ title }}</span>
     </div>
 
     <!-- 侧边栏切换按钮 -->
@@ -659,36 +660,39 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   position: absolute;
   top: 10px;
   left: 10px;
-  padding: 10px;
-  width: 40px;
-  height: 40px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
   cursor: pointer;
   color: white;
-  font-size: 24px;
-  z-index: 101; /* 增加z-index确保在全屏模式下显示在最上层 */
-  text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 0 5px rgba(0, 0, 0, 0.7);
+  z-index: 101;
+  border-radius: 4px;
+  max-width: 75%;
+}
+
+.back-icon {
+  flex-shrink: 0;
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+.back-title {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 /* 全屏模式下的返回按钮样式 */
 .back-button.fullscreen-visible {
   top: env(safe-area-inset-top, 10px);
   left: env(safe-area-inset-left, 10px);
-  background-color: rgba(0, 0, 0, 0.7);
-  transform: scale(1.1);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .back-button:hover {
-  color: #dc2626;
-  background-color: rgba(0, 0, 0, 0.8);
-  transform: scale(1.1);
-}
-
-.back-button:active {
-  transform: scale(1);
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 /* 全屏模式下隐藏侧边栏按钮 */
@@ -820,16 +824,6 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   margin: 0 0 24px;
 }
 
-.login-button {
-  background-color: #dc2626;
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
 
 .login-button:hover {
   background-color: #ef4444;
@@ -846,18 +840,20 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   .back-button {
     top: 15px;
     left: 15px;
-    width: 36px;
-    height: 36px;
-    padding: 8px;
+    max-width: 65%;
   }
   
   .back-button.fullscreen-visible {
     top: env(safe-area-inset-top, 15px);
     left: env(safe-area-inset-left, 15px);
-    width: 44px;
-    height: 44px;
-    padding: 10px;
-    opacity: 0.95;
+  }
+
+  .back-title {
+    font-size: 13px;
+  }
+
+  .sidebar-toggle {
+    display: none;
   }
 }
 </style>

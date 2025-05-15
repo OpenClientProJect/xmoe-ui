@@ -331,7 +331,6 @@ const goBack = () => {
   background: linear-gradient(to bottom, #ff5e62, #ff2957);
   padding: 20px;
   position: relative;
-  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
