@@ -658,15 +658,12 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 /* 返回按钮样式 */
 .back-button {
   position: absolute;
-  top: 10px;
-  left: 10px;
   padding: 8px 12px;
   display: flex;
   align-items: center;
   cursor: pointer;
   color: white;
   z-index: 101;
-  border-radius: 4px;
   max-width: 75%;
 }
 
@@ -687,8 +684,8 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 
 /* 全屏模式下的返回按钮样式 */
 .back-button.fullscreen-visible {
-  top: env(safe-area-inset-top, 10px);
-  left: env(safe-area-inset-left, 10px);
+  top: env(safe-area-inset-top, 0);
+  left: env(safe-area-inset-left, 0);
 }
 
 .back-button:hover {
@@ -838,20 +835,20 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 /* 响应式调整 */
 @media (max-width: 768px) {
   .back-button {
-    top: 15px;
-    left: 15px;
+    top: 0;
+    left: 0;
     max-width: 65%;
   }
   
   .back-button.fullscreen-visible {
-    top: env(safe-area-inset-top, 15px);
-    left: env(safe-area-inset-left, 15px);
+    top: env(safe-area-inset-top, 0);
+    left: env(safe-area-inset-left, 0);
   }
 
   .back-title {
     font-size: 13px;
   }
-
+  
   .sidebar-toggle {
     display: none;
   }
