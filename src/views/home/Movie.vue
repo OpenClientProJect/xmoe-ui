@@ -92,7 +92,6 @@ const handleImageLoaded = (event) => {
   if (isDataRendering.value && loadedImagesCount >= totalNewImages.value * 0.7) {
     // 当70%的图片加载完成时，认为渲染已经基本完成
     isDataRendering.value = false
-    console.log('图片加载完成，可以加载下一页')
   }
 }
 
@@ -106,7 +105,6 @@ watch(() => movieList.value.length, (newLength, oldLength) => {
     // 有新数据添加
     loadedImagesCount = 0
     totalNewImages.value = newLength - oldLength
-    console.log(`需要加载${totalNewImages.value}张新图片`)
   }
 })
 
@@ -207,12 +205,10 @@ const loadMoreData = async () => {
   
   // 增加页码
   currentPage.value += 1
-  console.log('加载更多数据，页码：', currentPage.value)
-  
+
   try {
     await getMovieList(currentQueryParams.value, true)
   } catch (error) {
-    console.error('加载更多数据失败:', error)
     currentPage.value -= 1
   } finally {
     setTimeout(() => {
@@ -270,8 +266,8 @@ const getSortValue = (sortLabel) => {
 const selectTag = (rowId, tag) => {
   selectedTags.value[rowId] = tag
   
-  // 构建查询参数
-  const params = {}
+  // 构建查询参数，基于当前的查询参数
+  const params = { ...currentQueryParams.value }
   
   // 重置分页
   currentPage.value = 1
@@ -279,32 +275,46 @@ const selectTag = (rowId, tag) => {
   
   // 类型筛选
   if (rowId === 0) {
-    if (tag === '全部') {
-      getMovieList(currentQueryParams.value)
-    } else {
+    if (tag !== '全部') {
       // 本地筛选vod_class包含所选标签的剧场版
       movieList.value = originalMovieList.value.filter(movie => {
         if (!movie.vod_class) return false
         const classes = movie.vod_class.split(',')
         return classes.includes(tag)
       })
+      return; // 只有在本地筛选时才return，不请求API
     }
-    return
+    // 选择全部时，继续执行后续代码，不return
   }
   
   // 地区筛选
-  if (rowId === 1 && tag !== '全部') {
-    params.area = tag
+  if (rowId === 1) {
+    if (tag === '全部') {
+      // 如果选择了全部，删除对应参数
+      delete params.area
+    } else {
+      params.area = tag
+    }
   }
   
   // 语言筛选
-  if (rowId === 2 && tag !== '全部') {
-    params.lang = tag
+  if (rowId === 2) {
+    if (tag === '全部') {
+      // 如果选择了全部，删除对应参数
+      delete params.lang
+    } else {
+      params.lang = tag
+    }
   }
   
   // 年份筛选
-  if (rowId === 3 && tag !== '全部') {
-    params.year = tag
+  if (rowId === 3) {
+    if (tag === '全部') {
+      // 如果选择了全部，删除对应参数
+      delete params.year
+    } else {
+      params.year = tag
+    }
   }
   
   // 排序选项
@@ -315,12 +325,16 @@ const selectTag = (rowId, tag) => {
   // 保存当前typeId参数
   if (route.query.typeId) {
     params.typeId = route.query.typeId
+  } else {
+    // 确保有默认的typeId
+    params.typeId = params.typeId || 2
   }
   
-  // 如果有筛选参数，则调用API重新获取数据
-  if (Object.keys(params).length > 0) {
-    getMovieList(params)
-  }
+  // 更新当前查询参数
+  currentQueryParams.value = params
+  
+  // 调用API重新获取数据，不再检查参数长度
+  getMovieList(params)
 }
 
 // 获取子分类标签
@@ -331,7 +345,6 @@ const getMovieTags = async () => {
     if (typeof res.data === 'object' && res.data !== null) {
       // 更新标签数据
       tagData.value = res.data
-      console.log('剧场版子分类数据:', tagData.value)
     }
   } catch (error) {
     console.error('获取剧场版子分类数据失败:', error)
@@ -342,6 +355,21 @@ const getMovieTags = async () => {
       lang: '',
       year: ''
     }
+  }
+}
+
+// 跳转到详情页
+const goToMovieDetail = (id) => {
+  if (!id) {
+    console.error('无效的剧场版ID')
+    return
+  }
+  try {
+    const url = `/video/${id}`
+    window.open(url, '_blank')
+  } catch (error) {
+    console.error('打开新窗口失败:', error)
+    router.push(`/video/${id}`)
   }
 }
 
@@ -450,7 +478,7 @@ watch(() => movieList.value, (newVal) => {
           :key="`${movie.id || movie.vod_id}_${index}`"
           class="anime-card"
           :style="`animation-delay: ${index * 30}ms`"
-          @click="router.push(`/video/${movie.id || movie.vod_id}`)"
+          @click="goToMovieDetail(movie.id || movie.vod_id)"
         >
           <div class="anime-cover">
             <img 

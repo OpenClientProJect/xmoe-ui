@@ -331,10 +331,13 @@ const goBack = () => {
   background: linear-gradient(to bottom, #ff5e62, #ff2957);
   padding: 20px;
   position: relative;
+  display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 20px;
   box-sizing: border-box;
+  padding-top: 60px; /* 为顶部返回按钮留出空间 */
 }
 
 .back-button {
@@ -349,8 +352,10 @@ const goBack = () => {
 .avatar-container {
   width: 100px;
   height: 100px;
-  margin: 20px auto 40px;
+  margin: 0 auto 40px;
   position: relative;
+  display: flex;
+  justify-content: center;
 }
 
 .avatar-img {
@@ -369,6 +374,28 @@ const goBack = () => {
   border-radius: 16px;
   padding: 30px 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+  position: relative;
+  z-index: 5;
+}
+
+/* 响应式调整 */
+@media (min-width: 768px) {
+  .login-container {
+    padding: 40px;
+  }
+  
+  .form-container {
+    max-width: 400px;
+    padding: 40px 30px;
+  }
+}
+
+/* 确保在超大屏幕上不会拉伸得过宽 */
+@media (min-width: 1200px) {
+  .form-container {
+    max-width: 450px;
+  }
 }
 
 .form-item {

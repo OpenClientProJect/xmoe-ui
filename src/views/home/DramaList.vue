@@ -157,12 +157,10 @@ const getDramaList = async (params = {}, isAppend = false) => {
       if (decryptedData && decryptedData.data && Array.isArray(decryptedData.data)) {
         // 解密成功，使用解密后的数据
         newData = decryptedData.data;
-        console.log('解密成功，获取到番剧数据', newData.length, '条');
       }
     } else if (Array.isArray(res.data)) {
       // 如果是数组，直接使用
       newData = res.data
-      console.log('获取到番剧数据', newData.length, '条');
     }
     
     if (newData.length === 0) {
@@ -206,8 +204,6 @@ const loadMoreData = async () => {
   isLoadingMore.value = true
   
   currentPage.value += 1
-  console.log('加载更多数据，页码：', currentPage.value)
-  
   try {
     await getDramaList(currentQueryParams.value, true)
   } catch (error) {
@@ -383,8 +379,10 @@ const goToAnimeDetail = (id) => {
     console.error('无效的番剧ID')
     return
   }
-  console.log('跳转到番剧详情页,ID:', id)
-  router.push(`/video/${id}`)
+
+  // 在新标签页打开链接
+  const url = `/video/${id}`
+  window.open(url, '_blank')
 }
 
 // 挂载函数
@@ -436,7 +434,6 @@ const handleImageLoad = () => {
   if (isDataRendering.value && loadedImagesCount >= totalNewImages.value * 0.7) {
     // 当70%的图片加载完成时，认为渲染已经基本完成
     isDataRendering.value = false
-    console.log('图片加载完成，可以加载下一页')
   }
 }
 
@@ -455,7 +452,6 @@ watch(() => DramaList.value.length, (newLength, oldLength) => {
     // 有新数据添加
     loadedImagesCount = 0
     totalNewImages.value = newLength - oldLength
-    console.log(`需要加载${totalNewImages.value}张新图片`)
   }
 })
 </script>
