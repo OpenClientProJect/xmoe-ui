@@ -252,7 +252,6 @@ const initPlayer = (url) => {
       theme: '#DC2626'
     }
 
-    // 播放器配置 - 精简设置项提高性能
     const options = {
       container: artRef.value,
       url,
@@ -263,7 +262,7 @@ const initPlayer = (url) => {
       pip: true,
       autoSize: false,
       autoMini: false,
-      screenshot: false, // 禁用截图功能以减少资源消耗
+      screenshot: true,
       setting: true,
       loop: false,
       flip: true,
@@ -282,7 +281,6 @@ const initPlayer = (url) => {
       plugins: [
         artplayerPluginDanmuku(danmukuOptions)
       ],
-      // 直接使用Loading图片作为加载动画
       icons: {
         loading: `<img src="${Loading}" alt="加载中" class="art-player-loading">`,
       },
@@ -298,7 +296,7 @@ const initPlayer = (url) => {
       ],
       moreVideoAttr: {
         crossOrigin: 'anonymous',
-        preload: 'auto', // 改为auto提前加载视频数据
+        preload: 'auto',
         'webkit-playsinline': true,
         playsinline: true,
       },
@@ -312,18 +310,18 @@ const initPlayer = (url) => {
                 debug: false,
                 enableWorker: true,
                 lowLatencyMode: false,
-                progressive: true, // 开启渐进式加载，提高加载速度
+                progressive: true,
                 startLevel: -1, // 自动选择最佳质量
-                abrEwmaDefaultEstimate: 1000000, // 默认带宽估计 500kbps
+                abrEwmaDefaultEstimate: 1000000, // 默认带宽估计
                 // 缓冲区优化
-                maxBufferLength: 30, // 减小缓冲区长度，从60秒降至30秒
-                maxMaxBufferLength: 60, // 减小最大缓冲区长度，从120秒降至60秒
+                maxBufferLength: 30, // 减小缓冲区长度
+                maxMaxBufferLength: 60, // 减小最大缓冲区长度
                 // 加载优化
-                fragLoadingTimeOut: 10000, // 片段加载超时时间10秒
-                manifestLoadingTimeOut: 8000, // 清单加载超时时间8秒
-                levelLoadingTimeOut: 8000, // 级别加载超时时间8秒
+                fragLoadingTimeOut: 10000, // 片段加载超时时间
+                manifestLoadingTimeOut: 8000, // 清单加载超时时间
+                levelLoadingTimeOut: 8000, // 级别加载超时时间
                 // 网络错误恢复设置
-                maxRetryCount: 3, // 降低重试次数，加快失败恢复
+                maxRetryCount: 3,
                 // XHR请求配置
                 xhrSetup: function (xhr) {
                   xhr.withCredentials = false
@@ -398,10 +396,8 @@ const initPlayer = (url) => {
                 console.error('HLS加载失败:', e)
               }
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-              // Safari浏览器原生支持HLS
               video.src = url
               
-              // 添加加载事件监听
               video.addEventListener('loadstart', () => {
                 isLoading.value = true
               })
