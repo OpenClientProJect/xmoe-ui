@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onMounted, ref, watch, onBeforeUnmount} from 'vue'
+import {computed, onMounted, ref, watch, onBeforeUnmount, nextTick} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import {getDramaListService, getRelatedDramaService} from "@/api/Drama.js";
 import {getSubMenuListService} from "@/api/home/anime.js";
@@ -20,6 +20,10 @@ const originalDramaList = ref([])
 const currentPage = ref(1)
 const hasMore = ref(true)
 const isLoadingMore = ref(false)
+// 滚动锁定标志，防止重复触发加载
+const scrollLocked = ref(false)
+// 数据渲染状态
+const isDataRendering = ref(false)
 
 // 加载状态
 const isLoading = ref(false)
@@ -132,11 +136,8 @@ const getDramaList = async (params = {}, isAppend = false) => {
       hasMore.value = true
       // 保存当前查询参数
       currentQueryParams.value = {...params}
-    } else {
-      // 加载更多时显示加载更多状态
-      isLoadingMore.value = true
-    }
-    
+    } 
+
     // 构建请求参数
     const requestParams = {
       ...params,
@@ -150,9 +151,7 @@ const getDramaList = async (params = {}, isAppend = false) => {
     let newData = []
     
     if (typeof res.data === 'string') {
-      // 如果是字符串，尝试解密
-      console.log('检测到加密数据，尝试解密');
-      
+
       const decryptedData = await decryptData(res.data);
       
       if (decryptedData && decryptedData.data && Array.isArray(decryptedData.data)) {
@@ -166,28 +165,37 @@ const getDramaList = async (params = {}, isAppend = false) => {
       console.log('获取到番剧数据', newData.length, '条');
     }
     
-    // 判断是否还有更多数据
     if (newData.length === 0) {
       hasMore.value = false
     }
     
+    isDataRendering.value = true
+    
     if (isAppend) {
-      // 追加模式，把新数据添加到现有列表
       DramaList.value = [...DramaList.value, ...newData]
-      // 更新原始数据集
       originalDramaList.value = [...originalDramaList.value, ...newData]
     } else {
       // 非追加模式，替换现有列表
       DramaList.value = newData
       originalDramaList.value = newData
     }
+    
+    // 使用nextTick等待DOM更新完成
+    await nextTick()
+    
+    setTimeout(() => {
+      isDataRendering.value = false
+    }, 500)
+    
   } catch (error) {
     console.error('获取番剧列表失败:', error)
     hasError.value = true
     errorMessage.value = error.message || '获取番剧列表失败'
+    throw error
   } finally {
-    isLoading.value = false
-    isLoadingMore.value = false
+    if (!isAppend) {
+      isLoading.value = false
+    }
   }
 }
 
@@ -195,26 +203,40 @@ const getDramaList = async (params = {}, isAppend = false) => {
 const loadMoreData = async () => {
   if (isLoading.value || isLoadingMore.value || !hasMore.value) return
   
-  // 增加页码
+  isLoadingMore.value = true
+  
   currentPage.value += 1
   console.log('加载更多数据，页码：', currentPage.value)
   
-  // 使用当前查询参数加载更多数据
-  await getDramaList(currentQueryParams.value, true)
+  try {
+    await getDramaList(currentQueryParams.value, true)
+  } catch (error) {
+    console.error('加载更多数据失败:', error)
+    currentPage.value -= 1
+  } finally {
+    setTimeout(() => {
+      isLoadingMore.value = false
+    }, 300)
+  }
 }
 
-// 监听滚动事件，检测是否滚动到底部
 const handleScroll = () => {
-  // 如果正在加载，或者没有更多数据，则不处理
-  if (isLoading.value || isLoadingMore.value || !hasMore.value) return
+  if (isLoading.value || isLoadingMore.value || !hasMore.value || scrollLocked.value || isDataRendering.value) return
   
   const scrollHeight = document.documentElement.scrollHeight
   const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
   const clientHeight = document.documentElement.clientHeight
   
-  // 当距离底部200px时提前加载
-  if (scrollHeight - scrollTop - clientHeight < 200) {
+  // 当距离底部100px时提前加载
+  if (scrollHeight - scrollTop - clientHeight < 50) {
+    // 锁定滚动，防止多次触发
+    scrollLocked.value = true
     loadMoreData()
+    
+    // 1秒后解锁滚动
+    setTimeout(() => {
+      scrollLocked.value = false
+    }, 1000)
   }
 }
 
@@ -238,10 +260,8 @@ const selectTag = (rowId, tag) => {
   // 类型筛选
   if (rowId === 0) {
     if (tag === '全部') {
-      // 如果选择了全部，重新请求数据
       getDramaList(currentQueryParams.value)
     } else {
-      // 本地筛选vod_class包含所选标签的番剧
       DramaList.value = originalDramaList.value.filter(drama => {
         if (!drama.vod_class) return false
         const classes = drama.vod_class.split(',')
@@ -271,7 +291,6 @@ const selectTag = (rowId, tag) => {
     params.typeId = route.query.typeId
   }
   
-  // 如果有筛选参数，则调用API重新获取数据
   if (Object.keys(params).length > 0) {
     getDramaList(params)
   }
@@ -356,9 +375,7 @@ const goToAnimeDetail = (id) => {
 
 // 挂载函数
 onMounted(() => {
-  // 设置当前标签为"番剧"
   emit('tab-change', '番剧')
-  // 获取番剧子分类数据
   animeTags()
   
   // 添加滚动事件监听
@@ -391,6 +408,40 @@ watch(() => route.query.typeId, (newTypeId) => {
   } else {
     // 如果typeId被移除，获取全部番剧
     getDramaList()
+  }
+})
+
+// 图片加载完成计数
+let loadedImagesCount = 0
+const totalNewImages = ref(0)
+
+// 处理图片加载完成事件
+const handleImageLoad = () => {
+  loadedImagesCount++
+  // 如果所有图片都加载完成，可以提前结束渲染状态
+  if (isDataRendering.value && loadedImagesCount >= totalNewImages.value * 0.7) {
+    // 当70%的图片加载完成时，认为渲染已经基本完成
+    isDataRendering.value = false
+    console.log('图片加载完成，可以加载下一页')
+  }
+}
+
+// 处理图片加载错误
+const handleImageError = () => {
+  loadedImagesCount++
+  // 即使图片加载失败，也计入已加载数量
+  if (isDataRendering.value && loadedImagesCount >= totalNewImages.value * 0.7) {
+    isDataRendering.value = false
+  }
+}
+
+// 监听DramaList变化，重置图片加载计数器
+watch(() => DramaList.value.length, (newLength, oldLength) => {
+  if (newLength > oldLength) {
+    // 有新数据添加
+    loadedImagesCount = 0
+    totalNewImages.value = newLength - oldLength
+    console.log(`需要加载${totalNewImages.value}张新图片`)
   }
 })
 </script>
@@ -436,37 +487,41 @@ watch(() => route.query.typeId, (newTypeId) => {
     </div>
 
     <!-- 番剧列表 -->
-    <div v-else class="anime-list">
-      <div 
-        v-for="(anime, index) in DramaList"
-        :key="`${anime.vod_id}_${index}`"
-        class="anime-card"
-        :style="`animation-delay: ${index * 30}ms`"
-        @click="goToAnimeDetail(anime.vod_id)"
-      >
-        <div class="anime-cover">
-          <img :src="handleImageUrl(anime.vod_pic)" alt="anime cover" class="anime-img" />
-          <div class="image-loading-overlay"></div>
-          <span class="anime-episodes">{{ anime.vod_remarks || '更新中' }}</span>
+    <div v-else>
+      <div class="anime-list">
+        <div 
+          v-for="(anime, index) in DramaList"
+          :key="`${anime.vod_id}_${index}`"
+          class="anime-card"
+          :style="`animation-delay: ${index * 30}ms`"
+          @click="goToAnimeDetail(anime.vod_id)"
+        >
+          <div class="anime-cover">
+            <img 
+              :src="handleImageUrl(anime.vod_pic)" 
+              alt="anime cover" 
+              class="anime-img" 
+              @load="handleImageLoad"
+              @error="handleImageError"
+            />
+            <div class="image-loading-overlay"></div>
+            <span class="anime-episodes">{{ anime.vod_remarks || '更新中' }}</span>
+          </div>
+          <div class="anime-title">{{ anime.vod_name }}</div>
+          <div class="anime-sub" v-if="anime.vod_sub">{{ anime.vod_sub }}</div>
         </div>
-        <div class="anime-title">{{ anime.vod_name }}</div>
-        <div class="anime-sub" v-if="anime.vod_sub">{{ anime.vod_sub }}</div>
       </div>
-    </div>
     
-    <!-- 加载更多提示 -->
-    <div v-if="isLoadingMore" class="loading-more-container">
-      <div class="loading-dot-container">
-        <div class="loading-dot"></div>
-        <div class="loading-dot"></div>
-        <div class="loading-dot"></div>
+      <!-- 加载更多提示 -->
+      <div v-if="isLoadingMore || isDataRendering" class="loading-more-container">
+        <img :src="Loading" alt="加载中" class="loading-more-img">
+        <p>{{ isDataRendering ? '数据加载中...' : '加载更多中...' }}</p>
       </div>
-      <p>加载更多...</p>
-    </div>
     
-    <!-- 没有更多数据提示 -->
-    <div v-if="!hasMore && DramaList.length > 0" class="no-more-container">
-      <p>没有更多数据了</p>
+      <!-- 没有更多数据提示 -->
+      <div v-if="!hasMore && DramaList.length > 0 && !isDataRendering" class="no-more-container">
+        <p>没有更多数据了</p>
+      </div>
     </div>
   </div>
 </template>
@@ -474,13 +529,12 @@ watch(() => route.query.typeId, (newTypeId) => {
 <style scoped>
 /* 番剧内容区域 */
 .anime-content {
-  padding: 0 0 80px;
+  padding: 0 0 20px;
   margin-top: 0; 
 }
 
 /* 分类标签容器 */
 .category-container {
-  padding: 0 0 8px;
   background-color: var(--el-bg-color);
   border-bottom: 1px solid var(--el-border-color-light);
 }
@@ -714,53 +768,27 @@ watch(() => route.query.typeId, (newTypeId) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px 0;
+  padding: 15px 0;
+  background-color: transparent;
+  position: relative;
+  z-index: 10;
 }
 
-.loading-dot-container {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.loading-dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--el-color-primary);
-  border-radius: 50%;
-  animation: dot-pulse 1.4s infinite ease-in-out;
-}
-
-.loading-dot:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.loading-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.loading-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes dot-pulse {
-  0%, 80%, 100% {
-    transform: scale(0.6);
-    opacity: 0.6;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.loading-more-img {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 5px;
 }
 
 /* 没有更多数据提示 */
 .no-more-container {
   display: flex;
   justify-content: center;
-  padding: 20px 0;
+  padding: 10px 0 20px;
   color: #999;
   font-size: 14px;
+  background-color: transparent;
+  margin: 0 15px;
 }
 
 /* 错误和空数据容器 */

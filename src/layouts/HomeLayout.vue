@@ -54,7 +54,6 @@ const handleTabChange = (tab) => {
 .page-content {
   flex: 1;
   padding-top: 100px; /* 为顶部导航栏留出空间 */
-  padding-bottom: 60px; /* 为底部标签栏留出空间 */
 }
 
 /* 适配有子菜单的情况 */

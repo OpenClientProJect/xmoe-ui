@@ -335,7 +335,6 @@ watch(() => movieList.value, (newVal) => {
 <style scoped>
 /* 番剧内容区域 */
 .movie-content {
-  padding: 0 0 80px;
   margin-top: 0; 
 }
 

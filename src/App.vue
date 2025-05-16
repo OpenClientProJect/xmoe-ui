@@ -33,7 +33,7 @@ html, body {
 }
 
 .app-content {
-  min-height: 100vh;
+  min-height: calc(100vh - env(safe-area-inset-bottom, 0px));
 }
 
 .has-tab-bar {
@@ -43,7 +43,7 @@ html, body {
 /* iOS 底部安全区域适配 */
 @supports (padding: max(0px)) {
   .has-tab-bar {
-    padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(50px, calc(50px + env(safe-area-inset-bottom, 0px) / 2));
   }
 }
 </style>
