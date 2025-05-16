@@ -250,18 +250,20 @@ const getSortValue = (sortLabel) => {
 const selectTag = (rowId, tag) => {
   selectedTags.value[rowId] = tag
   
-  // 构建查询参数
-  const params = {}
+  // 构建查询参数，基于当前查询参数
+  const params = { ...currentQueryParams.value }
   
   // 重置分页
   currentPage.value = 1
   hasMore.value = true
   
-  // 类型筛选
+  // 类型筛选 - 只做本地筛选，不影响API参数
   if (rowId === 0) {
     if (tag === '全部') {
-      getDramaList(currentQueryParams.value)
+      // 如果选择了全部，重新请求数据
+      getDramaList(params)
     } else {
+      // 本地筛选vod_class包含所选标签的番剧
       DramaList.value = originalDramaList.value.filter(drama => {
         if (!drama.vod_class) return false
         const classes = drama.vod_class.split(',')
@@ -272,13 +274,23 @@ const selectTag = (rowId, tag) => {
   }
   
   // 季度筛选
-  if (rowId === 1 && tag !== '全部') {
-    params.lang = tag
+  if (rowId === 1) {
+    if (tag === '全部') {
+      // 如果选择了全部，删除对应参数
+      delete params.lang
+    } else {
+      params.lang = tag
+    }
   }
   
   // 年份筛选
-  if (rowId === 2 && tag !== '全部') {
-    params.year = tag
+  if (rowId === 2) {
+    if (tag === '全部') {
+      // 如果选择了全部，删除对应参数
+      delete params.year
+    } else {
+      params.year = tag
+    }
   }
   
   // 排序选项
@@ -291,9 +303,11 @@ const selectTag = (rowId, tag) => {
     params.typeId = route.query.typeId
   }
   
-  if (Object.keys(params).length > 0) {
-    getDramaList(params)
-  }
+  // 更新当前查询参数
+  currentQueryParams.value = params
+  
+  // 调用API重新获取数据
+  getDramaList(params)
 }
 
 // 直接在组件中实现AES解密功能
