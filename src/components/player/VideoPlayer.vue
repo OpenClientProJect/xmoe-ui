@@ -84,6 +84,10 @@ let hideControlsTimer = null
 const isLoading = ref(false)
 // 全屏状态
 const isFullScreen = ref(false)
+// 视频加载错误状态
+const videoLoadFailed = ref(false)
+// 加载超时计时器
+let loadTimeoutTimer = null
 
 // 检测全屏状态变化
 const checkFullscreenStatus = () => {
@@ -180,8 +184,22 @@ const initPlayer = (url) => {
     return
   }
 
+  // 重置错误状态
+  videoLoadFailed.value = false
+  
   // 设置加载状态
   isLoading.value = true
+  
+  // 设置加载超时计时器，如果10秒后视频仍在加载，则显示错误
+  if (loadTimeoutTimer) {
+    clearTimeout(loadTimeoutTimer)
+  }
+  loadTimeoutTimer = setTimeout(() => {
+    if (isLoading.value) {
+      videoLoadFailed.value = true
+      isLoading.value = false
+    }
+  }, 10000) // 10秒后判断是否仍在加载
 
   // 如果用户未登录，不初始化播放器
   if (!props.isLoggedIn) {
@@ -189,6 +207,10 @@ const initPlayer = (url) => {
       artRef.value.innerHTML = ''
     }
     isLoading.value = false
+    if (loadTimeoutTimer) {
+      clearTimeout(loadTimeoutTimer)
+      loadTimeoutTimer = null
+    }
     return null
   }
 
@@ -292,7 +314,7 @@ const initPlayer = (url) => {
                 lowLatencyMode: false,
                 progressive: true, // 开启渐进式加载，提高加载速度
                 startLevel: -1, // 自动选择最佳质量
-                abrEwmaDefaultEstimate: 500000, // 默认带宽估计 500kbps
+                abrEwmaDefaultEstimate: 1000000, // 默认带宽估计 500kbps
                 // 缓冲区优化
                 maxBufferLength: 30, // 减小缓冲区长度，从60秒降至30秒
                 maxMaxBufferLength: 60, // 减小最大缓冲区长度，从120秒降至60秒
@@ -339,6 +361,9 @@ const initPlayer = (url) => {
                       if (video) {
                         video.dispatchEvent(new Event('error'))
                       }
+                      // 设置视频加载失败状态
+                      videoLoadFailed.value = true
+                      isLoading.value = false
                       break
                   }
                 }
@@ -362,6 +387,11 @@ const initPlayer = (url) => {
                 // 监听可以播放事件
                 video.addEventListener('canplay', () => {
                   isLoading.value = false
+                  // 清除加载超时计时器
+                  if (loadTimeoutTimer) {
+                    clearTimeout(loadTimeoutTimer)
+                    loadTimeoutTimer = null
+                  }
                 })
               } catch (e) {
                 isLoading.value = false
@@ -436,6 +466,12 @@ const initPlayer = (url) => {
       // 监听错误事件
       artInstance.value.$video.onerror = function() {
         isLoading.value = false
+        videoLoadFailed.value = true
+        // 清除加载超时计时器
+        if (loadTimeoutTimer) {
+          clearTimeout(loadTimeoutTimer)
+          loadTimeoutTimer = null
+        }
         emit('error', this.error || new Error('视频加载失败'))
       }
     }
@@ -444,13 +480,33 @@ const initPlayer = (url) => {
   } catch (error) {
     console.error('播放器初始化失败:', error)
     isLoading.value = false
+    videoLoadFailed.value = true
+    // 清除加载超时计时器
+    if (loadTimeoutTimer) {
+      clearTimeout(loadTimeoutTimer)
+      loadTimeoutTimer = null
+    }
     emit('error', error)
     return null
   }
 }
 
 // 监听URL变化，重新初始化播放器
-watch(() => props.url, (newUrl) => {
+watch(() => props.url, (newUrl, oldUrl) => {
+  // 如果新旧URL不同且之前有URL，需要先清理当前播放的视频
+  if (oldUrl && oldUrl !== newUrl && artInstance.value) {
+    try {
+      // 清空视频源
+      if (artInstance.value.$video) {
+        artInstance.value.$video.src = ''
+        artInstance.value.$video.load()
+      }
+    } catch (e) {
+      console.error('清理视频资源失败:', e)
+    }
+  }
+  
+  // 初始化新的播放器
   if (newUrl) {
     initPlayer(newUrl)
   }
@@ -489,6 +545,12 @@ onUnmounted(() => {
   if (hideControlsTimer) {
     clearTimeout(hideControlsTimer)
     hideControlsTimer = null
+  }
+  
+  // 清理加载超时计时器
+  if (loadTimeoutTimer) {
+    clearTimeout(loadTimeoutTimer)
+    loadTimeoutTimer = null
   }
 
   // 移除全屏事件监听
@@ -545,6 +607,13 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
     <div v-if="!isLoggedIn" class="login-overlay">
       <div class="login-content">
         <p class="login-desc">登录后即可观看完整视频内容</p>
+      </div>
+    </div>
+    
+    <!-- 视频加载失败提示层 -->
+    <div v-if="videoLoadFailed" class="login-overlay">
+      <div class="login-content">
+        <p class="login-desc">视频加载失败，请检查网络或稍后重试</p>
       </div>
     </div>
 
@@ -731,8 +800,6 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   padding: 30px;
   max-width: 80%;
   border-radius: 10px;
-  background-color: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .login-desc {

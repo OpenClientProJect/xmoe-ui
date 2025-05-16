@@ -158,6 +158,21 @@ const playVideo = async (episodeId) => {
   }
 
   try {
+    // 先停止当前视频播放
+    if (playerRef.value) {
+      const player = playerRef.value.getPlayer()
+      if (player) {
+        // 暂停视频
+        player.pause()
+        // 重置视频时间
+        player.seek = 0
+        // 清空播放源
+        player.url = ''
+      }
+      // 重置播放URL
+      currentVideoUrl.value = ''
+    }
+    
     // 先重置当前选中的剧集
     currentEpisode.value = null
 
