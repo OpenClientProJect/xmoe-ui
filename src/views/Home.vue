@@ -21,9 +21,6 @@ const activeTab = ref('推荐')
 // 添加番剧数据
 const animeList = []
 
-// 模拟追番日历数据
-const activeDay = ref(0) // 默认选中周一
-
 // 按周几分类的动漫数据
 const calendarByDay = ref({
   0: [], // 周一
@@ -34,6 +31,23 @@ const calendarByDay = ref({
   5: [], // 周六
   6: [], // 周日
 })
+
+// 获取当前是星期几，并设置为默认选中
+const getCurrentDay = () => {
+  const today = new Date()
+  // getDay() 返回 0-6，其中 0 是星期日
+  let currentDay = today.getDay()
+  // 转换为我们的索引：0-6 对应周一到周日，所以星期日(0)要转为 6
+  if (currentDay === 0) {
+    currentDay = 6
+  } else {
+    currentDay -= 1
+  }
+  return currentDay
+}
+
+// 将默认选中日改为当前星期
+const activeDay = ref(getCurrentDay())
 
 // 获取当前选中日期的动漫列表
 const currentDayAnimes = computed(() => {
@@ -158,6 +172,8 @@ onMounted(() => {
   getDramaSchedule()
   // 新番列表
   getNewAnimes()
+  // 设置当前星期
+  activeDay.value = getCurrentDay()
 })
 
 // 处理标签切换事件
