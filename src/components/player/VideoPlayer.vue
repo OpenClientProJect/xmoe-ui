@@ -1,5 +1,5 @@
 <script setup>
-import {ref, onMounted, onUnmounted, watch} from 'vue'
+import {ref, onMounted, onUnmounted, watch, shallowRef} from 'vue'
 import Artplayer from 'artplayer'
 import artplayerPluginDanmuku from 'artplayer-plugin-danmuku'
 import {ElMessage} from 'element-plus'
@@ -10,7 +10,6 @@ import Next from '@/assets/icon/Next.svg'
 import Loading from '@/assets/gif/loading.gif'
 import Left from '@/assets/icon/left.svg'
 import Right from '@/assets/icon/right.svg'
-import Return from '@/assets/icon/return.svg'
 // 获取路由实例
 const router = useRouter()
 
@@ -73,18 +72,17 @@ const emit = defineEmits(['play', 'pause', 'ended', 'timeupdate', 'error', 'back
 
 // 播放器容器引用
 const artRef = ref(null)
-// 播放器实例
-const artInstance = ref(null)
-// 创建ResizeObserver来处理缩放事件
-let resizeObserver = null
-let resizeTimeout = null
+// 播放器实例 - 使用shallowRef以避免响应式深度监听，提高性能
+const artInstance = shallowRef(null)
+// HLS实例引用
+let hlsInstance = null
 // 控制返回按钮显示状态
 const isControlsVisible = ref(false)
 // 控制延迟隐藏的定时器
 let hideControlsTimer = null
-// 当前视频URL
-const currentVideoUrl = ref('')
-
+// 显示加载状态
+const isLoading = ref(false)
+// 全屏状态
 const isFullScreen = ref(false)
 
 // 检测全屏状态变化
@@ -98,46 +96,39 @@ const checkFullscreenStatus = () => {
 
 // 显示控制栏
 const showControls = () => {
-  isControlsVisible.value = true;
-  checkFullscreenStatus(); // 检查全屏状态
+  isControlsVisible.value = true
+  checkFullscreenStatus()
 
-  // 清除现有的隐藏定时器
   if (hideControlsTimer) {
-    clearTimeout(hideControlsTimer);
+    clearTimeout(hideControlsTimer)
   }
 
-  // 设置延迟隐藏定时器
   hideControlsTimer = setTimeout(() => {
-    isControlsVisible.value = false;
-  }, 3000); // 3秒后自动隐藏
+    isControlsVisible.value = false
+  }, 3000)
 }
 
 // 隐藏控制栏
 const hideControls = () => {
   if (hideControlsTimer) {
-    clearTimeout(hideControlsTimer);
+    clearTimeout(hideControlsTimer)
   }
   hideControlsTimer = setTimeout(() => {
-    isControlsVisible.value = false;
-  }, 800); // 延迟800毫秒隐藏，避免切换时闪烁
+    isControlsVisible.value = false
+  }, 800)
 }
 
 // 返回上一页
 const goBack = () => {
-  emit('back');
-  // 如果父组件没有处理back事件，则默认行为是返回首页
-  router.push('/');
+  router.push('/')
 }
 
-// 节流函数 - 限制函数调用频率
-// 在指定的时间间隔内只执行一次函数
+// 节流函数
 function throttle(fn, delay) {
   let lastCall = 0
   return function (...args) {
     const now = new Date().getTime()
-    if (now - lastCall < delay) {
-      return
-    }
+    if (now - lastCall < delay) return
     lastCall = now
     return fn(...args)
   }
@@ -145,120 +136,112 @@ function throttle(fn, delay) {
 
 // 处理下一集按钮点击事件
 const handleNextEpisode = () => {
-  console.log('点击了下一集按钮')
   emit('next')
   if (typeof props.onNextEpisode === 'function') {
     props.onNextEpisode()
   }
 }
 
-// 初始化播放器后，添加视频结束事件监听
+// 初始化播放器后，添加视频事件监听
 const setupEventListeners = (art) => {
-  // 监听视频结束事件
+  // 视频结束事件
   art.on('video:ended', () => {
-    console.log('视频播放结束，触发ended事件')
     emit('ended')
   })
 
-  // 播放事件
-  art.on('play', () => {
-    emit('play')
-  })
+  // 播放/暂停事件
+  art.on('play', () => emit('play'))
+  art.on('pause', () => emit('pause'))
   
-  // 暂停事件
-  art.on('pause', () => {
-    emit('pause')
-  })
-  
-  // 时间更新事件，用于记录播放进度
+  // 时间更新事件，用节流函数减少存储操作频率
   art.on('video:timeupdate', throttle(() => {
-    // 保存播放进度
     const currentTime = art.currentTime
     if (props.videoId) {
       localStorage.setItem(`video_progress_${props.videoId}`, currentTime.toString())
     }
     emit('timeupdate', currentTime)
-  }, 5000)) // 5秒内只执行一次，减少存储操作
+  }, 5000))
+  
+  // 加载状态监听
+  art.on('loading', () => {
+    isLoading.value = true
+  })
+  
+  art.on('loaded', () => {
+    isLoading.value = false
+  })
 }
 
 // 初始化播放器
 const initPlayer = (url) => {
   if (!url) {
-    console.error('播放URL为空')
     ElMessage.error('播放地址无效')
     emit('error', new Error('播放地址无效'))
     return
   }
 
-  // 保存当前URL供调试
-  currentVideoUrl.value = url
+  // 设置加载状态
+  isLoading.value = true
 
-  // 如果用户未登录，不初始化播放器，显示登录提示层
+  // 如果用户未登录，不初始化播放器
   if (!props.isLoggedIn) {
-    console.log('用户未登录，不初始化播放器')
-    // 清空容器以便显示登录提示层
     if (artRef.value) {
       artRef.value.innerHTML = ''
     }
+    isLoading.value = false
     return null
   }
 
-  // 添加video-api前缀，使用代理转发
-  let videoUrl = url
-  // if (url.startsWith('http')) {
-  //   // 如果是完整URL，检查是否需要添加前缀
-  //   if (!url.includes('/video-api/') && !url.includes('/video-proxy/')) {
-  //     videoUrl = `/video-api${new URL(url).pathname}${new URL(url).search}`
-  //   }
-  // } else {
-  //   // 如果是相对路径，直接添加前缀
-  //   videoUrl = `/video-api/${url}`
-  // }
-  console.log('当前视频播放地址:', videoUrl)
-
-  // 如果已经有播放器实例，先销毁
+  // 清理旧实例
   if (artInstance.value) {
-    artInstance.value.destroy()
+    try {
+      // 销毁旧的HLS实例
+      if (hlsInstance) {
+        hlsInstance.destroy()
+        hlsInstance = null
+      }
+      artInstance.value.destroy()
+    } catch (e) {
+      console.error('销毁旧播放器实例失败:', e)
+    }
   }
 
   try {
-    console.log('初始化播放器，URL:', videoUrl)
-
     // 清空容器
-    artRef.value.innerHTML = ''
+    if (artRef.value) {
+      artRef.value.innerHTML = ''
+    }
 
     // 弹幕插件配置
     const danmukuOptions = {
       danmuku: props.danmaku || [],
-      speed: 5, // 弹幕速度
-      fontSize: 25, // 弹幕字体大小
-      color: '#FFFFFF', // 弹幕默认颜色
-      mode: 0, // 弹幕默认模式 0-滚动 1-顶部 2-底部
-      margin: [10, 100], // 弹幕上下边距
-      antiOverlap: true, // 防重叠
-      useWorker: true, // 使用 web worker
-      synchronousPlayback: true, // 同步播放
-      lockTime: 5, // 输入框锁定时间
-      maxLength: 100, // 输入框最大长度
-      minWidth: 200, // 输入框最小宽度
-      maxWidth: 400, // 输入框最大宽度
-      theme: '#DC2626' // 输入框主题色
+      speed: 5,
+      fontSize: 25,
+      color: '#FFFFFF',
+      mode: 0,
+      margin: [10, 100],
+      antiOverlap: true,
+      useWorker: true,
+      synchronousPlayback: true,
+      lockTime: 5,
+      maxLength: 100,
+      minWidth: 200,
+      maxWidth: 400,
+      theme: '#DC2626'
     }
 
-    // 播放器配置
+    // 播放器配置 - 精简设置项提高性能
     const options = {
       container: artRef.value,
-      url: videoUrl,
+      url,
       poster: props.poster,
       title: props.title,
       volume: 0.7,
-      isLive: false,
-      muted: false,
       autoplay: props.autoplay,
       pip: true,
       autoSize: false,
-      autoMini: false, // 禁用小窗口功能
-      screenshot: true,
+      autoMini: false,
+      screenshot: false, // 禁用截图功能以减少资源消耗
       setting: true,
       loop: false,
       flip: true,
@@ -267,145 +250,132 @@ const initPlayer = (url) => {
       fullscreen: true,
       fullscreenWeb: true,
       subtitleOffset: true,
-      miniProgressBar: false, // 关闭迷你进度条
+      miniProgressBar: false,
       mutex: true,
       backdrop: true,
       playsInline: true,
       autoPlayback: true,
-      airplay: true,
       theme: '#dc2626',
       lang: 'zh-cn',
       plugins: [
         artplayerPluginDanmuku(danmukuOptions)
       ],
+      // 直接使用Loading图片作为加载动画
       icons: {
-        loading: `<img src="${Loading}" alt="加载中" style="width: 60px; height: 70px;">`,
+        loading: `<img src="${Loading}" alt="加载中" class="art-player-loading">`,
       },
       controls: [
         {
           position: 'left',
-          index: 20, // 设置为2，确保在暂停按钮之后
+          index: 20,
           name: 'next-episode',
           tooltip: '下一集',
           html: '<div class="next-episode-btn"><img src="' + Next + '" alt="下一集" style="width: 20px; height: 18px;"></div>',
-          click: function() {
-            handleNextEpisode();
-          },
+          click: handleNextEpisode,
         },
       ],
       moreVideoAttr: {
         crossOrigin: 'anonymous',
-        preload: 'metadata',
+        preload: 'auto', // 改为auto提前加载视频数据
         'webkit-playsinline': true,
         playsinline: true,
       },
       customType: {
-        // 添加对m3u8格式的支持
+        // m3u8格式支持
         m3u8: function (video, url) {
           try {
             if (window.Hls && window.Hls.isSupported()) {
-              const hls = new window.Hls({
-                debug: false,
-                enableWorker: true,
-                lowLatencyMode: false,
-                maxBufferLength: 60,
-                maxMaxBufferLength: 120,
-                maxRetryCount: 5,
-                // 设置XHR请求配置
-                xhrSetup: function (xhr, url) {
-                  // 不发送凭证，避免CORS预检请求
-                  xhr.withCredentials = false
-                  // 设置请求头
-                  xhr.setRequestHeader('Accept', '*/*')
-                  xhr.setRequestHeader('Origin', window.location.origin)
-                  console.log('HLS请求:', url)
-                }
+              // 创建新的HLS实例
+                            hlsInstance = new window.Hls({                debug: false,                enableWorker: true,                lowLatencyMode: false,                progressive: true, // 开启渐进式加载，提高加载速度                startLevel: -1, // 自动选择最佳质量                abrEwmaDefaultEstimate: 1000000, // 提高默认带宽估计到1Mbps                // 缓冲区优化                maxBufferLength: 20, // 进一步减小初始缓冲区长度，从30秒降至20秒                maxMaxBufferLength: 40, // 进一步减小最大缓冲区长度，从60秒降至40秒                backBufferLength: 10, // 限制回退缓冲区长度                // 性能优化                testBandwidth: true, // 启用带宽测试                // 加载优化                fragLoadingTimeOut: 8000, // 缩短片段加载超时时间                manifestLoadingTimeOut: 5000, // 缩短清单加载超时时间                levelLoadingTimeOut: 5000, // 缩短级别加载超时时间                // 网络错误恢复设置                maxRetryCount: 2, // 进一步降低重试次数，加快失败恢复                // XHR请求配置                xhrSetup: function (xhr) {                  xhr.withCredentials = false                  xhr.setRequestHeader('Accept', '*/*')                  xhr.setRequestHeader('Origin', window.location.origin)                  xhr.setRequestHeader('Cache-Control', 'no-cache')                }
               })
 
-              // 添加错误处理
-              hls.on(window.Hls.Events.ERROR, function (event, data) {
-                console.error('HLS错误:', data)
+              // 监听加载事件
+              hlsInstance.on(window.Hls.Events.MANIFEST_LOADING, () => {
+                isLoading.value = true
+              })
+
+              // 监听片段加载事件
+              hlsInstance.on(window.Hls.Events.FRAG_LOADED, () => {
+                isLoading.value = false
+              })
+
+              // 错误处理
+              hlsInstance.on(window.Hls.Events.ERROR, (_, data) => {
                 if (data.fatal) {
                   switch (data.type) {
                     case window.Hls.ErrorTypes.NETWORK_ERROR:
-                      console.log('HLS网络错误，尝试重新加载')
-                      hls.startLoad()
+                      hlsInstance.startLoad()
                       break
                     case window.Hls.ErrorTypes.MEDIA_ERROR:
-                      console.log('HLS媒体错误，尝试恢复')
-                      hls.recoverMediaError()
+                      hlsInstance.recoverMediaError()
                       break
                     default:
-                      console.error('无法恢复的HLS错误:', data)
-
-                      // 清理资源并触发错误事件
                       try {
-                        hls.destroy()
-                      } catch (e) {
-                        console.error('销毁HLS实例失败:', e)
-                      }
-
-                      // 创建一个自定义错误事件并分发
+                        hlsInstance.destroy()
+                        hlsInstance = null
+                      } catch (e) {}
                       if (video) {
-                        const errorEvent = new Event('error')
-                        video.dispatchEvent(errorEvent)
+                        video.dispatchEvent(new Event('error'))
                       }
                       break
                   }
                 }
               })
 
-              // 添加成功事件
-              hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
-                console.log('HLS清单解析成功，准备播放')
-                try {
-                  video.play().catch(e => {
-                    console.error('自动播放失败:', e)
-                  })
-                } catch (e) {
-                  console.error('播放HLS视频失败:', e)
+              // 清单解析成功事件
+              hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, (_, data) => {
+                // 预加载策略
+                hlsInstance.startLoad(-1)
+                if (props.autoplay) {
+                  video.play().catch(() => {})
                 }
               })
 
+              // 加载视频
               try {
-                hls.loadSource(url)
-                hls.attachMedia(video)
+                hlsInstance.loadSource(url)
+                hlsInstance.attachMedia(video)
+                artInstance.value.$hls = hlsInstance
 
-                // 保存hls实例以便后续清理
-                artInstance.value.$hls = hls
+                // 监听可以播放事件
+                video.addEventListener('canplay', () => {
+                  isLoading.value = false
+                })
               } catch (e) {
-                console.error('HLS加载/附加失败:', e)
+                isLoading.value = false
+                console.error('HLS加载失败:', e)
               }
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-              // 对于Safari等原生支持HLS的浏览器
-              console.log('使用浏览器原生HLS支持')
+              // Safari浏览器原生支持HLS
               video.src = url
-              video.addEventListener('loadedmetadata', function () {
-                try {
-                  video.play().catch(e => {
-                    console.error('自动播放失败:', e)
-                  })
-                } catch (e) {
-                  console.error('播放HLS视频失败(原生):', e)
-                }
+              
+              // 添加加载事件监听
+              video.addEventListener('loadstart', () => {
+                isLoading.value = true
               })
+              
+              video.addEventListener('canplay', () => {
+                isLoading.value = false
+              })
+              
+              if (props.autoplay) {
+                video.addEventListener('loadedmetadata', () => {
+                  video.play().catch(() => {})
+                })
+              }
             } else {
-              console.warn('当前浏览器不支持HLS播放')
+              // 浏览器不支持HLS
               ElMessage.error('您的浏览器不支持此视频格式，请使用Chrome或Edge浏览器')
-
-              // 创建一个自定义错误事件并分发
+              isLoading.value = false
               if (video) {
-                const errorEvent = new Event('error')
-                video.dispatchEvent(errorEvent)
+                video.dispatchEvent(new Event('error'))
               }
             }
           } catch (error) {
             console.error('HLS初始化失败:', error)
-
-            // 创建一个自定义错误事件并分发
+            isLoading.value = false
             if (video) {
-              const errorEvent = new Event('error')
-              video.dispatchEvent(errorEvent)
+              video.dispatchEvent(new Event('error'))
             }
           }
         }
@@ -418,39 +388,40 @@ const initPlayer = (url) => {
     // 设置事件监听器
     setupEventListeners(artInstance.value)
     
-    console.log('播放器初始化成功:', artInstance.value)
-    
     // 恢复播放进度
     if (props.videoId) {
       const savedTime = localStorage.getItem(`video_progress_${props.videoId}`)
       if (savedTime) {
         const timeToSeek = parseFloat(savedTime)
         if (!isNaN(timeToSeek) && timeToSeek > 0) {
-          // 等待一点时间确保视频加载完毕
-          setTimeout(() => {
-            artInstance.value.seek = timeToSeek
-            console.log('恢复播放进度到:', timeToSeek)
-          }, 1000)
+          // 立即设置时间点，不等待
+          artInstance.value.seek = timeToSeek
         }
       }
     }
-    // 添加video元素错误事件监听
+    
+    // 添加视频元素事件监听
     if (artInstance.value.$video) {
-      artInstance.value.$video.onerror = function (e) {
-        console.error('视频元素错误:', {
-          event: e,
-          error: this.error,
-          src: this.src,
-          currentSrc: this.currentSrc,
-          readyState: this.readyState,
-          networkState: this.networkState
-        });
-      };
+      // 监听加载事件
+      artInstance.value.$video.onloadstart = () => {
+        isLoading.value = true
+      }
+      
+      artInstance.value.$video.oncanplay = () => {
+        isLoading.value = false
+      }
+      
+      // 监听错误事件
+      artInstance.value.$video.onerror = function() {
+        isLoading.value = false
+        emit('error', this.error || new Error('视频加载失败'))
+      }
     }
 
     return artInstance.value
   } catch (error) {
     console.error('播放器初始化失败:', error)
+    isLoading.value = false
     emit('error', error)
     return null
   }
@@ -458,11 +429,10 @@ const initPlayer = (url) => {
 
 // 监听URL变化，重新初始化播放器
 watch(() => props.url, (newUrl) => {
-  console.log('URL发生变化:', newUrl);
   if (newUrl) {
     initPlayer(newUrl)
   }
-})
+}, { flush: 'post' }) // 使用post选项确保DOM更新后再初始化播放器
 
 // 组件挂载时初始化播放器
 onMounted(() => {
@@ -470,70 +440,30 @@ onMounted(() => {
     initPlayer(props.url)
   }
 
-  // 监听全屏变化事件
+  // 监听全屏事件
   document.addEventListener('fullscreenchange', checkFullscreenStatus)
   document.addEventListener('webkitfullscreenchange', checkFullscreenStatus)
-  document.addEventListener('mozfullscreenchange', checkFullscreenStatus)
-  document.addEventListener('MSFullscreenChange', checkFullscreenStatus)
-
-  // 初始化ResizeObserver来处理缩放事件
-  try {
-    if (window.ResizeObserver) {
-      resizeObserver = new ResizeObserver(throttle(entries => {
-        // 使用节流函数减少回调频率
-        // 在缩放结束后才调整播放器
-        clearTimeout(resizeTimeout)
-        resizeTimeout = setTimeout(() => {
-          if (artInstance.value && artRef.value && typeof artInstance.value.resize === 'function') {
-            // 确保resize方法存在后再调用
-            try {
-              artInstance.value.resize()
-            } catch (e) {
-              console.error('播放器resize失败:', e)
-            }
-          }
-        }, 200)
-      }, 200))
-
-      // 监听播放器容器的大小变化
-      if (artRef.value) {
-        resizeObserver.observe(artRef.value)
-      }
-    }
-  } catch (error) {
-    console.error('设置ResizeObserver失败:', error)
-  }
 })
 
 // 组件卸载时销毁播放器和清理资源
 onUnmounted(() => {
+  // 销毁HLS实例
+  if (hlsInstance) {
+    try {
+      hlsInstance.destroy()
+    } catch (e) {}
+    hlsInstance = null
+  }
+  
   // 销毁播放器
   if (artInstance.value) {
     try {
       artInstance.value.destroy()
-    } catch (e) {
-      console.error('销毁播放器失败:', e)
-    }
+    } catch (e) {}
     artInstance.value = null
   }
 
-  // 清理ResizeObserver
-  if (resizeObserver) {
-    try {
-      resizeObserver.disconnect()
-    } catch (e) {
-      console.error('断开ResizeObserver失败:', e)
-    }
-    resizeObserver = null
-  }
-
   // 清理定时器
-  if (resizeTimeout) {
-    clearTimeout(resizeTimeout)
-    resizeTimeout = null
-  }
-
-  // 清理控制栏隐藏定时器
   if (hideControlsTimer) {
     clearTimeout(hideControlsTimer)
     hideControlsTimer = null
@@ -542,27 +472,19 @@ onUnmounted(() => {
   // 移除全屏事件监听
   document.removeEventListener('fullscreenchange', checkFullscreenStatus)
   document.removeEventListener('webkitfullscreenchange', checkFullscreenStatus)
-  document.removeEventListener('mozfullscreenchange', checkFullscreenStatus)
-  document.removeEventListener('MSFullscreenChange', checkFullscreenStatus)
 })
 
 // 暴露方法给父组件
 defineExpose({
-  // 获取播放器实例
   getPlayer: () => artInstance.value,
-  // 播放
   play: () => artInstance.value?.play(),
-  // 暂停
   pause: () => artInstance.value?.pause(),
-  // 切换播放/暂停
   toggle: () => artInstance.value?.toggle(),
-  // 设置播放时间
   seek: (time) => {
     if (artInstance.value) {
       artInstance.value.seek = time
     }
   },
-  // 设置音量
   setVolume: (volume) => {
     if (artInstance.value) {
       artInstance.value.volume = volume
@@ -577,15 +499,12 @@ const toggleSidebar = () => {
 
 // 处理登录按钮点击
 const handleLogin = () => {
-  console.log('点击登录按钮')
   emit('login')
 }
 
 // 监听登录状态变化
 watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   if (newIsLoggedIn && props.url) {
-    // 如果用户登录，且有URL，初始化播放器
-    console.log('用户已登录，初始化播放器')
     initPlayer(props.url)
   }
 })
@@ -599,7 +518,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
       @touchstart="showControls"
   >
     <div ref="artRef" class="video-player-content"></div>
-
+    
     <!-- 未登录提示层 -->
     <div v-if="!isLoggedIn" class="login-overlay">
       <div class="login-content">
@@ -607,7 +526,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
       </div>
     </div>
 
-    <!-- 返回按钮 - 始终显示，添加全屏模式样式 -->
+    <!-- 返回按钮 -->
     <div
         v-if="showBackButton"
         class="back-button"
@@ -627,8 +546,8 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
         :class="{ 'visible': isControlsVisible, 'expanded': showSidebar, 'fullscreen-hidden': isFullScreen }"
     >
       <div class="toggle-icon">
-        <img v-if="showSidebar" :src='Right' alt="Left"/>
-        <img v-else :src="Left" alt="Right"/>
+        <img v-if="showSidebar" :src='Right' alt="收起" />
+        <img v-else :src="Left" alt="展开" />
       </div>
     </div>
   </div>
@@ -638,13 +557,13 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 .video-player {
   position: relative;
   width: 100%;
-  /* 使用固定高度比例而不是 aspect-ratio 以减少重排 */
   height: 0;
-  padding-top: 56.25%; /* 16:9 的高度比例 */
+  padding-top: 56.25%; /* 16:9比例 */
   background-color: #000;
   overflow: hidden;
-  /* 使用更轻量级的硬件加速方式 */
-  backface-visibility: hidden;
+  /* 硬件加速 */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .video-player-content {
@@ -688,8 +607,6 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   top: env(safe-area-inset-top, 0);
   left: env(safe-area-inset-left, 0);
 }
-
-
 
 /* 全屏模式下隐藏侧边栏按钮 */
 .sidebar-toggle.fullscreen-hidden {
@@ -745,7 +662,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 :deep(.art-control-next-episode) {
   opacity: 0.95;
   transition: all 0.2s ease;
-  margin-left: 5px; /* 添加左边距 */
+  margin-left: 5px;
   padding: 5px;
   display: flex !important;
   align-items: center !important;
@@ -760,7 +677,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 :deep(.art-control-next-episode img) {
   width: 20px;
   height: 20px;
-  min-width: 20px; /* 确保图标不会被压缩 */
+  min-width: 20px;
 }
 
 .next-episode-btn {
@@ -771,7 +688,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   height: 100%;
 }
 
-/* 添加登录提示层样式 */
+/* 登录提示层样式 */
 .login-overlay {
   position: absolute;
   top: 0;
@@ -796,39 +713,10 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.login-icon {
-  margin: 0 auto 20px;
-  width: 60px;
-  height: 60px;
-  background-color: rgba(220, 38, 38, 0.15);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #dc2626;
-}
-
-.login-title {
-  font-size: 22px;
-  margin: 0 0 12px;
-  font-weight: 500;
-}
-
 .login-desc {
   font-size: 16px;
   opacity: 0.8;
   margin: 0 0 24px;
-}
-
-
-.login-button:hover {
-  background-color: #ef4444;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
-}
-
-.login-button:active {
-  transform: translateY(0);
 }
 
 /* 响应式调整 */
@@ -851,5 +739,23 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   .sidebar-toggle {
     display: none;
   }
+}
+
+/* 自定义ArtPlayer的加载图标样式 */
+:deep(.art-player-loading) {
+  width: 60px;
+  height: 60px;
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 删除不再需要的自定义加载动画样式 */
+:deep(.custom-loading-animation),
+:deep(.loading-spinner) {
+  display: none;
 }
 </style>

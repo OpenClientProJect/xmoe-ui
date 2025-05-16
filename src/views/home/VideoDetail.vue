@@ -178,8 +178,6 @@ const playVideo = async (episodeId) => {
       throw new Error(res.message || '获取视频地址失败')
     }
 
-    console.log('获取到视频地址:', res.data)
-
     // 处理视频URL，确保可以正确播放
     let videoUrl = ''
 
@@ -190,7 +188,6 @@ const playVideo = async (episodeId) => {
       if (res.data.url) {
         videoUrl = res.data.url
       } else {
-        console.log('响应数据对象:', res.data)
         for (const key in res.data) {
           if (typeof res.data[key] === 'string' &&
               (res.data[key].includes('http') ||
@@ -207,57 +204,13 @@ const playVideo = async (episodeId) => {
       throw new Error('无法从响应中提取视频地址')
     }
 
-    console.log('提取到的原始视频地址:', videoUrl)
-
-    // 处理跨域问题，使用代理URL
-    let proxyUrl = videoUrl
-
-    // 判断是否是外部URL
-    // if (videoUrl.startsWith('https') && !videoUrl.startsWith(window.location.origin)) {
-    //   try {
-    //     const urlObj = new URL(videoUrl)
-    //
-    //     // 如果是xmoe.video域名，使用video-proxy代理
-    //     if (urlObj.hostname === 'xmoe.video' || urlObj.hostname.endsWith('.xmoe.video')) {
-    //       // 特殊处理validate路径
-    //       if (urlObj.pathname === '/validate') {
-    //         // 提取link参数值，防止多次编码
-    //         let linkParam = '';
-    //         const linkMatch = urlObj.search.match(/[?&]link=([^&]+)/);
-    //         if (linkMatch && linkMatch[1]) {
-    //           linkParam = linkMatch[1];
-    //           // 使用专门的@格式代理 - 更可靠的方式处理长token
-    //           proxyUrl = `https://xmoe.video/validate?link=${linkParam}`;
-    //         } else {
-    //           // 如果无法提取link参数，使用完整的搜索字符串
-    //           proxyUrl = `/video-proxy/validate${urlObj.search}`;
-    //         }
-    //         console.log('使用validate专用代理URL:', proxyUrl);
-    //       } else {
-    //         // 其他xmoe.video路径
-    //         proxyUrl = `/video-proxy${urlObj.pathname}${urlObj.search}`
-    //         console.log('使用xmoe代理URL:', proxyUrl)
-    //       }
-    //     }
-    //     // 为其他所有外部URL添加CORS代理
-    //     else {
-    //       // 使用通用的代理解决跨域问题
-    //       proxyUrl = `/cors-proxy?url=${encodeURIComponent(videoUrl)}`
-    //       console.log('使用CORS代理URL:', proxyUrl)
-    //     }
-    //   } catch (e) {
-    //     console.error('解析URL失败:', e)
-    //     // 直接使用原URL
-    //     console.log('URL解析失败，使用原始URL')
-    //   }
-    // }
-
     // 更新当前播放的视频URL
-    currentVideoUrl.value = proxyUrl
+    currentVideoUrl.value = videoUrl
 
-    return proxyUrl
+    return videoUrl
   } catch (error) {
     console.error('播放视频失败:', error)
+    ElMessage.error('视频加载失败，请尝试切换线路')
     return null
   }
 }
@@ -402,8 +355,15 @@ const goToVideoDetail = (id) => {
 
 // 组件卸载时清理资源
 onUnmounted(() => {
-  // 播放器组件会自动处理资源清理
-  console.log('组件卸载，清理资源')
+  // 清理播放器资源
+  if (playerRef.value) {
+    try {
+      const player = playerRef.value.getPlayer();
+      if (player) {
+        player.pause();
+      }
+    } catch (e) {}
+  }
   
   // 移除事件监听器
   window.removeEventListener('scroll', handleScroll)
@@ -755,31 +715,43 @@ onMounted(async () => {
   // 添加窗口大小变化监听
   window.addEventListener('resize', checkMobileScreen)
   
-  await getVideoDetail()
-  await checkIsFollowing()
-  await getRelatedDrama()
-  await getComments()
-
-  // 尝试自动播放第一集
-  if (episodes.value && episodes.value.length > 0) {
-    try {
-      console.log('尝试播放第一集视频')
-      const result = await playVideo(episodes.value[0].id)
-
-      if (!result && videoInfo.value.sources && videoInfo.value.sources.length > 1) {
-        // 如果播放失败，尝试切换到第二个线路
-        console.log('第一条线路播放失败，尝试切换线路')
-        switchSource(1)
-        // 等待线路切换完成
-        setTimeout(async () => {
-          if (episodes.value && episodes.value.length > 0) {
-            await playVideo(episodes.value[0].id)
-          }
-        }, 500)
-      }
-    } catch (error) {
-      console.error('自动播放第一集视频失败:', error)
+  // 加载基本数据 - 使用Promise.all并行请求
+  try {
+    await Promise.all([
+      getVideoDetail(),
+      getComments()
+    ]);
+    
+    // 加载用户相关数据
+    if (isUserLoggedIn.value) {
+      await checkIsFollowing();
     }
+    
+    // 加载相关推荐 - 可以稍后加载
+    getRelatedDrama();
+    
+    // 尝试自动播放第一集
+    if (episodes.value?.length > 0) {
+      try {
+        const result = await playVideo(episodes.value[0].id);
+        
+        // 如果第一条线路播放失败且有多条线路，尝试切换线路
+        if (!result && videoInfo.value.sources?.length > 1) {
+          switchSource(1);
+          // 等待线路切换完成后尝试播放
+          setTimeout(async () => {
+            if (episodes.value?.length > 0) {
+              await playVideo(episodes.value[0].id);
+            }
+          }, 300);
+        }
+      } catch (error) {
+        console.error('自动播放失败:', error);
+      }
+    }
+  } catch (error) {
+    console.error('初始化视频页面失败:', error);
+    ElMessage.error('加载视频数据失败');
   }
 })
 </script>
@@ -2434,5 +2406,14 @@ onMounted(async () => {
     height: 100%;
     overflow: hidden;
   }
+}
+
+/* 优化播放器容器样式，提高渲染性能 */
+.player-wrapper {
+  width: 100%;
+  padding-top: env(safe-area-inset-top, 0);
+  transform: translateZ(0); /* 启用硬件加速 */
+  will-change: transform; /* 提示浏览器该元素将会改变 */
+  backface-visibility: hidden; /* 防止3D转换时的闪烁 */
 }
 </style>
