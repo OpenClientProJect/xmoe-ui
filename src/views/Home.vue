@@ -106,13 +106,10 @@ const getDramaSchedule = async () => {
   try {
     // 定义周几的映射数组
     const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-    // 获取当前选中的周几作为typeKey参数
     const typeKey = weekdays[activeDay.value]
-    // 调用API时传递typeKey参数
     const res = await getDramaScheduleService(typeKey)
 
     if (res && res.code === 200 && res.data && res.data.length > 0) {
-      // 确保每个日期的数组都被初始化
       for (let i = 0; i < 7; i++) {
         if (!calendarByDay.value[i]) {
           calendarByDay.value[i] = []

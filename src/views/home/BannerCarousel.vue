@@ -51,9 +51,8 @@ const handleBannerClick = (id) => {
   // 如果点击当前处于禁用状态，不执行操作
   if (!clickEnabled.value) return
   
-  // 如果有有效ID，进行跳转
   if (id) {
-    router.push(`/video/${id}`)
+    window.open(`/video/${id}`, '_blank')
   }
 }
 

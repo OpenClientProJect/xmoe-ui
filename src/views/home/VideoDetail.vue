@@ -2195,6 +2195,7 @@ onMounted(async () => {
   border-radius: 16px 16px 0 0;
   padding: 16px;
   max-height: 90vh;
+  background-color: white;
   overflow-y: auto;
   transition: bottom 0.3s ease;
   z-index: 1001;
@@ -2203,6 +2204,16 @@ onMounted(async () => {
   box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
   overscroll-behavior: contain; /* 防止过度滚动影响外层 */
   -webkit-overflow-scrolling: touch; /* 平滑滚动 */
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  scrollbar-width: none; /* 隐藏滚动条 */
+  -ms-overflow-style: none;
+}
+
+.detail-drawer::-webkit-scrollbar {
+  width: 0;
+  display: none;
 }
 
 .detail-drawer.open {

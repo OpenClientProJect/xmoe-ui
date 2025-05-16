@@ -658,6 +658,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 /* 返回按钮样式 */
 .back-button {
   position: absolute;
+  top: 0px;
   padding: 8px 12px;
   display: flex;
   align-items: center;
@@ -688,9 +689,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
   left: env(safe-area-inset-left, 0);
 }
 
-.back-button:hover {
-  background-color: rgba(0, 0, 0, 0.7);
-}
+
 
 /* 全屏模式下隐藏侧边栏按钮 */
 .sidebar-toggle.fullscreen-hidden {
