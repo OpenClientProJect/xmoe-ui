@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, computed, nextTick } from 'vue'
+import { ref, onMounted, watch, computed, nextTick, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getDramaListService } from '@/api/Drama.js'
 import { getSubMenuListService } from '@/api/home/anime.js'
@@ -15,6 +15,18 @@ const originalMovieList = ref([]) // 用于本地筛选的原始数据
 const isLoading = ref(false)
 const isEmpty = ref(false)
 const activeTab = ref('剧场版')
+
+// 分页相关
+const currentPage = ref(1)
+const hasMore = ref(true)
+const isLoadingMore = ref(false)
+// 滚动锁定标志，防止重复触发加载
+const scrollLocked = ref(false)
+// 数据渲染状态
+const isDataRendering = ref(false)
+
+// 当前查询参数
+const currentQueryParams = ref({})
 
 // 分类标签数据
 const tagData = ref({})
@@ -74,7 +86,29 @@ const handleImageLoaded = (event) => {
   event.target.classList.add('loaded')
   // 移除loading类
   event.target.classList.remove('loading')
+  
+  // 图片加载完成计数
+  loadedImagesCount++
+  if (isDataRendering.value && loadedImagesCount >= totalNewImages.value * 0.7) {
+    // 当70%的图片加载完成时，认为渲染已经基本完成
+    isDataRendering.value = false
+    console.log('图片加载完成，可以加载下一页')
+  }
 }
+
+// 图片加载完成计数
+let loadedImagesCount = 0
+const totalNewImages = ref(0)
+
+// 监听movieList变化，重置图片加载计数器
+watch(() => movieList.value.length, (newLength, oldLength) => {
+  if (newLength > oldLength) {
+    // 有新数据添加
+    loadedImagesCount = 0
+    totalNewImages.value = newLength - oldLength
+    console.log(`需要加载${totalNewImages.value}张新图片`)
+  }
+})
 
 // 处理图片加载开始事件
 const handleImageLoading = (event) => {
@@ -83,39 +117,129 @@ const handleImageLoading = (event) => {
 }
 
 // 获取剧场版列表数据
-const getMovieList = async (params = {}) => {
+const getMovieList = async (params = {}, isAppend = false) => {
   try {
-    isLoading.value = true
-    isEmpty.value = false
+    if (!isAppend) {
+      // 初始加载时显示加载状态
+      isLoading.value = true
+      isEmpty.value = false
+      // 重置分页
+      currentPage.value = 1
+      hasMore.value = true
+      // 保存当前查询参数
+      currentQueryParams.value = {...params}
+    }
     
-    // 合并默认参数和传入的参数
+    // 构建请求参数
     const queryParams = {
       typeId: params.typeId || 2, // 默认使用剧场版的typeId
-      page: 1,
-      pageSize: 20,
+      page: currentPage.value,
+      limit: 18,
       ...params
     }
     
     const res = await getDramaListService(queryParams)
     
+    // 设置数据正在渲染中
+    isDataRendering.value = true
+    
+    let newData = []
+    
     if (res.code === 200 && Array.isArray(res.data)) {
       // 处理电影数据，确保图片URL正确
-      movieList.value = res.data.map(movie => ({
+      newData = res.data.map(movie => ({
         ...movie,
         // 使用handleImageUrl处理图片URL防盗链问题
         processedCover: handleImageUrl(movie.cover || movie.vod_pic)
       }))
-      originalMovieList.value = [...movieList.value] // 保存原始数据用于本地筛选
-      isEmpty.value = res.data.length === 0
+      
+      // 判断是否还有更多数据
+      if (newData.length === 0) {
+        hasMore.value = false
+      }
+      
+      if (isAppend) {
+        // 追加模式，把新数据添加到现有列表
+        movieList.value = [...movieList.value, ...newData]
+        // 更新原始数据集
+        originalMovieList.value = [...originalMovieList.value, ...newData]
+      } else {
+        // 非追加模式，替换现有列表
+        movieList.value = newData
+        originalMovieList.value = [...newData]
+        isEmpty.value = newData.length === 0
+      }
+      
+      // 使用nextTick等待DOM更新完成
+      await nextTick()
+      
+      // 给图片加载一些额外时间
+      setTimeout(() => {
+        isDataRendering.value = false
+      }, 500)
+      
     } else {
       console.error('获取剧场版列表失败:', res.message || '未知错误')
-      isEmpty.value = true
+      if (!isAppend) {
+        isEmpty.value = true
+      }
+      hasMore.value = false
     }
   } catch (error) {
     console.error('获取剧场版列表错误:', error)
-    isEmpty.value = true
+    if (!isAppend) {
+      isEmpty.value = true
+    }
+    throw error
   } finally {
-    isLoading.value = false
+    // 只有在非追加模式下才重置加载状态
+    if (!isAppend) {
+      isLoading.value = false
+    }
+  }
+}
+
+// 加载更多数据
+const loadMoreData = async () => {
+  if (isLoading.value || isLoadingMore.value || !hasMore.value) return
+  
+  isLoadingMore.value = true
+  
+  // 增加页码
+  currentPage.value += 1
+  console.log('加载更多数据，页码：', currentPage.value)
+  
+  try {
+    await getMovieList(currentQueryParams.value, true)
+  } catch (error) {
+    console.error('加载更多数据失败:', error)
+    currentPage.value -= 1
+  } finally {
+    setTimeout(() => {
+      isLoadingMore.value = false
+    }, 300)
+  }
+}
+
+// 监听滚动事件，检测是否滚动到底部
+const handleScroll = () => {
+  // 如果正在加载，或者没有更多数据，或者滚动已锁定，或者数据正在渲染中，则不处理
+  if (isLoading.value || isLoadingMore.value || !hasMore.value || scrollLocked.value || isDataRendering.value) return
+  
+  const scrollHeight = document.documentElement.scrollHeight
+  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
+  const clientHeight = document.documentElement.clientHeight
+  
+  // 当距离底部50px时提前加载
+  if (scrollHeight - scrollTop - clientHeight < 50) {
+    // 锁定滚动，防止多次触发
+    scrollLocked.value = true
+    loadMoreData()
+    
+    // 1秒后解锁滚动
+    setTimeout(() => {
+      scrollLocked.value = false
+    }, 1000)
   }
 }
 
@@ -131,7 +255,9 @@ const emit = defineEmits(['tab-change'])
 
 // 监听路由参数变化，重新获取数据
 watch(() => route.query.typeId, (newTypeId) => {
-  getMovieList({ typeId: newTypeId || 2 }) // 如果没有typeId参数，使用默认值2
+  const params = { typeId: newTypeId || 2 }
+  currentQueryParams.value = params
+  getMovieList(params)
 }, { immediate: true })
 
 // 获取排序参数值
@@ -147,11 +273,14 @@ const selectTag = (rowId, tag) => {
   // 构建查询参数
   const params = {}
   
+  // 重置分页
+  currentPage.value = 1
+  hasMore.value = true
+  
   // 类型筛选
   if (rowId === 0) {
     if (tag === '全部') {
-      // 重置为原始列表
-      movieList.value = [...originalMovieList.value]
+      getMovieList(currentQueryParams.value)
     } else {
       // 本地筛选vod_class包含所选标签的剧场版
       movieList.value = originalMovieList.value.filter(movie => {
@@ -181,6 +310,11 @@ const selectTag = (rowId, tag) => {
   // 排序选项
   if (rowId === 4) {
     params.type = getSortValue(tag)
+  }
+  
+  // 保存当前typeId参数
+  if (route.query.typeId) {
+    params.typeId = route.query.typeId
   }
   
   // 如果有筛选参数，则调用API重新获取数据
@@ -214,20 +348,26 @@ const getMovieTags = async () => {
 onMounted(() => {
   // 组件挂载时获取数据
   if (!route.query.typeId) {
-    getMovieList({ typeId: 2 }) // 默认使用剧场版的typeId
+    const params = { typeId: 2 }
+    currentQueryParams.value = params
+    getMovieList(params)
   }
   // 获取子分类标签
   getMovieTags()
   // 向父组件发送tab-change事件
   emit('tab-change', '剧场版')
   
+  // 添加滚动事件监听
+  window.addEventListener('scroll', handleScroll)
+  
   // 为浏览器添加resize事件监听器，优化图片加载
   window.addEventListener('resize', optimizeImageLoading)
-  
-  return () => {
-    // 清理事件监听器
-    window.removeEventListener('resize', optimizeImageLoading)
-  }
+})
+
+// 组件卸载前移除滚动事件监听
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('resize', optimizeImageLoading)
 })
 
 // 优化图片加载
@@ -303,30 +443,43 @@ watch(() => movieList.value, (newVal) => {
     </div>
     
     <!-- 剧场版列表 -->
-    <div v-else class="anime-list">
-      <div 
-        v-for="(movie, index) in movieList" 
-        :key="movie.id || movie.vod_id"
-        class="anime-card"
-        :style="`animation-delay: ${index * 30}ms`"
-        @click="router.push(`/video/${movie.id || movie.vod_id}`)"
-      >
-        <div class="anime-cover">
-          <img 
-            :src="movie.processedCover" 
-            :alt="movie.title || movie.vod_name" 
-            class="anime-img" 
-            @error="handleImageError" 
-            @load="handleImageLoaded"
-            loading="lazy"
-          />
-          <div class="image-loading-overlay"></div>
-          <span class="anime-episodes">{{ movie.vod_remarks || '' }}</span>
+    <div v-else>
+      <div class="anime-list">
+        <div 
+          v-for="(movie, index) in movieList" 
+          :key="`${movie.id || movie.vod_id}_${index}`"
+          class="anime-card"
+          :style="`animation-delay: ${index * 30}ms`"
+          @click="router.push(`/video/${movie.id || movie.vod_id}`)"
+        >
+          <div class="anime-cover">
+            <img 
+              :src="movie.processedCover" 
+              :alt="movie.title || movie.vod_name" 
+              class="anime-img" 
+              @error="handleImageError" 
+              @load="handleImageLoaded"
+              loading="lazy"
+            />
+            <div class="image-loading-overlay"></div>
+            <span class="anime-episodes">{{ movie.vod_remarks || '' }}</span>
+          </div>
+          <div class="anime-title-container">
+            <div class="anime-title">{{ movie.title || movie.vod_name }}</div>
+            <div class="anime-sub" v-if="movie.score || movie.vod_score">{{ movie.score || movie.vod_score }}分</div>
+          </div>
         </div>
-        <div class="anime-title-container">
-          <div class="anime-title">{{ movie.title || movie.vod_name }}</div>
-          <div class="anime-sub" v-if="movie.score || movie.vod_score">{{ movie.score || movie.vod_score }}分</div>
-        </div>
+      </div>
+      
+      <!-- 加载更多提示 -->
+      <div v-if="isLoadingMore || isDataRendering" class="loading-more-container">
+        <img :src="Loading" alt="加载中" class="loading-more-img">
+        <p>{{ isDataRendering ? '数据加载中...' : '加载更多中...' }}</p>
+      </div>
+      
+      <!-- 没有更多数据提示 -->
+      <div v-if="!hasMore && movieList.length > 0 && !isDataRendering" class="no-more-container">
+        <p>没有更多数据了</p>
       </div>
     </div>
   </div>
@@ -335,6 +488,7 @@ watch(() => movieList.value, (newVal) => {
 <style scoped>
 /* 番剧内容区域 */
 .movie-content {
+  padding: 0 0 20px;
   margin-top: 0; 
 }
 
@@ -632,6 +786,35 @@ watch(() => movieList.value, (newVal) => {
   width: 60px;
   height: 80px;
   margin-bottom: 10px;
+}
+
+/* 加载更多状态 */
+.loading-more-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 0;
+  background-color: transparent;
+  position: relative;
+  z-index: 10;
+}
+
+.loading-more-img {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 5px;
+}
+
+/* 没有更多数据提示 */
+.no-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 20px;
+  color: #999;
+  font-size: 14px;
+  background-color: transparent;
+  margin: 0 15px;
 }
 
 .retry-button:hover {

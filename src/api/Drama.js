@@ -63,12 +63,6 @@ export const getVideoUrlService = (sourceId) =>   {
 
 /**
  * 相关推荐
- * @param {string|number} typeId 视频类型ID
- * @param {Object} params 其他请求参数
- * @param {number} [params.page=1] 当前页码，默认为1
- * @param {number} [params.limit=10] 每页数量，默认为10
- * @param {string} [params.type='randomlike'] 排序类型，默认为随机推荐
- * @returns {Promise} 请求Promise
  */
 export const getRelatedDramaService = (typeId, params = {}) => {
 

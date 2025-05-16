@@ -1,7 +1,7 @@
 <script setup>
 import {computed, onMounted, ref, watch, onBeforeUnmount, nextTick} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
-import {getDramaListService, getRelatedDramaService} from "@/api/Drama.js";
+import {getDramaListService} from "@/api/Drama.js";
 import {getSubMenuListService} from "@/api/home/anime.js";
 import {handleImageUrl} from '@/utils/imageUtils.js';
 import Loading from '@/assets/gif/loading.gif'
