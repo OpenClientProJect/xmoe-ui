@@ -439,7 +439,7 @@ watch(() => movieList.value, (newVal) => {
 
     <!-- 空状态 -->
     <div v-else-if="isEmpty" class="empty-container">
-      <p>暂无剧场版内容</p>
+      <h3 class="empty-title">暂无剧场版内容</h3>
     </div>
     
     <!-- 剧场版列表 -->
@@ -819,5 +819,23 @@ watch(() => movieList.value, (newVal) => {
 
 .retry-button:hover {
   background-color: #0055cc;
+}
+
+/* 空状态容器优化 */
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  border-radius: 8px;
+  margin: 20px;
+  text-align: center;
+}
+
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 500;
 }
 </style>
