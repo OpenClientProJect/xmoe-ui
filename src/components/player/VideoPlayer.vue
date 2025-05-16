@@ -286,7 +286,29 @@ const initPlayer = (url) => {
           try {
             if (window.Hls && window.Hls.isSupported()) {
               // 创建新的HLS实例
-                            hlsInstance = new window.Hls({                debug: false,                enableWorker: true,                lowLatencyMode: false,                progressive: true, // 开启渐进式加载，提高加载速度                startLevel: -1, // 自动选择最佳质量                abrEwmaDefaultEstimate: 1000000, // 提高默认带宽估计到1Mbps                // 缓冲区优化                maxBufferLength: 20, // 进一步减小初始缓冲区长度，从30秒降至20秒                maxMaxBufferLength: 40, // 进一步减小最大缓冲区长度，从60秒降至40秒                backBufferLength: 10, // 限制回退缓冲区长度                // 性能优化                testBandwidth: true, // 启用带宽测试                // 加载优化                fragLoadingTimeOut: 8000, // 缩短片段加载超时时间                manifestLoadingTimeOut: 5000, // 缩短清单加载超时时间                levelLoadingTimeOut: 5000, // 缩短级别加载超时时间                // 网络错误恢复设置                maxRetryCount: 2, // 进一步降低重试次数，加快失败恢复                // XHR请求配置                xhrSetup: function (xhr) {                  xhr.withCredentials = false                  xhr.setRequestHeader('Accept', '*/*')                  xhr.setRequestHeader('Origin', window.location.origin)                  xhr.setRequestHeader('Cache-Control', 'no-cache')                }
+              hlsInstance = new window.Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: false,
+                progressive: true, // 开启渐进式加载，提高加载速度
+                startLevel: -1, // 自动选择最佳质量
+                abrEwmaDefaultEstimate: 500000, // 默认带宽估计 500kbps
+                // 缓冲区优化
+                maxBufferLength: 30, // 减小缓冲区长度，从60秒降至30秒
+                maxMaxBufferLength: 60, // 减小最大缓冲区长度，从120秒降至60秒
+                // 加载优化
+                fragLoadingTimeOut: 10000, // 片段加载超时时间10秒
+                manifestLoadingTimeOut: 8000, // 清单加载超时时间8秒
+                levelLoadingTimeOut: 8000, // 级别加载超时时间8秒
+                // 网络错误恢复设置
+                maxRetryCount: 3, // 降低重试次数，加快失败恢复
+                // XHR请求配置
+                xhrSetup: function (xhr) {
+                  xhr.withCredentials = false
+                  xhr.setRequestHeader('Accept', '*/*')
+                  xhr.setRequestHeader('Origin', window.location.origin)
+                  xhr.setRequestHeader('Cache-Control', 'no-cache')
+                }
               })
 
               // 监听加载事件
@@ -744,8 +766,7 @@ watch(() => props.isLoggedIn, (newIsLoggedIn) => {
 /* 自定义ArtPlayer的加载图标样式 */
 :deep(.art-player-loading) {
   width: 60px;
-  height: 60px;
-  animation: spin 1.2s linear infinite;
+  height: 80px;
 }
 
 @keyframes spin {
