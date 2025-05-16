@@ -38,7 +38,7 @@ const handleTabChange = (tab) => {
 <style scoped>
 .home-layout {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #ffffff;
   display: flex;
   flex-direction: column;
 }

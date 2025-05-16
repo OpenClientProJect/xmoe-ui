@@ -40,7 +40,7 @@ const navigateTo = (path) => {
 
 <template>
   <div class="tab-bar-wrapper safe-area-bottom">
-    <div class="fixed bottom-0 left-0 w-full bg-white border-t z-50 flex">
+    <div class="fixed bottom-0 left-0 w-full bg-white z-50 flex">
       <div 
         v-for="tab in tabs" 
         :key="tab.name"
@@ -79,12 +79,19 @@ const navigateTo = (path) => {
 /* 底部安全区域适配 */
 .tab-bar-wrapper {
   height: 50px; /* 固定高度 */
+  background-color: white;
+}
+
+/* 确保底部固定区域背景色 */
+.fixed {
+  background-color: white !important;
 }
 
 /* iOS底部安全区域适配 */
 @supports (padding: max(0px)) {
   .safe-area-bottom {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
+    background-color: white;
   }
 }
 </style> 

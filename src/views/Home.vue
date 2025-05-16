@@ -190,7 +190,8 @@ const emit = defineEmits(['tab-change'])
 // 在轮播图中点击跳转到详情页
 const goToVideoDetail = (id) => {
   if (id) {
-    router.push(`/video/${id}`)
+    // 创建新标签页打开
+    window.open(`/video/${id}`, '_blank')
   }
 }
 

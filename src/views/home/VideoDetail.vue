@@ -404,6 +404,11 @@ const goToVideoDetail = (id) => {
 onUnmounted(() => {
   // 播放器组件会自动处理资源清理
   console.log('组件卸载，清理资源')
+  
+  // 移除事件监听器
+  window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('resize', optimizeImageLoading)
+  window.removeEventListener('resize', checkMobileScreen)
 })
 
 // 获取视频详情
@@ -644,6 +649,14 @@ const replyMode = ref(false)
 const replyTo = ref(null)
 const replyPlaceholder = ref('发表你的评论...')
 
+// 添加移动设备检测变量
+const isMobile = ref(false)
+
+// 检测当前屏幕尺寸是否为移动设备
+const checkMobileScreen = () => {
+  isMobile.value = window.innerWidth < 1024
+}
+
 // 开始回复
 const startReply = (commentItem) => {
   replyMode.value = true
@@ -736,6 +749,12 @@ const handleNextEpisode = () => {
 }
 
 onMounted(async () => {
+  // 检测当前设备类型
+  checkMobileScreen()
+  
+  // 添加窗口大小变化监听
+  window.addEventListener('resize', checkMobileScreen)
+  
   await getVideoDetail()
   await checkIsFollowing()
   await getRelatedDrama()
@@ -970,7 +989,7 @@ onMounted(async () => {
               </el-icon>
               <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
             </div>
-
+            
             <!-- 评论输入区域 -->
             <div class="comment-input-area">
               <div v-if="replyMode" class="reply-indicator">
@@ -1102,7 +1121,7 @@ onMounted(async () => {
           </el-icon>
           <p class="text-sm">暂无评论，快来发表第一条评论吧！</p>
         </div>
-
+        
         <!-- 评论输入区域 -->
         <div class="comment-input-area">
           <div v-if="replyMode" class="reply-indicator">
@@ -1129,6 +1148,7 @@ onMounted(async () => {
           :loading="isRelatedLoading"
           @itemClick="goToVideoDetail"
           class="related-recommendations"
+          v-if="!isMobile || (isMobile && sidebarContent === 'episodes')"
       />
 
       <!-- 详情抽屉弹窗 -->
@@ -1201,7 +1221,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #ffffff;
 }
 
 .video-detail-container {
@@ -1211,6 +1231,7 @@ onMounted(async () => {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto; /* 确保容器水平居中 */
+  background-color: #ffffff;
 }
 
 /* 播放器和信息区域布局 */
@@ -1384,7 +1405,6 @@ onMounted(async () => {
 /* 原有样式 */
 .video-detail-container {
   min-height: 100vh;
-  background-color: #f5f5f5;
   padding-bottom: 16px;
   padding-top: 0; /* 确保没有顶部内边距 */
 }
@@ -1394,8 +1414,6 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   flex-direction: column;
-  margin-top: 0; /* 移除顶部间距，让播放器直接占据顶部位置 */
-  padding-top: 0; /* 移除顶部内边距 */
   background-color: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   transform: translateZ(0);
@@ -1618,46 +1636,6 @@ onMounted(async () => {
   }
 }
 
-/* 内容区域 */
-.content-container {
-  background-color: white;
-  /* 添加硬件加速 */
-  transform: translateZ(0);
-  will-change: transform;
-  z-index: 1;
-  /* 修改上边距，与剧集列表保持距离 */
-  margin-top: 8px;
-  border-radius: 4px;
-}
-
-/* 标签页 */
-.tabs {
-  display: flex;
-  border-bottom: 1px solid #eee;
-  padding: 0 16px; /* 添加左右间距，与内容区域保持一致 */
-}
-
-.tab {
-  margin-right: 16px;
-  padding: 8px 0;
-  position: relative;
-  cursor: pointer;
-}
-
-.active-tab {
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.tab-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: #dc2626;
-}
-
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -1711,15 +1689,15 @@ onMounted(async () => {
   margin-top: 12px;
   overflow-y: auto;
   flex-grow: 1;
-  padding-bottom: 16px;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  padding-bottom: 60px; 
+  scrollbar-width: none; 
+  -ms-overflow-style: none; 
+  max-height: 450px; 
 }
 
 .comment-list::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-  width: 0;
-  height: 0;
+  width: 0; 
+  display: none;
 }
 
 .comment-item {
@@ -1852,15 +1830,18 @@ onMounted(async () => {
 
 /* 评论输入区域样式 */
 .comment-input-area {
-  position: sticky;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   background-color: white;
-  padding: 10px 0;
-  border-top: 1px solid #eaeaea;
-  margin-top: 16px;
-  z-index: 10;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  padding: 10px 16px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); /* 适配iPhone底部安全区域 */
+  z-index: 100;
+  max-width: 1440px; 
+  margin: 0 auto; 
+  width: 100%;
 }
 
 .reply-indicator {
@@ -1871,6 +1852,7 @@ onMounted(async () => {
   color: #2563eb;
   padding: 0 4px;
   margin-bottom: 4px;
+  background-color: white;
 }
 
 .cancel-reply {
@@ -1884,10 +1866,20 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   width: 100%;
+  background-color: white;
 }
 
 .comment-input {
   flex: 1;
+}
+
+/* 移除评论输入框边框和阴影 */
+.comment-input :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  border: none !important;
+  background-color: #f5f5f5;
+  border-radius: 18px;
+  padding: 0 12px;
 }
 
 .send-button {
@@ -1907,13 +1899,23 @@ onMounted(async () => {
   padding: 16px;
   border-radius: 4px;
   margin-bottom: 16px;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-comment-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 10px; /* 确保最后的评论不会被输入框遮挡 */
+  max-height: calc(80vh - 130px); /* 设置最大高度 */
+  overflow-y: auto; /* 启用垂直滚动 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mobile-comment-list::-webkit-scrollbar {
+  width: 0;
+  display: none;
 }
 
 /* 确保在移动端和桌面端正确显示的辅助类 */
@@ -2047,6 +2049,7 @@ onMounted(async () => {
   margin-top: 12px;
   border-radius: 4px;
   overflow: hidden;
+  background-color: white;
 }
 
 /* 调整相关视频组件的样式，与播放器区域保持一致 */
@@ -2060,6 +2063,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* 在手机端默认展示2列 */
   gap: 12px; /* 减小间距使卡片更紧凑 */
+  background-color: white;
 }
 
 /* 在平板和桌面设备上改为网格布局 */
@@ -2188,7 +2192,6 @@ onMounted(async () => {
   bottom: -100%;
   left: 0;
   right: 0;
-  background-color: white;
   border-radius: 16px 16px 0 0;
   padding: 16px;
   max-height: 90vh;
@@ -2352,5 +2355,73 @@ onMounted(async () => {
   padding: 20px 0;
   color: #6b7280;
   font-size: 14px;
+}
+
+/* 为移动端视图中的评论区域添加底部填充，避免被输入框遮挡 */
+.comments-section {
+  padding-bottom: 60px;
+}
+
+/* 为桌面端评论区域添加底部填充 */
+.comment-sidebar {
+  padding-bottom: 70px;
+}
+
+/* 优化移动端输入框的样式 */
+@media (max-width: 768px) {
+  .comment-input-area {
+    left: 0;
+    right: 0;
+    max-width: 100%;
+  }
+  
+  /* 增加移动端底部安全距离 */
+  .comments-section {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .comment-list, .mobile-comment-list {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* 番剧列表 */
+.anime-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  min-height: 300px; /* 最小高度，防止闪烁 */
+}
+
+/* 桌面端评论区域修复 */
+@media (min-width: 1024px) {
+  /* 修改评论输入框在桌面端的位置 */
+  .comment-sidebar .comment-input-area {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* 增加评论列表底部内边距，避免被输入框遮挡 */
+  .comment-sidebar .comment-list {
+    padding-bottom: 70px;
+    max-height: 530px; /* 为桌面版调整最大高度 */
+  }
+  
+  /* 确保评论侧边栏有相对定位，以便内部绝对定位元素能够正确定位 */
+  .comment-sidebar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
 }
 </style>
