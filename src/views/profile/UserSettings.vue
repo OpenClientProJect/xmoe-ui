@@ -101,23 +101,11 @@ const submitForm = async () => {
 // 打开头像选择抽屉
 const openAvatarDrawer = () => {
   showAvatarDrawer.value = true
-  // 禁止底层页面滚动
-  document.body.style.overflow = 'hidden'
-  document.body.style.position = 'fixed'
-  document.body.style.width = '100%'
-  document.body.style.top = `-${window.scrollY}px`
 }
 
 // 关闭头像选择抽屉
 const closeAvatarDrawer = () => {
   showAvatarDrawer.value = false
-  // 恢复底层页面滚动
-  const scrollY = document.body.style.top
-  document.body.style.overflow = ''
-  document.body.style.position = ''
-  document.body.style.width = ''
-  document.body.style.top = ''
-  window.scrollTo(0, parseInt(scrollY || '0') * -1)
 }
 
 // 选择头像
@@ -126,23 +114,13 @@ const selectAvatar = (avatarUrl) => {
   closeAvatarDrawer()
 }
 
-// 禁止页面滚动
-const disablePageScroll = () => {
-  document.body.style.overflow = 'hidden'
-  document.body.style.position = 'fixed'
-  document.body.style.width = '100%'
-  document.body.style.height = '100%'
-}
-
 onMounted(() => {
   getUserInfo()
-  // 在组件挂载时禁止页面滚动
-  disablePageScroll()
 })
 </script>
 
 <template>
-  <div class="user-settings fixed inset-0 bg-white overflow-hidden">
+  <div class="user-settings min-h-screen bg-white">
     <!-- 顶部导航栏 -->
     <div class="py-3 px-4 flex items-center sticky top-0 z-10 bg-white text-black border-b border-gray-100">
       <div @click="goBack" class="flex items-center">
@@ -155,8 +133,8 @@ onMounted(() => {
     </div>
     
     <!-- 主要内容区域 -->
-    <div class="bg-white h-full flex flex-col overflow-auto">
-      <div v-if="loading" class="text-center py-8 flex-grow">
+    <div class="bg-white min-h-screen">
+      <div v-if="loading" class="text-center py-8">
         <el-icon class="is-loading" :size="24">
           <Loading />
         </el-icon>
@@ -181,7 +159,7 @@ onMounted(() => {
         </div>
         
         <!-- 表单区域 -->
-        <div class="mt-10 flex justify-center mb-6 flex-grow">
+        <div class="mt-10 flex justify-center mb-6">
           <div class="relative mb-4 w-4/5">
             <input 
               v-model="userForm.nickname"
@@ -190,17 +168,17 @@ onMounted(() => {
             />
           </div>
         </div>
+        
+        <!-- 确定按钮 -->
+        <div class="mt-20 flex justify-center">
+          <button 
+            @click="submitForm" 
+            :disabled="!hasChanged() || submitting"
+            class="px-40 py-3 rounded-full text-white font-normal text-lg bg-[#ff6665] disabled:bg-[#ffb4b3]">
+            完成
+          </button>
+        </div>
       </template>
-    </div>
-    
-    <!-- 确定按钮（固定在底部） -->
-    <div class="fixed bottom-0 left-0 right-0 bg-white py-5 px-4 border-t border-gray-100 flex justify-center safe-area-bottom">
-      <button 
-        @click="submitForm" 
-        :disabled="!hasChanged() || submitting"
-        class="px-20 py-3 rounded-full text-white font-normal text-lg bg-[#ff6665] disabled:bg-[#ffb4b3] w-full max-w-md">
-        完成
-      </button>
     </div>
     
     <!-- 头像选择抽屉 -->
@@ -260,14 +238,6 @@ input {
   width: 100%;
   height: 100%;
   z-index: 40;
-  overscroll-behavior: contain; /* 阻止滚动传递到下层元素 */
-  touch-action: none; /* 禁止触摸操作传递 */
-}
-
-/* 抽屉内容区域样式 */
-.avatar-drawer-container .fixed.bottom-0 {
-  overscroll-behavior: contain; /* 防止过度滚动影响外层 */
-  -webkit-overflow-scrolling: touch; /* 平滑滚动 */
 }
 
 /* 动画定义 */
@@ -322,18 +292,7 @@ input {
 /* 安全区域 - 用于iPhone X及以上机型底部黑条 */
 @supports (padding: max(0px)) {
   .safe-area-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom, 16px), 60px);
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
-}
-
-/* 禁止页面滚动 */
-.user-settings {
-  overscroll-behavior: none;
-  touch-action: none;
-}
-
-/* 确保内容可滚动区域有正确的底部间距，避免被底部按钮遮挡 */
-.user-settings .bg-white.h-full {
-  padding-bottom: 120px;
 }
 </style> 

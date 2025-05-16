@@ -64,21 +64,31 @@ export const getVideoUrlService = (sourceId) =>   {
 /**
  * 相关推荐
  * @param {string|number} typeId 视频类型ID
+ * @param {Object} params 其他请求参数
+ * @param {number} [params.page=1] 当前页码，默认为1
+ * @param {number} [params.limit=10] 每页数量，默认为10
+ * @param {string} [params.type='randomlike'] 排序类型，默认为随机推荐
  * @returns {Promise} 请求Promise
  */
-export const getRelatedDramaService = (typeId) => {
+export const getRelatedDramaService = (typeId, params = {}) => {
 
     // 确保typeId是有效值
     const finalTypeId = typeId || 1
 
+    // 设置默认参数
+    const defaultParams = {
+        typeId: finalTypeId,
+        page: 1,
+        limit: 10,
+        type: 'randomlike'
+    }
+
+    // 合并默认参数和传入参数
+    const finalParams = {...defaultParams, ...params}
+
     return request({
-        url: '/sk-api/vod/list', // 添加前导斜杠
+        url: '/sk-api/vod/list',
         method: 'get',
-        params: {
-            typeId: finalTypeId,
-            page: '1',
-            limit: '10',
-            type: 'randomlike'
-        }
+        params: finalParams
     })
 }

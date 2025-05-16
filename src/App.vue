@@ -29,7 +29,6 @@ html, body {
 }
 
 .app-container {
-  min-height: 100vh;
   position: relative;
 }
 

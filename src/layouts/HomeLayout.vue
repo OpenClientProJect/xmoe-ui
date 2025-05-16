@@ -32,9 +32,6 @@ const handleTabChange = (tab) => {
         </keep-alive>
       </router-view>
     </div>
-
-    <!-- 底部标签栏 -->
-    <TabBar />
   </div>
 </template>
 

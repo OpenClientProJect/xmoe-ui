@@ -7,7 +7,7 @@ import {ElMessage} from "element-plus";
 const baseURL = '/sk-api';
 const instance = axios.create({
     baseURL,
-    timeout: 15000 // 设置15秒超时时间
+    timeout: 20000 // 设置15秒超时时间
 })
 //添加请求拦截器
 // instance.interceptors.request.use(

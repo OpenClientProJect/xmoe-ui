@@ -1,7 +1,7 @@
 <script setup>
-import {computed, onMounted, ref, watch} from 'vue'
+import {computed, onMounted, ref, watch, onBeforeUnmount} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
-import {getDramaListService} from "@/api/Drama.js";
+import {getDramaListService, getRelatedDramaService} from "@/api/Drama.js";
 import {getSubMenuListService} from "@/api/home/anime.js";
 import {handleImageUrl} from '@/utils/imageUtils.js';
 import Loading from '@/assets/gif/loading.gif'
@@ -16,10 +16,18 @@ const DramaList = ref([])
 // 原始番剧列表数据（用于本地筛选）
 const originalDramaList = ref([])
 
+// 分页相关
+const currentPage = ref(1)
+const hasMore = ref(true)
+const isLoadingMore = ref(false)
+
 // 加载状态
 const isLoading = ref(false)
 const hasError = ref(false)
 const errorMessage = ref('')
+
+// 当前查询参数
+const currentQueryParams = ref({})
 
 // 分类标签数据
 const tagData = ref({})
@@ -112,33 +120,66 @@ const animeTags = async () => {
 }
 
 // 获取番剧列表
-const getDramaList = async (params = {}) => {
+const getDramaList = async (params = {}, isAppend = false) => {
   try {
-    isLoading.value = true
-    hasError.value = false
-    errorMessage.value = ''
+    if (!isAppend) {
+      // 初始加载时显示加载状态
+      isLoading.value = true
+      hasError.value = false
+      errorMessage.value = ''
+      // 重置分页
+      currentPage.value = 1
+      hasMore.value = true
+      // 保存当前查询参数
+      currentQueryParams.value = {...params}
+    } else {
+      // 加载更多时显示加载更多状态
+      isLoadingMore.value = true
+    }
+    
+    // 构建请求参数
+    const requestParams = {
+      ...params,
+      page: currentPage.value
+    }
     
     // 调用接口获取数据
-    const res = await getDramaListService(params)
+    const res = await getDramaListService(requestParams)
     
     // 处理不同类型的数据响应
+    let newData = []
+    
     if (typeof res.data === 'string') {
       // 如果是字符串，尝试解密
       console.log('检测到加密数据，尝试解密');
       
-        const decryptedData = await decryptData(res.data);
-        
-        if (decryptedData && decryptedData.data && Array.isArray(decryptedData.data)) {
-          // 解密成功，使用解密后的数据
-          originalDramaList.value = decryptedData.data;
-          DramaList.value = decryptedData.data;
-          console.log('解密成功，获取到番剧数据', DramaList.value.length, '条');
+      const decryptedData = await decryptData(res.data);
+      
+      if (decryptedData && decryptedData.data && Array.isArray(decryptedData.data)) {
+        // 解密成功，使用解密后的数据
+        newData = decryptedData.data;
+        console.log('解密成功，获取到番剧数据', newData.length, '条');
       }
     } else if (Array.isArray(res.data)) {
       // 如果是数组，直接使用
-      originalDramaList.value = res.data
-      DramaList.value = res.data
-      console.log('获取到番剧数据', DramaList.value.length, '条');
+      newData = res.data
+      console.log('获取到番剧数据', newData.length, '条');
+    }
+    
+    // 判断是否还有更多数据
+    if (newData.length === 0) {
+      hasMore.value = false
+    }
+    
+    if (isAppend) {
+      // 追加模式，把新数据添加到现有列表
+      DramaList.value = [...DramaList.value, ...newData]
+      // 更新原始数据集
+      originalDramaList.value = [...originalDramaList.value, ...newData]
+    } else {
+      // 非追加模式，替换现有列表
+      DramaList.value = newData
+      originalDramaList.value = newData
     }
   } catch (error) {
     console.error('获取番剧列表失败:', error)
@@ -146,6 +187,34 @@ const getDramaList = async (params = {}) => {
     errorMessage.value = error.message || '获取番剧列表失败'
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
+  }
+}
+
+// 加载更多数据
+const loadMoreData = async () => {
+  if (isLoading.value || isLoadingMore.value || !hasMore.value) return
+  
+  // 增加页码
+  currentPage.value += 1
+  console.log('加载更多数据，页码：', currentPage.value)
+  
+  // 使用当前查询参数加载更多数据
+  await getDramaList(currentQueryParams.value, true)
+}
+
+// 监听滚动事件，检测是否滚动到底部
+const handleScroll = () => {
+  // 如果正在加载，或者没有更多数据，则不处理
+  if (isLoading.value || isLoadingMore.value || !hasMore.value) return
+  
+  const scrollHeight = document.documentElement.scrollHeight
+  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
+  const clientHeight = document.documentElement.clientHeight
+  
+  // 当距离底部200px时提前加载
+  if (scrollHeight - scrollTop - clientHeight < 200) {
+    loadMoreData()
   }
 }
 
@@ -162,11 +231,15 @@ const selectTag = (rowId, tag) => {
   // 构建查询参数
   const params = {}
   
+  // 重置分页
+  currentPage.value = 1
+  hasMore.value = true
+  
   // 类型筛选
   if (rowId === 0) {
     if (tag === '全部') {
-      // 重置为原始列表
-      DramaList.value = [...originalDramaList.value]
+      // 如果选择了全部，重新请求数据
+      getDramaList(currentQueryParams.value)
     } else {
       // 本地筛选vod_class包含所选标签的番剧
       DramaList.value = originalDramaList.value.filter(drama => {
@@ -191,6 +264,11 @@ const selectTag = (rowId, tag) => {
   // 排序选项
   if (rowId === 3) {
     params.type = getSortValue(tag)
+  }
+  
+  // 保存当前typeId参数
+  if (route.query.typeId) {
+    params.typeId = route.query.typeId
   }
   
   // 如果有筛选参数，则调用API重新获取数据
@@ -283,21 +361,33 @@ onMounted(() => {
   // 获取番剧子分类数据
   animeTags()
   
+  // 添加滚动事件监听
+  window.addEventListener('scroll', handleScroll)
+  
   // 检查URL参数中是否有typeId
   if (route.query.typeId) {
     // 如果有typeId参数，使用该参数获取对应分类的番剧
-    getDramaList({ typeId: route.query.typeId })
+    const params = { typeId: route.query.typeId }
+    currentQueryParams.value = params
+    getDramaList(params)
   } else {
     // 否则获取全部番剧
     getDramaList()
   }
 })
 
+// 组件卸载前移除滚动事件监听
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
 // 监听路由参数变化
 watch(() => route.query.typeId, (newTypeId) => {
   if (newTypeId) {
     // 如果typeId变化，重新获取对应分类的番剧
-    getDramaList({ typeId: newTypeId })
+    const params = { typeId: newTypeId }
+    currentQueryParams.value = params
+    getDramaList(params)
   } else {
     // 如果typeId被移除，获取全部番剧
     getDramaList()
@@ -349,7 +439,7 @@ watch(() => route.query.typeId, (newTypeId) => {
     <div v-else class="anime-list">
       <div 
         v-for="(anime, index) in DramaList"
-        :key="anime.vod_id"
+        :key="`${anime.vod_id}_${index}`"
         class="anime-card"
         :style="`animation-delay: ${index * 30}ms`"
         @click="goToAnimeDetail(anime.vod_id)"
@@ -362,6 +452,21 @@ watch(() => route.query.typeId, (newTypeId) => {
         <div class="anime-title">{{ anime.vod_name }}</div>
         <div class="anime-sub" v-if="anime.vod_sub">{{ anime.vod_sub }}</div>
       </div>
+    </div>
+    
+    <!-- 加载更多提示 -->
+    <div v-if="isLoadingMore" class="loading-more-container">
+      <div class="loading-dot-container">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+      <p>加载更多...</p>
+    </div>
+    
+    <!-- 没有更多数据提示 -->
+    <div v-if="!hasMore && DramaList.length > 0" class="no-more-container">
+      <p>没有更多数据了</p>
     </div>
   </div>
 </template>
@@ -601,6 +706,61 @@ watch(() => route.query.typeId, (newTypeId) => {
   width: 60px;
   height: 80px;
   margin-bottom: 10px;
+}
+
+/* 加载更多状态 */
+.loading-more-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.loading-dot-container {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.loading-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--el-color-primary);
+  border-radius: 50%;
+  animation: dot-pulse 1.4s infinite ease-in-out;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 没有更多数据提示 */
+.no-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  color: #999;
+  font-size: 14px;
 }
 
 /* 错误和空数据容器 */
